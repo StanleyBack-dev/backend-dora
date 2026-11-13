@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "git": {
+    "deploymentEnabled": {
+      "master": false
+    }
+  },
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ]
+}

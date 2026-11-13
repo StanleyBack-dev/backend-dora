@@ -1,0 +1,616 @@
+# ------------------------------------------------------
+# GENERATED FILE (npm run schema:generate) — do not edit
+# ------------------------------------------------------
+
+"""Quem criou e quem alterou por último um registro."""
+type RecordStamp {
+  createdAt: DateTime!
+  createdById: ID
+  createdByName: String
+  updatedAt: DateTime!
+  updatedById: ID
+  updatedByName: String
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+"""Comunicado enviado por um gestor."""
+type Broadcast {
+  id: ID!
+  title: String!
+  body: String!
+  audience: BroadcastAudience!
+  targetGroup: UserGroup
+  sendEmail: Boolean!
+
+  """Quantas pessoas receberam."""
+  recipients: Int!
+  authorName: String
+  createdAt: DateTime!
+}
+
+"""Quem recebe o comunicado."""
+enum BroadcastAudience {
+  TODOS
+  GRUPO
+}
+
+"""Perfil de acesso: Morador, Gestor ou Administrador geral."""
+enum UserGroup {
+  """Morador"""
+  USER
+
+  """Gestor"""
+  ADMIN
+
+  """Administrador geral"""
+  ADMIN_MASTER
+}
+
+"""Painel do gestor."""
+type Dashboard {
+  """Contas ativas."""
+  activeUsers: Int!
+
+  """Cadastros aguardando aprovação."""
+  pendingEnrollments: Int!
+
+  """Pedidos de suporte sem resposta."""
+  openSupportRequests: Int!
+
+  """Notificações que falharam de vez."""
+  failedNotifications: Int!
+}
+
+type PermissionOverride {
+  permission: Permission!
+  allowed: Boolean!
+}
+
+"""Capacidade verificada pela API."""
+enum Permission {
+  DASHBOARD_READ
+  NOTIFICATIONS_BROADCAST
+  USERS_MANAGE
+  PERMISSIONS_MANAGE
+  AUDIT_READ
+  SUPPORT_MANAGE
+}
+
+type PermissionMatrix {
+  """O que o usuário pode fazer (padrão do grupo + exceções)."""
+  effective: [Permission!]!
+
+  """O que o grupo concede."""
+  defaults: [Permission!]!
+
+  """Exceções do usuário em relação ao grupo."""
+  overrides: [PermissionOverride!]!
+}
+
+"""Usuário da sessão atual."""
+type SessionUser {
+  id: ID!
+  name: String!
+  username: String!
+  email: String!
+  group: UserGroup!
+
+  """Precisa trocar a senha temporária antes de usar o app."""
+  mustChangePassword: Boolean!
+
+  """Permissões efetivas."""
+  permissions: [Permission!]!
+
+  """Já viu (ou pulou) a apresentação guiada do app."""
+  onboardingCompleted: Boolean!
+
+  """Link temporário da foto de perfil (null: sem foto)."""
+  photoUrl: String
+}
+
+type AuthTokens {
+  accessToken: String!
+  accessTokenExpiresAt: DateTime!
+  refreshToken: String!
+  refreshTokenExpiresAt: DateTime!
+}
+
+type LoginResult {
+  accessToken: String!
+  accessTokenExpiresAt: DateTime!
+  refreshToken: String!
+  refreshTokenExpiresAt: DateTime!
+  user: SessionUser!
+}
+
+"""Usuário visto pela administração."""
+type UserAccount {
+  id: ID!
+  name: String!
+  email: String!
+  username: String!
+  group: UserGroup!
+  active: Boolean!
+
+  """Ainda não trocou a senha temporária."""
+  mustChangePassword: Boolean!
+
+  """Bloqueado por tentativas inválidas até esta data."""
+  lockedUntil: DateTime
+  lastLoginAt: DateTime
+  deactivatedAt: DateTime
+  createdAt: DateTime!
+
+  """Bloqueado agora por tentativas inválidas de login."""
+  locked: Boolean!
+}
+
+type UserAccountPage {
+  items: [UserAccount!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+"""Senha temporária, exibida uma única vez para quem a gerou."""
+type TemporaryAccess {
+  user: UserAccount!
+  temporaryPassword: String!
+
+  """Se o e-mail com o acesso foi enviado."""
+  emailSent: Boolean!
+}
+
+"""Código de convite para o formulário público de cadastro."""
+type EnrollmentInvite {
+  id: ID!
+  code: String!
+  label: String!
+  expiresAt: DateTime!
+  revokedAt: DateTime
+  createdAt: DateTime!
+
+  """Cadastros enviados com este código."""
+  requestCount: Int!
+}
+
+type EnrollmentRequest {
+  id: ID!
+  status: EnrollmentStatus!
+  fullName: String!
+  email: String!
+  phone: String!
+  createdAt: DateTime!
+  reviewedAt: DateTime
+  rejectionReason: String
+  userId: ID
+  photoUrl: String
+}
+
+"""Situação do cadastro enviado pelo link público."""
+enum EnrollmentStatus {
+  PENDENTE
+  APROVADA
+  RECUSADA
+}
+
+type EnrollmentRequestPage {
+  items: [EnrollmentRequest!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+type EnrollmentApproval {
+  request: EnrollmentRequest!
+  access: TemporaryAccess!
+}
+
+type Notification {
+  id: ID!
+  type: NotificationType!
+  title: String!
+  body: String!
+
+  """Caminho no app."""
+  link: String
+  readAt: DateTime
+  createdAt: DateTime!
+}
+
+enum NotificationType {
+  BROADCAST
+  SUPPORT_REQUESTED
+  SUPPORT_ANSWERED
+  SUPPORT_FINALIZED
+  SYSTEM_ALERT
+  ENROLLMENT_SUBMITTED
+}
+
+type NotificationPage {
+  items: [Notification!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+type NotificationPreference {
+  type: NotificationType!
+
+  """Também recebe por e-mail."""
+  emailEnabled: Boolean!
+}
+
+"""Solicitação de suporte."""
+type SupportRequest {
+  id: ID!
+
+  """Número do protocolo (#000042)."""
+  protocol: Int!
+  userId: ID!
+  userName: String!
+  category: SupportCategory!
+  subject: String!
+  message: String!
+  status: SupportStatus!
+  reply: String
+  repliedAt: DateTime
+  repliedByName: String
+  finalizedAt: DateTime
+  finalizedByName: String
+  createdAt: DateTime!
+}
+
+"""Do que se trata a solicitação de suporte."""
+enum SupportCategory {
+  DUVIDA
+  PROBLEMA
+  ACESSO
+  SUGESTAO
+  OUTRO
+}
+
+"""Aberto → respondido → finalizado."""
+enum SupportStatus {
+  ABERTO
+  RESPONDIDO
+  FINALIZADO
+}
+
+"""Limite diário de solicitações."""
+type SupportQuota {
+  limit: Int!
+  sentToday: Int!
+  remaining: Int!
+
+  """Quando poderá enviar de novo (vazio: já pode)."""
+  nextAllowedAt: DateTime
+}
+
+type SupportRequestPage {
+  items: [SupportRequest!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+"""Registro do log do sistema."""
+type SystemLog {
+  id: ID!
+
+  """INFO, WARN, ERROR ou CRITICAL."""
+  level: String!
+
+  """API, DATABASE, AUTH, SECURITY, OUTBOX, ROUTINE…"""
+  category: String!
+  source: String!
+  message: String!
+  details: JSON
+  userId: ID
+  userName: String
+  ip: String
+  statusCode: Int
+  durationMs: Int
+  environment: String!
+  createdAt: DateTime!
+}
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
+type SystemLogSummary {
+  level: String!
+  last24h: Int!
+  last7d: Int!
+}
+
+type SystemLogPage {
+  items: [SystemLog!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+type Query {
+  """Verifica se a API GraphQL responde."""
+  ping: String!
+
+  """
+  Criação e última alteração de um registro (null: não existe). Para todos; contas e cadastros só para quem gerencia usuários.
+  """
+  recordStamp(entity: String!, id: ID!): RecordStamp
+
+  """Últimos 50 comunicados."""
+  broadcasts: [Broadcast!]!
+  dashboard: Dashboard!
+
+  """Confere se o token do formulário ainda vale."""
+  enrollmentFormValid(formToken: String!): Boolean!
+  enrollmentInvites: [EnrollmentInvite!]!
+  enrollmentRequests(filter: EnrollmentRequestFilterInput, page: PageInput): EnrollmentRequestPage!
+
+  """Cadastros aguardando aprovação."""
+  pendingEnrollmentCount: Int!
+  enrollmentRequest(id: ID!): EnrollmentRequest!
+  me: SessionUser!
+  users(filter: UserFilterInput, page: PageInput): UserAccountPage!
+  user(id: ID!): UserAccount!
+  userPermissions(id: ID!): PermissionMatrix!
+
+  """Mais recentes primeiro."""
+  myNotifications(unreadOnly: Boolean! = false, page: PageInput): NotificationPage!
+  unreadNotificationsCount: Int!
+  myNotificationPreferences: [NotificationPreference!]!
+
+  """Chave VAPID para o navegador assinar o push (null = desligado)."""
+  pushPublicKey: String
+
+  """Quantas solicitações de suporte ainda posso enviar hoje."""
+  supportQuota: SupportQuota!
+
+  """Minhas solicitações de suporte, das mais recentes."""
+  mySupportRequests(page: PageInput): SupportRequestPage!
+
+  """Todas as solicitações de suporte (administração)."""
+  supportRequests(status: SupportStatus, page: PageInput): SupportRequestPage!
+
+  """Log do sistema (administração), do mais recente."""
+  systemLogs(filter: SystemLogFilterInput, page: PageInput): SystemLogPage!
+
+  """Quantos registros por nível nas últimas 24 h e 7 dias."""
+  systemLogSummary: [SystemLogSummary!]!
+}
+
+input EnrollmentRequestFilterInput {
+  status: EnrollmentStatus
+  search: String
+}
+
+input PageInput {
+  page: Int! = 1
+  limit: Int! = 20
+}
+
+input UserFilterInput {
+  search: String
+  group: UserGroup
+  active: Boolean
+}
+
+input SystemLogFilterInput {
+  from: DateTime
+  to: DateTime
+  levels: [String!]
+  categories: [String!]
+  search: String
+  environment: String
+}
+
+type Mutation {
+  sendBroadcast(input: BroadcastInput!): Broadcast!
+
+  """
+  Confere o código de convite e devolve o token do formulário (vale 60 min).
+  """
+  verifyEnrollmentCode(code: String!): String!
+
+  """Envia o cadastro, que aguarda a aprovação da administração."""
+  submitEnrollment(input: SubmitEnrollmentInput!): Boolean!
+  createEnrollmentInvite(input: CreateEnrollmentInviteInput!): EnrollmentInvite!
+  revokeEnrollmentInvite(id: ID!): EnrollmentInvite!
+
+  """Aprova o cadastro (com as correções) e cria o usuário."""
+  approveEnrollmentRequest(id: ID!, data: EnrollmentDataInput!, group: UserGroup!): EnrollmentApproval!
+  rejectEnrollmentRequest(id: ID!, reason: String!): EnrollmentRequest!
+
+  """Entra com usuário (ou e-mail) e senha."""
+  login(input: LoginInput!): LoginResult!
+
+  """Novo access token a partir do refresh token da sessão."""
+  refreshSessionTokens(refreshToken: String!): AuthTokens!
+
+  """Encerra a sessão atual."""
+  logout: Boolean!
+
+  """
+  Troca a própria senha (inclusive a temporária). Encerra as outras sessões.
+  """
+  changeMyPassword(input: ChangePasswordInput!): Boolean!
+  updateMyProfile(input: UpdateMyProfileInput!): SessionUser!
+
+  """
+  Envia um código por e-mail. Sempre responde true, exista ou não o usuário.
+  """
+  requestPasswordRecovery(login: String!): Boolean!
+
+  """Confere o código e devolve o token para redefinir a senha."""
+  verifyPasswordRecoveryCode(input: VerifyRecoveryCodeInput!): String!
+  resetPasswordWithRecovery(input: ResetPasswordInput!): Boolean!
+
+  """Marca a apresentação guiada como vista (concluída ou pulada)."""
+  completeOnboarding: Boolean!
+
+  """Cria o usuário com senha temporária (enviada por e-mail)."""
+  createUser(input: CreateUserInput!): TemporaryAccess!
+  updateUser(id: ID!, input: UpdateUserInput!): UserAccount!
+
+  """Ativa ou desativa o acesso. Desativar encerra as sessões."""
+  setUserActive(id: ID!, active: Boolean!): UserAccount!
+
+  """Gera nova senha temporária e encerra as sessões do usuário."""
+  resetUserPassword(id: ID!): TemporaryAccess!
+  unlockUser(id: ID!): UserAccount!
+  revokeUserSessions(id: ID!): UserAccount!
+  setUserPermissions(input: SetUserPermissionsInput!): PermissionMatrix!
+  markNotificationRead(id: ID!): Boolean!
+
+  """Quantas foram marcadas."""
+  markAllNotificationsRead: Int!
+  setNotificationPreference(type: NotificationType!, emailEnabled: Boolean!): NotificationPreference!
+
+  """Ativa o push neste aparelho."""
+  subscribePush(input: PushSubscriptionInput!): Boolean!
+
+  """Desativa o push neste aparelho."""
+  unsubscribePush(endpoint: String!): Boolean!
+
+  """Envia um push de teste; devolve quantos aparelhos receberam."""
+  sendTestPush: Int!
+
+  """
+  Troca a própria foto de perfil (base64, já reduzida pelo navegador). Devolve o link temporário.
+  """
+  setMyPhoto(photo: String!): String!
+
+  """Remove a própria foto de perfil."""
+  removeMyPhoto: Boolean!
+
+  """
+  Envia uma solicitação de suporte (até 3 por dia); avisa os administradores.
+  """
+  sendSupportRequest(input: SupportRequestInput!): SupportRequest!
+
+  """Responde a solicitação; quem pediu é avisado."""
+  replySupportRequest(id: ID!, reply: String!): SupportRequest!
+
+  """Finaliza a solicitação; quem pediu é avisado."""
+  finalizeSupportRequest(id: ID!): SupportRequest!
+
+  """Erro de tela do app (o frontend avisa para o log do sistema)."""
+  reportClientError(message: String!, url: String!, digest: String): Boolean!
+}
+
+input BroadcastInput {
+  title: String!
+  body: String!
+  audience: BroadcastAudience!
+  targetGroup: UserGroup
+
+  """Também envia por e-mail."""
+  sendEmail: Boolean!
+}
+
+input SubmitEnrollmentInput {
+  formToken: String!
+  data: EnrollmentDataInput!
+
+  """Aceite do uso dos dados (LGPD)."""
+  consent: Boolean!
+
+  """Foto de perfil em base64 (JPEG, PNG ou WebP, até 2 MB)."""
+  photo: String
+}
+
+"""Dados do cadastro (formulário ou correção)."""
+input EnrollmentDataInput {
+  fullName: String!
+  email: String!
+  phone: String!
+}
+
+input CreateEnrollmentInviteInput {
+  label: String!
+
+  """Validade em dias (1 a 30)."""
+  validDays: Int!
+}
+
+input LoginInput {
+  """Usuário ou e-mail."""
+  login: String!
+  password: String!
+}
+
+input ChangePasswordInput {
+  currentPassword: String!
+  newPassword: String!
+}
+
+input UpdateMyProfileInput {
+  name: String!
+  email: String!
+}
+
+input VerifyRecoveryCodeInput {
+  login: String!
+  code: String!
+}
+
+input ResetPasswordInput {
+  resetToken: String!
+  newPassword: String!
+}
+
+input CreateUserInput {
+  name: String!
+  email: String!
+
+  """Login: 3 a 32 caracteres (a-z, 0-9, ., -, _)."""
+  username: String!
+  group: UserGroup!
+}
+
+input UpdateUserInput {
+  name: String
+  email: String
+  username: String
+  group: UserGroup
+}
+
+input SetUserPermissionsInput {
+  userId: ID!
+
+  """true descarta as exceções e volta ao padrão do grupo."""
+  useGroupDefaults: Boolean!
+
+  """Conjunto completo desejado (ignorado com useGroupDefaults)."""
+  permissions: [Permission!]
+}
+
+"""PushSubscription do navegador (PushManager)."""
+input PushSubscriptionInput {
+  endpoint: String!
+
+  """Chave pública do aparelho (base64url)."""
+  p256dh: String!
+
+  """Segredo de autenticação (base64url)."""
+  auth: String!
+}
+
+input SupportRequestInput {
+  category: SupportCategory!
+  subject: String!
+  message: String!
+}
