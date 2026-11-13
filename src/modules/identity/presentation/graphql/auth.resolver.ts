@@ -9,27 +9,23 @@ import {
 } from "@/common/decorators/request-meta.decorator";
 import { PermissionsService } from "@/modules/access-control/application/permissions.service";
 import { LoginUseCase } from "@/modules/identity/application/use-cases/login.use-case";
-import {
-  ChangeOwnPasswordUseCase,
-  UpdateOwnProfileUseCase,
-} from "@/modules/identity/application/use-cases/own-account.use-cases";
+import { ChangeOwnPasswordUseCase } from "@/modules/identity/application/use-cases/change-own-password.use-case";
+import { UpdateOwnProfileUseCase } from "@/modules/identity/application/use-cases/update-own-profile.use-case";
 import { PasswordRecoveryUseCase } from "@/modules/identity/application/use-cases/password-recovery.use-case";
-import {
-  LogoutUseCase,
-  RefreshSessionUseCase,
-} from "@/modules/identity/application/use-cases/session.use-cases";
-import {
-  AuthTokensType,
-  ChangePasswordInput,
-  LoginInput,
-  LoginResultType,
-  ResetPasswordInput,
-  SessionUserType,
-  UpdateMyProfileInput,
-  VerifyRecoveryCodeInput,
-} from "@/modules/identity/presentation/graphql/identity.graphql-types";
+import { LogoutUseCase } from "@/modules/identity/application/use-cases/logout.use-case";
+import { RefreshSessionUseCase } from "@/modules/identity/application/use-cases/refresh-session.use-case";
+import { AuthTokensType } from "@/modules/identity/presentation/graphql/dto/outputs/auth-tokens.output";
+import { ChangePasswordInput } from "@/modules/identity/presentation/graphql/dto/inputs/change-password.input";
+import { LoginInput } from "@/modules/identity/presentation/graphql/dto/inputs/login.input";
+import { LoginResultType } from "@/modules/identity/presentation/graphql/dto/outputs/login-result.output";
+import { ResetPasswordInput } from "@/modules/identity/presentation/graphql/dto/inputs/reset-password.input";
+import { SessionUserType } from "@/modules/identity/presentation/graphql/dto/outputs/session-user.output";
+import { UpdateMyProfileInput } from "@/modules/identity/presentation/graphql/dto/inputs/update-my-profile.input";
+import { VerifyRecoveryCodeInput } from "@/modules/identity/presentation/graphql/dto/inputs/verify-recovery-code.input";
 
-type SessionSubject = Omit<SessionUserType, "permissions">;
+export type SessionSubject = Omit<SessionUserType, "permissions"> & {
+  membershipId: string | null;
+};
 
 @Resolver()
 export class AuthResolver {
@@ -58,8 +54,12 @@ export class AuthResolver {
       refreshToken: result.refreshToken,
       refreshTokenExpiresAt: result.refreshTokenExpiresAt,
       user: await this.toSessionUser({
-        ...result.user,
+        id: result.user.id,
+        name: result.user.name,
+        username: result.user.username,
+        email: result.user.email,
         mustChangePassword: result.mustChangePassword,
+        ...result.context,
       }),
     };
   }
@@ -107,8 +107,9 @@ export class AuthResolver {
   ): Promise<SessionUserType> {
     const updated = await this.updateOwnProfile.execute(user, input);
     return this.toSessionUser({
-      ...updated,
-      mustChangePassword: user.mustChangePassword,
+      ...user,
+      name: updated.name,
+      email: updated.email,
     });
   }
 
@@ -155,8 +156,10 @@ export class AuthResolver {
       username: subject.username,
       email: subject.email,
       group: subject.group,
+      platformAdmin: subject.platformAdmin,
       mustChangePassword: subject.mustChangePassword,
       permissions: matrix.effective,
+      condominiumId: subject.condominiumId,
     };
   }
 }

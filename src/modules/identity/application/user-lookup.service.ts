@@ -1,6 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { UserGroup } from "@/modules/access-control/domain/user-group";
 import {
+  MEMBERSHIP_REPOSITORY,
+  type MembershipRepositoryPort,
+} from "@/modules/identity/application/ports/membership-repository.port";
+import {
   USER_REPOSITORY,
   type UserRepositoryPort,
 } from "@/modules/identity/application/ports/user-repository.port";
@@ -21,14 +25,27 @@ export type UserSummary = {
 export class UserLookupService {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepositoryPort,
+    @Inject(MEMBERSHIP_REPOSITORY)
+    private readonly memberships: MembershipRepositoryPort,
   ) {}
 
-  /** Every enabled account (announcements to everyone). */
-  activeUserIds(): Promise<string[]> {
-    return this.users.listActiveIds();
+  /**
+   * Members of a condominium who can be reached (active membership, active
+   * account), optionally only one role (e.g. its managers).
+   */
+  activeMemberIds(condominiumId: string, role?: UserGroup): Promise<string[]> {
+    return this.memberships.activeUserIds(condominiumId, role);
   }
 
-  /** Enabled accounts of one group (e.g. who reviews new sign-ups). */
+  /** Whether this e-mail's account already belongs to the condominium. */
+  async isMemberEmail(email: string, condominiumId: string): Promise<boolean> {
+    const user = await this.users.findByEmail(email);
+    return Boolean(
+      user && (await this.memberships.find(user.id, condominiumId)),
+    );
+  }
+
+  /** Enabled accounts of an account-level group (e.g. platform admins). */
   activeUserIdsInGroup(group: UserGroup): Promise<string[]> {
     return this.users.listActiveIds(group);
   }

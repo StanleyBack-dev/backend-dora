@@ -9,7 +9,17 @@ export type AuthenticatedUser = {
   name: string;
   username: string;
   email: string;
+  /**
+   * Group in the current context: the role in the session's condominium,
+   * ADMIN_MASTER for the platform administrator, USER outside a condominium.
+   */
   group: UserGroup;
+  /** Runs the platform (account-level ADMIN_MASTER). */
+  platformAdmin: boolean;
+  /** The condominium this session works in (null: none chosen/available). */
+  condominiumId: string | null;
+  /** The caller's membership there (null: none, e.g. the platform admin). */
+  membershipId: string | null;
   mustChangePassword: boolean;
   /** End user's address as forwarded by the BFF (for the audit trail). */
   ipAddress: string | null;

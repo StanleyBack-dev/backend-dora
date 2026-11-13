@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { AppException } from "@/common/exceptions/app-exception";
-import { PublicEnrollmentUseCase } from "@/modules/enrollment/application/enrollment.use-cases";
+import type { CondominiumLookupService } from "@/modules/condominiums/application/condominium-lookup.service";
+import { PublicEnrollmentUseCase } from "@/modules/enrollment/application/use-cases/public-enrollment.use-case";
 import type { EnrollmentRepositoryPort } from "@/modules/enrollment/application/ports/enrollment-repository.port";
 import type { EnrollmentInvite } from "@/modules/enrollment/domain/enrollment";
 import type { SecretsPort } from "@/modules/identity/application/ports/secrets.port";
@@ -24,10 +25,20 @@ const secrets: SecretsPort = {
     a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b)),
 };
 
-function setup(invite: Partial<EnrollmentInvite> = {}) {
+type Setup = {
+  invite?: Partial<EnrollmentInvite>;
+  /** Active managers of the condominium. */
+  managers?: string[];
+  units?: { id: string; block: string; number: string }[];
+  status?: "ACTIVE" | "SUSPENDED";
+};
+
+function setup(options: Setup = {}) {
   let now = NOW;
+  const units = options.units ?? [];
   const stored: EnrollmentInvite = {
     id: "invite-1",
+    condominiumId: "condo-1",
     code: "123456",
     label: "Bloco A",
     expiresAt: new Date(NOW.getTime() + 86_400_000),
@@ -35,7 +46,7 @@ function setup(invite: Partial<EnrollmentInvite> = {}) {
     createdBy: "admin",
     createdAt: NOW,
     requestCount: 0,
-    ...invite,
+    ...options.invite,
   };
   const created: unknown[] = [];
   const notices: OutboxDraft[] = [];
@@ -60,9 +71,26 @@ function setup(invite: Partial<EnrollmentInvite> = {}) {
     purgeEndedBefore: async () => 0,
   };
   const users = {
-    isTaken: async () => false,
-    activeUserIdsInGroup: async () => ["master-1", "master-2"],
+    isMemberEmail: async () => false,
+    activeMemberIds: async (condominiumId: string) =>
+      condominiumId === "condo-1"
+        ? (options.managers ?? ["manager-1", "manager-2"])
+        : [],
+    activeUserIdsInGroup: async () => ["master-1"],
   } as unknown as UserLookupService;
+  const condominiums = {
+    find: async (id: string) =>
+      id === "condo-1"
+        ? {
+            id,
+            name: "Residencial Aurora",
+            status: options.status ?? "ACTIVE",
+          }
+        : null,
+    unitsOf: async () => units,
+    unitIn: async (_condominiumId: string, unitId: string) =>
+      units.find((unit) => unit.id === unitId) ?? null,
+  } as unknown as CondominiumLookupService;
   const files: { key: string; type: string; bytes: number }[] = [];
   const storage = {
     put: async (key: string, body: Buffer, type: string) => {
@@ -79,6 +107,7 @@ function setup(invite: Partial<EnrollmentInvite> = {}) {
     storage,
     users,
     { kick: () => (kicks += 1) } as unknown as OutboxDispatcher,
+    condominiums,
   );
   return {
     useCase,
@@ -108,27 +137,77 @@ describe("PublicEnrollmentUseCase", () => {
         email: "joao@example.com",
         phone: "62999991234",
         inviteId: "invite-1",
+        condominiumId: "condo-1",
+        unitId: null,
       }),
     ]);
   });
 
-  it("notifies every active ADMIN_MASTER by app and e-mail", async () => {
+  it("tells the form which condominium and units it is for", async () => {
+    const { useCase } = setup({
+      units: [
+        { id: "unit-1", block: "Bloco A", number: "101" },
+        { id: "unit-2", block: "", number: "Casa 3" },
+      ],
+    });
+    const token = await useCase.verify("123456", null);
+    await expect(useCase.form(token)).resolves.toEqual({
+      condominiumName: "Residencial Aurora",
+      units: [
+        { id: "unit-1", label: "Bloco A · 101" },
+        { id: "unit-2", label: "Casa 3" },
+      ],
+    });
+  });
+
+  it("requires a unit of the condominium when it has units", async () => {
+    const { useCase, created } = setup({
+      units: [{ id: "unit-1", block: "A", number: "101" }],
+    });
+    const token = await useCase.verify("123456", null);
+    await expect(useCase.submit(token, form, true, null)).rejects.toThrow(
+      "Escolha a sua unidade",
+    );
+    await expect(
+      useCase.submit(token, { ...form, unitId: "other" }, true, null),
+    ).rejects.toThrow("Escolha a sua unidade");
+    await useCase.submit(token, { ...form, unitId: "unit-1" }, true, null);
+    expect(created).toEqual([expect.objectContaining({ unitId: "unit-1" })]);
+  });
+
+  it("takes no sign-up for a suspended condominium", async () => {
+    const { useCase } = setup({ status: "SUSPENDED" });
+    await expect(useCase.verify("123456", null)).rejects.toBeInstanceOf(
+      AppException,
+    );
+  });
+
+  it("falls back to the platform when the condominium has no manager", async () => {
+    const { useCase, notices } = setup({ managers: [] });
+    const token = await useCase.verify("123456", null);
+    await useCase.submit(token, form, true, null);
+    expect(notices).toEqual([
+      expect.objectContaining({ dedupeKey: "enrollment:request-1:master-1" }),
+    ]);
+  });
+
+  it("notifies the condominium's managers by app and e-mail", async () => {
     const { useCase, notices, kicks } = setup();
     const token = await useCase.verify("123456", null);
     await useCase.submit(token, form, true, null);
     expect(notices).toEqual([
       expect.objectContaining({
         topic: "notification.deliver",
-        dedupeKey: "enrollment:request-1:master-1",
+        dedupeKey: "enrollment:request-1:manager-1",
         payload: expect.objectContaining({
-          userId: "master-1",
+          userId: "manager-1",
           type: "ENROLLMENT_SUBMITTED",
           link: "/admin/cadastros",
           email: expect.objectContaining({ ctaLabel: "Analisar cadastro" }),
         }),
       }),
       expect.objectContaining({
-        dedupeKey: "enrollment:request-1:master-2",
+        dedupeKey: "enrollment:request-1:manager-2",
       }),
     ]);
     expect(kicks()).toBe(1);

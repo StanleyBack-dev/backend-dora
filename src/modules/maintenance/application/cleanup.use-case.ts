@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { IdentityMaintenanceService } from "@/modules/identity/application/identity-maintenance.service";
-import { NotificationsUseCase } from "@/modules/notifications/application/notifications.use-cases";
+import { NotificationsUseCase } from "@/modules/notifications/application/use-cases/notifications.use-case";
 import { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
 import { SystemLogsService } from "@/modules/system-logs/application/system-logs.service";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";

@@ -30,6 +30,9 @@ export class SessionOrmEntity {
   @Column({ name: "ip_address", type: "varchar", length: 64, nullable: true })
   ipAddress!: string | null;
 
+  @Column({ name: "idtb_condominiums", type: "uuid", nullable: true })
+  condominiumId!: string | null;
+
   @Column({ name: "user_agent", type: "varchar", length: 512, nullable: true })
   userAgent!: string | null;
 

@@ -17,6 +17,10 @@ type PrincipalRow = {
   group: Principal["group"];
   active: boolean;
   must_change_password: boolean;
+  condominium_id: string | null;
+  condominium_status: "ACTIVE" | "SUSPENDED" | null;
+  membership_id: string | null;
+  membership_role: Principal["group"] | null;
 };
 
 @Injectable()
@@ -27,10 +31,19 @@ export class PrincipalTypeormReader implements PrincipalReaderPort {
     const rows: PrincipalRow[] = await this.dataSource.query(
       `SELECT s.idtb_sessions AS session_id, s.revoked_at, s.expires_at,
               u.idtb_users AS user_id, u.name, u.username, u.email, u."group",
-              u.active, c.must_change_password
+              u.active, c.must_change_password,
+              s.idtb_condominiums AS condominium_id,
+              cd.status AS condominium_status,
+              m.idtb_memberships AS membership_id, m.role AS membership_role
          FROM tb_sessions s
          JOIN tb_users u ON u.idtb_users = s.idtb_users
          JOIN tb_auth_credentials c ON c.idtb_users = u.idtb_users
+         LEFT JOIN tb_condominiums cd
+           ON cd.idtb_condominiums = s.idtb_condominiums
+         LEFT JOIN tb_memberships m
+           ON m.idtb_users = u.idtb_users
+          AND m.idtb_condominiums = s.idtb_condominiums
+          AND m.active
         WHERE s.idtb_sessions = $1`,
       [sessionId],
     );
@@ -47,6 +60,13 @@ export class PrincipalTypeormReader implements PrincipalReaderPort {
       group: row.group,
       active: row.active,
       mustChangePassword: row.must_change_password,
+      tenant: {
+        accountGroup: row.group,
+        condominiumId: row.condominium_id,
+        condominiumStatus: row.condominium_status,
+        membershipId: row.membership_id,
+        membershipRole: row.membership_role,
+      },
     };
   }
 }

@@ -1,32 +1,30 @@
 import { Args, ID, Mutation, Query, Resolver } from "@nestjs/graphql";
-import { ParseUUIDPipe } from "@nestjs/common";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
+import { UuidArg } from "@/common/graphql/uuid-arg.pipe";
 import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { PageInput } from "@/common/graphql/pagination.graphql";
 import { Permission } from "@/modules/access-control/domain/permission";
 import type { PermissionMatrix } from "@/modules/access-control/domain/permission-policy";
 import { RequirePermissions } from "@/modules/access-control/presentation/decorators/require-permissions.decorator";
-import { PermissionMatrixType } from "@/modules/access-control/presentation/graphql/access-control.graphql-types";
-import type { UserAccount } from "@/modules/identity/application/ports/user-repository.port";
-import {
-  ManageUsersUseCase,
-  UserDirectoryUseCase,
-  UserPermissionsUseCase,
-  type TemporaryAccess,
-} from "@/modules/identity/application/use-cases/manage-users.use-cases";
-import {
-  CreateUserInput,
-  SetUserPermissionsInput,
-  TemporaryAccessType,
-  UpdateUserInput,
-  UserAccountPage,
-  UserAccountType,
-  UserFilterInput,
-} from "@/modules/identity/presentation/graphql/identity.graphql-types";
+import { PermissionMatrixType } from "@/modules/access-control/presentation/graphql/dto/outputs/permission-matrix.output";
+import { ManageUsersUseCase } from "@/modules/identity/application/use-cases/manage-users.use-case";
+import { UserDirectoryUseCase } from "@/modules/identity/application/use-cases/user-directory.use-case";
+import { UserPermissionsUseCase } from "@/modules/identity/application/use-cases/user-permissions.use-case";
+import { CreateUserInput } from "@/modules/identity/presentation/graphql/dto/inputs/create-user.input";
+import { SetUserPermissionsInput } from "@/modules/identity/presentation/graphql/dto/inputs/set-user-permissions.input";
+import { TemporaryAccessType } from "@/modules/identity/presentation/graphql/dto/outputs/temporary-access.output";
+import { UpdateUserInput } from "@/modules/identity/presentation/graphql/dto/inputs/update-user.input";
+import { UserAccountPage } from "@/modules/identity/presentation/graphql/dto/outputs/user-account-page.output";
+import { UserAccountType } from "@/modules/identity/presentation/graphql/dto/outputs/user-account.output";
+import { UserFilterInput } from "@/modules/identity/presentation/graphql/dto/inputs/user-filter.input";
 import type { Paginated } from "@/shared/application/pagination";
+import {
+  toAccountType,
+  toAccessType,
+} from "@/modules/identity/presentation/graphql/user-account.mapper";
 
-const UserId = () => new ParseUUIDPipe({ version: "4" });
-
+// Members of the session's condominium. Every operation is scoped to it by
+// the use cases (the condominium comes from the session, never the input).
 @Resolver()
 export class UsersAdminResolver {
   constructor(
@@ -36,88 +34,100 @@ export class UsersAdminResolver {
   ) {}
 
   @RequirePermissions(Permission.USERS_MANAGE)
-  @Query(() => UserAccountPage)
-  users(
+  @Query(() => UserAccountPage, { description: "Membros do condomínio." })
+  async users(
+    @CurrentUser() actor: AuthenticatedUser,
     @Args("filter", { nullable: true }) filter?: UserFilterInput,
     @Args("page", { nullable: true }) page?: PageInput,
-  ): Promise<Paginated<UserAccount>> {
-    return this.directory.list(filter ?? {}, page ?? { page: 1, limit: 20 });
+  ): Promise<Paginated<UserAccountType>> {
+    const found = await this.directory.list(
+      actor,
+      filter ?? {},
+      page ?? { page: 1, limit: 20 },
+    );
+    return { ...found, items: found.items.map(toAccountType) };
   }
 
   @RequirePermissions(Permission.USERS_MANAGE)
   @Query(() => UserAccountType)
-  user(@Args("id", { type: () => ID }, UserId()) id: string) {
-    return this.directory.get(id);
+  async user(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Args("id", { type: () => ID }, UuidArg()) id: string,
+  ): Promise<UserAccountType> {
+    return toAccountType(await this.directory.get(actor, id));
   }
 
   @RequirePermissions(Permission.USERS_MANAGE)
   @Mutation(() => TemporaryAccessType, {
-    description: "Cria o usuário com senha temporária (enviada por e-mail).",
+    description:
+      "Adiciona ao condomínio. Conta nova: senha temporária (também por e-mail). E-mail já cadastrado: só ganha acesso.",
   })
-  createUser(
+  async createUser(
     @CurrentUser() actor: AuthenticatedUser,
     @Args("input") input: CreateUserInput,
-  ): Promise<TemporaryAccess> {
-    return this.manage.create(actor, input);
+  ): Promise<TemporaryAccessType> {
+    return toAccessType(await this.manage.create(actor, input));
   }
 
   @RequirePermissions(Permission.USERS_MANAGE)
   @Mutation(() => UserAccountType)
-  updateUser(
+  async updateUser(
     @CurrentUser() actor: AuthenticatedUser,
-    @Args("id", { type: () => ID }, UserId()) id: string,
+    @Args("id", { type: () => ID }, UuidArg()) id: string,
     @Args("input") input: UpdateUserInput,
-  ): Promise<UserAccount> {
-    return this.manage.update(actor, id, input);
+  ): Promise<UserAccountType> {
+    return toAccountType(await this.manage.update(actor, id, input));
   }
 
   @RequirePermissions(Permission.USERS_MANAGE)
   @Mutation(() => UserAccountType, {
-    description: "Ativa ou desativa o acesso. Desativar encerra as sessões.",
+    description:
+      "Ativa ou desativa o acesso a este condomínio (a conta e outros condomínios não mudam).",
   })
-  setUserActive(
+  async setUserActive(
     @CurrentUser() actor: AuthenticatedUser,
-    @Args("id", { type: () => ID }, UserId()) id: string,
+    @Args("id", { type: () => ID }, UuidArg()) id: string,
     @Args("active") active: boolean,
-  ): Promise<UserAccount> {
-    return this.manage.setActive(actor, id, active);
+  ): Promise<UserAccountType> {
+    return toAccountType(await this.manage.setActive(actor, id, active));
   }
 
   @RequirePermissions(Permission.USERS_MANAGE)
   @Mutation(() => TemporaryAccessType, {
     description: "Gera nova senha temporária e encerra as sessões do usuário.",
   })
-  resetUserPassword(
+  async resetUserPassword(
     @CurrentUser() actor: AuthenticatedUser,
-    @Args("id", { type: () => ID }, UserId()) id: string,
-  ): Promise<TemporaryAccess> {
-    return this.manage.resetPassword(actor, id);
+    @Args("id", { type: () => ID }, UuidArg()) id: string,
+  ): Promise<TemporaryAccessType> {
+    return toAccessType(await this.manage.resetPassword(actor, id));
   }
 
   @RequirePermissions(Permission.USERS_MANAGE)
   @Mutation(() => UserAccountType)
-  unlockUser(
+  async unlockUser(
     @CurrentUser() actor: AuthenticatedUser,
-    @Args("id", { type: () => ID }, UserId()) id: string,
-  ): Promise<UserAccount> {
-    return this.manage.unlock(actor, id);
+    @Args("id", { type: () => ID }, UuidArg()) id: string,
+  ): Promise<UserAccountType> {
+    return toAccountType(await this.manage.unlock(actor, id));
   }
 
   @RequirePermissions(Permission.USERS_MANAGE)
   @Mutation(() => UserAccountType)
-  revokeUserSessions(
+  async revokeUserSessions(
     @CurrentUser() actor: AuthenticatedUser,
-    @Args("id", { type: () => ID }, UserId()) id: string,
-  ): Promise<UserAccount> {
-    return this.manage.revokeSessions(actor, id);
+    @Args("id", { type: () => ID }, UuidArg()) id: string,
+  ): Promise<UserAccountType> {
+    return toAccountType(await this.manage.revokeSessions(actor, id));
   }
 
   @RequirePermissions(Permission.PERMISSIONS_MANAGE)
   @Query(() => PermissionMatrixType)
   userPermissions(
-    @Args("id", { type: () => ID }, UserId()) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Args("id", { type: () => ID }, UuidArg()) id: string,
   ): Promise<PermissionMatrix> {
-    return this.permissionsUseCase.get(id);
+    return this.permissionsUseCase.get(actor, id);
   }
 
   @RequirePermissions(Permission.PERMISSIONS_MANAGE)

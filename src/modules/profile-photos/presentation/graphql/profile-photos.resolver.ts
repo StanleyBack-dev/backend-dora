@@ -7,7 +7,7 @@ import {
 } from "@nestjs/graphql";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { CurrentUser } from "@/common/decorators/current-user.decorator";
-import { SessionUserType } from "@/modules/identity/presentation/graphql/identity.graphql-types";
+import { SessionUserType } from "@/modules/identity/presentation/graphql/dto/outputs/session-user.output";
 import { OwnPhotoUseCase } from "@/modules/profile-photos/application/own-photo.use-case";
 
 @Resolver(() => SessionUserType)

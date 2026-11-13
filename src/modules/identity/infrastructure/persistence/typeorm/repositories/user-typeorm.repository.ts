@@ -8,17 +8,19 @@ import {
   type DataSource,
   type Repository,
 } from "typeorm";
-import type { UserGroup } from "@/modules/access-control/domain/user-group";
+import { UserGroup } from "@/modules/access-control/domain/user-group";
+import type { NewMembership } from "@/modules/identity/application/ports/membership-repository.port";
 import type {
+  MemberAccount,
   NewCredential,
   NewUser,
-  UserAccount,
   UserFilter,
   UserPatch,
   UserRepositoryPort,
 } from "@/modules/identity/application/ports/user-repository.port";
 import type { User } from "@/modules/identity/domain/user";
 import { CredentialOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/credential.orm-entity";
+import { MembershipOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/membership.orm-entity";
 import { UserOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/user.orm-entity";
 import {
   paginate,
@@ -41,9 +43,16 @@ const toUser = (row: UserOrmEntity): User => ({
   onboardingCompletedAt: row.onboardingCompletedAt,
 });
 
-type AccountRaw = {
+type MemberRaw = {
   credential_must_change_password: boolean | null;
   credential_locked_until: Date | null;
+  membership_id: string;
+  membership_role: UserGroup;
+  membership_active: boolean;
+  membership_unit_id: string | null;
+  unit_block: string | null;
+  unit_number: string | null;
+  other_memberships: string | number;
 };
 
 const escapeLike = (value: string) => value.replace(/[\\%_]/g, "\\$&");
@@ -80,16 +89,25 @@ export class UserTypeormRepository implements UserRepositoryPort {
     return row ? toUser(row) : null;
   }
 
-  async findAccount(id: string): Promise<UserAccount | null> {
-    const { items } = await this.queryAccounts({}, { page: 1, limit: 1 }, id);
+  async findMember(
+    condominiumId: string,
+    userId: string,
+  ): Promise<MemberAccount | null> {
+    const { items } = await this.queryMembers(
+      condominiumId,
+      {},
+      { page: 1, limit: 1 },
+      userId,
+    );
     return items[0] ?? null;
   }
 
-  listAccounts(
+  listMembers(
+    condominiumId: string,
     filter: UserFilter,
     page: PageRequest,
-  ): Promise<Paginated<UserAccount>> {
-    return this.queryAccounts(filter, page);
+  ): Promise<Paginated<MemberAccount>> {
+    return this.queryMembers(condominiumId, filter, page);
   }
 
   countActiveInGroup(group: UserGroup): Promise<number> {
@@ -116,6 +134,7 @@ export class UserTypeormRepository implements UserRepositoryPort {
   createWithCredential(
     user: NewUser,
     credential: NewCredential,
+    membership?: Omit<NewMembership, "userId">,
   ): Promise<User> {
     return this.dataSource.transaction(async (manager) => {
       const users = manager.getRepository(UserOrmEntity);
@@ -125,6 +144,11 @@ export class UserTypeormRepository implements UserRepositoryPort {
         passwordHash: credential.passwordHash,
         mustChangePassword: credential.mustChangePassword,
       });
+      if (membership) {
+        await manager
+          .getRepository(MembershipOrmEntity)
+          .insert({ ...membership, userId: saved.id });
+      }
       return toUser(saved);
     });
   }
@@ -146,32 +170,62 @@ export class UserTypeormRepository implements UserRepositoryPort {
     await this.repository.update({ id }, { lastLoginAt: at });
   }
 
-  private async queryAccounts(
+  // Units come from tb_units (condominiums module), read-only.
+  private async queryMembers(
+    condominiumId: string,
     filter: UserFilter,
     page: PageRequest,
-    id?: string,
-  ): Promise<Paginated<UserAccount>> {
+    userId?: string,
+  ): Promise<Paginated<MemberAccount>> {
     const query = this.repository
-      .createQueryBuilder("user")
+      .createQueryBuilder("account")
+      .innerJoin(
+        MembershipOrmEntity,
+        "membership",
+        "membership.idtb_users = account.idtb_users AND membership.idtb_condominiums = :condominiumId",
+        { condominiumId },
+      )
+      .leftJoin("tb_units", "unit", "unit.idtb_units = membership.idtb_units")
       .leftJoin(
         CredentialOrmEntity,
         "credential",
-        "credential.idtb_users = user.idtb_users",
+        "credential.idtb_users = account.idtb_users",
       )
       .addSelect(
         "credential.must_change_password",
         "credential_must_change_password",
       )
       .addSelect("credential.locked_until", "credential_locked_until")
-      .orderBy("user.active", "DESC")
-      .addOrderBy("user.name", "ASC")
+      .addSelect("membership.idtb_memberships", "membership_id")
+      .addSelect("membership.role", "membership_role")
+      .addSelect("membership.active", "membership_active")
+      .addSelect("membership.idtb_units", "membership_unit_id")
+      .addSelect("unit.block", "unit_block")
+      .addSelect("unit.number", "unit_number")
+      .addSelect(
+        `(SELECT count(*) FROM tb_memberships other
+            WHERE other.idtb_users = account.idtb_users
+              AND other.idtb_condominiums <> :condominiumId)`,
+        "other_memberships",
+      )
+      .orderBy("membership.active", "DESC")
+      .addOrderBy("account.name", "ASC")
       .skip((page.page - 1) * page.limit)
       .take(page.limit);
 
-    if (id) query.andWhere("user.idtb_users = :id", { id });
-    if (filter.group) query.andWhere("user.group = :group", filter);
-    if (filter.active !== undefined) {
-      query.andWhere("user.active = :active", filter);
+    if (userId) query.andWhere("account.idtb_users = :userId", { userId });
+    if (filter.group) {
+      query.andWhere("membership.role = :role", { role: filter.group });
+    }
+    if (filter.active === true) {
+      query.andWhere("membership.active AND account.active");
+    } else if (filter.active === false) {
+      query.andWhere("NOT (membership.active AND account.active)");
+    }
+    if (filter.unitId) {
+      query.andWhere("membership.idtb_units = :unitId", {
+        unitId: filter.unitId,
+      });
     }
     const search = filter.search?.trim();
     if (search) {
@@ -179,22 +233,35 @@ export class UserTypeormRepository implements UserRepositoryPort {
       query.andWhere(
         new Brackets((where) =>
           where
-            .where("user.name ILIKE :term", { term })
-            .orWhere("user.username ILIKE :term", { term })
-            .orWhere("user.email ILIKE :term", { term }),
+            .where("unaccent(account.name) ILIKE unaccent(:term)", { term })
+            .orWhere("account.username ILIKE :term", { term })
+            .orWhere("account.email ILIKE :term", { term }),
         ),
       );
     }
 
     const [{ entities, raw }, total] = await Promise.all([
-      query.getRawAndEntities<AccountRaw>(),
+      query.getRawAndEntities<MemberRaw>(),
       query.getCount(),
     ]);
-    const items = entities.map((row, index) => ({
-      ...toUser(row),
-      mustChangePassword: raw[index]?.credential_must_change_password ?? false,
-      lockedUntil: raw[index]?.credential_locked_until ?? null,
-    }));
+    const items = entities.map((row, index): MemberAccount => {
+      const extra = raw[index] as MemberRaw;
+      const user = toUser(row);
+      return {
+        ...user,
+        mustChangePassword: extra.credential_must_change_password ?? false,
+        lockedUntil: extra.credential_locked_until ?? null,
+        membershipId: extra.membership_id,
+        role: extra.membership_role,
+        membershipActive: extra.membership_active,
+        unitId: extra.membership_unit_id,
+        unitBlock: extra.unit_block,
+        unitNumber: extra.unit_number,
+        sharedAccount:
+          user.group === UserGroup.ADMIN_MASTER ||
+          Number(extra.other_memberships) > 0,
+      };
+    });
     return paginate(items, total, page);
   }
 }

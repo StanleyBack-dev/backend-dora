@@ -101,10 +101,22 @@ export const identityErrors = {
     status: HttpStatus.CONFLICT,
     message: "Este e-mail já está em uso por outro usuário.",
   },
-  lastAdminMaster: {
-    code: "USER_LAST_ADMIN_MASTER",
+  alreadyMember: {
+    code: "USER_ALREADY_MEMBER",
     status: HttpStatus.CONFLICT,
-    message: "É preciso manter pelo menos um Administrador geral ativo.",
+    message:
+      "Esta pessoa já faz parte do condomínio. Se estiver desativada, reative o acesso dela.",
+  },
+  sharedAccount: {
+    code: "USER_SHARED_ACCOUNT",
+    status: HttpStatus.FORBIDDEN,
+    message:
+      "Esta conta também é usada em outro condomínio: nome, login, e-mail e senha só podem ser alterados pela própria pessoa ou pela administração do Dora.",
+  },
+  noUsername: {
+    code: "USER_NO_USERNAME",
+    status: HttpStatus.CONFLICT,
+    message: "Não foi possível gerar um login livre. Informe um manualmente.",
   },
   invalidPhoto: {
     code: "USER_INVALID_PHOTO",

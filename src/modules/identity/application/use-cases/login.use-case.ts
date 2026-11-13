@@ -9,6 +9,10 @@ import {
   type CredentialRepositoryPort,
 } from "@/modules/identity/application/ports/credential-repository.port";
 import {
+  MEMBERSHIP_REPOSITORY,
+  type MembershipRepositoryPort,
+} from "@/modules/identity/application/ports/membership-repository.port";
+import {
   PASSWORD_HASHER,
   type PasswordHasherPort,
 } from "@/modules/identity/application/ports/password-hasher.port";
@@ -30,6 +34,10 @@ import {
   isLocked,
   UNLOCKED,
 } from "@/modules/identity/domain/lockout-policy";
+import {
+  resolveTenantContext,
+  type TenantContext,
+} from "@/modules/identity/domain/membership";
 import type { User } from "@/modules/identity/domain/user";
 import {
   isEmailLogin,
@@ -41,6 +49,8 @@ import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
 export type LoginResult = IssuedTokens & {
   user: User;
   mustChangePassword: boolean;
+  /** Where the new session works (its condominium and role there). */
+  context: TenantContext;
 };
 
 @Injectable()
@@ -54,6 +64,8 @@ export class LoginUseCase {
     @Inject(CREDENTIAL_REPOSITORY)
     private readonly credentials: CredentialRepositoryPort,
     @Inject(PASSWORD_HASHER) private readonly hasher: PasswordHasherPort,
+    @Inject(MEMBERSHIP_REPOSITORY)
+    private readonly memberships: MembershipRepositoryPort,
     @Inject(SECRETS) private readonly secrets: SecretsPort,
     @Inject(CLOCK) private readonly clock: ClockPort,
     private readonly sessionTokens: SessionTokensService,
@@ -122,11 +134,24 @@ export class LoginUseCase {
     }
     await this.users.touchLastLogin(user.id, now);
 
-    const tokens = await this.sessionTokens.open(user.id, meta);
+    // The session opens in the condominium the person used last (only
+    // active memberships of active condominiums are candidates).
+    const condominiumId = await this.memberships.defaultCondominiumId(user.id);
+    const membership = condominiumId
+      ? await this.memberships.find(user.id, condominiumId)
+      : null;
+    const tokens = await this.sessionTokens.open(user.id, meta, condominiumId);
     return {
       ...tokens,
       user,
       mustChangePassword: credential.mustChangePassword,
+      context: resolveTenantContext({
+        accountGroup: user.group,
+        condominiumId,
+        condominiumStatus: condominiumId ? "ACTIVE" : null,
+        membershipId: membership?.id ?? null,
+        membershipRole: membership?.role ?? null,
+      }),
     };
   }
 

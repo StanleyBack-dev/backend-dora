@@ -1,7 +1,7 @@
 import type { UserGroup } from "@/modules/access-control/domain/user-group";
 
-// An announcement (comunicado) from a manager to a group of people: every
-// active account, or everyone in one access group.
+// An announcement (comunicado) from a manager to the members of their
+// condominium: everyone, or everyone with one role (residents or managers).
 
 export enum BroadcastAudience {
   TODOS = "TODOS",
@@ -10,10 +10,11 @@ export enum BroadcastAudience {
 
 export type Broadcast = {
   id: string;
+  condominiumId: string;
   title: string;
   body: string;
   audience: BroadcastAudience;
-  /** Target access group (only when the audience is GRUPO). */
+  /** Target role (only when the audience is GRUPO): USER or ADMIN. */
   targetGroup: UserGroup | null;
   sendEmail: boolean;
   recipients: number;

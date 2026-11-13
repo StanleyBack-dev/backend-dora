@@ -40,7 +40,11 @@ export class SessionTokensService {
   ) {}
 
   /** Opens a new session (one per login/device) and issues its tokens. */
-  async open(userId: string, meta: RequestMeta): Promise<IssuedTokens> {
+  async open(
+    userId: string,
+    meta: RequestMeta,
+    condominiumId: string | null,
+  ): Promise<IssuedTokens> {
     const sessionId = randomUUID();
     const secret = this.secrets.randomToken();
     const expiresAt = this.refreshExpiry();
@@ -52,6 +56,7 @@ export class SessionTokensService {
       expiresAt,
       ipAddress: meta.ipAddress?.slice(0, 64) ?? null,
       userAgent: meta.userAgent?.slice(0, 512) ?? null,
+      condominiumId,
     });
 
     return this.issue(userId, sessionId, secret, expiresAt);

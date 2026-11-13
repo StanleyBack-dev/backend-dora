@@ -17,7 +17,7 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
-"""Comunicado enviado por um gestor."""
+"""Comunicado enviado por um gestor aos membros do condomínio."""
 type Broadcast {
   id: ID!
   title: String!
@@ -50,81 +50,69 @@ enum UserGroup {
   ADMIN_MASTER
 }
 
-"""Painel do gestor."""
+"""Condomínio cliente, como o console da plataforma o mostra."""
+type Condominium {
+  id: ID!
+  name: String!
+
+  """CNPJ (só dígitos)."""
+  document: String
+  city: String!
+  state: String!
+  status: CondominiumStatus!
+
+  """Membros ativos."""
+  activeMembers: Int!
+
+  """Gestores ativos."""
+  managers: Int!
+  units: Int!
+
+  """Cadastros aguardando aprovação."""
+  pendingEnrollments: Int!
+
+  """Último login de algum membro."""
+  lastActivityAt: DateTime
+  createdAt: DateTime!
+}
+
+"""Situação do condomínio na plataforma."""
+enum CondominiumStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+"""Unidade (apartamento, casa)."""
+type Unit {
+  id: ID!
+
+  """Bloco ou torre ("" quando não há)."""
+  block: String!
+  number: String!
+
+  """Como exibir: "Bloco A · 101"."""
+  label: String!
+
+  """Membros ativos vinculados."""
+  residents: Int!
+}
+
+"""Painel do gestor do condomínio."""
 type Dashboard {
-  """Contas ativas."""
+  """Membros com acesso ativo."""
   activeUsers: Int!
 
   """Cadastros aguardando aprovação."""
   pendingEnrollments: Int!
 
-  """Pedidos de suporte sem resposta."""
-  openSupportRequests: Int!
+  """Unidades cadastradas."""
+  units: Int!
 
-  """Notificações que falharam de vez."""
-  failedNotifications: Int!
-}
+  """Pedidos de suporte sem resposta (só a plataforma vê)."""
+  openSupportRequests: Int
 
-type PermissionOverride {
-  permission: Permission!
-  allowed: Boolean!
-}
-
-"""Capacidade verificada pela API."""
-enum Permission {
-  DASHBOARD_READ
-  NOTIFICATIONS_BROADCAST
-  USERS_MANAGE
-  PERMISSIONS_MANAGE
-  AUDIT_READ
-  SUPPORT_MANAGE
-}
-
-type PermissionMatrix {
-  """O que o usuário pode fazer (padrão do grupo + exceções)."""
-  effective: [Permission!]!
-
-  """O que o grupo concede."""
-  defaults: [Permission!]!
-
-  """Exceções do usuário em relação ao grupo."""
-  overrides: [PermissionOverride!]!
-}
-
-"""Usuário da sessão atual."""
-type SessionUser {
-  id: ID!
-  name: String!
-  username: String!
-  email: String!
-  group: UserGroup!
-
-  """Precisa trocar a senha temporária antes de usar o app."""
-  mustChangePassword: Boolean!
-
-  """Permissões efetivas."""
-  permissions: [Permission!]!
-
-  """Já viu (ou pulou) a apresentação guiada do app."""
-  onboardingCompleted: Boolean!
-
-  """Link temporário da foto de perfil (null: sem foto)."""
-  photoUrl: String
-}
-
-type AuthTokens {
-  accessToken: String!
-  accessTokenExpiresAt: DateTime!
-  refreshToken: String!
-  refreshTokenExpiresAt: DateTime!
-}
-
-type LoginResult {
-  accessToken: String!
-  accessTokenExpiresAt: DateTime!
-  refreshToken: String!
-  refreshTokenExpiresAt: DateTime!
-  user: SessionUser!
+  """Notificações que falharam de vez (só a plataforma vê)."""
+  failedNotifications: Int
 }
 
 """Usuário visto pela administração."""
@@ -133,8 +121,21 @@ type UserAccount {
   name: String!
   email: String!
   username: String!
+
+  """Papel no condomínio atual."""
   group: UserGroup!
+
+  """Acesso ativo neste condomínio."""
   active: Boolean!
+  unitId: ID
+
+  """Unidade: "Bloco A · 101"."""
+  unitLabel: String
+
+  """
+  A conta também é usada fora deste condomínio: os dados de login só mudam pela própria pessoa ou pela plataforma.
+  """
+  sharedAccount: Boolean!
 
   """Ainda não trocou a senha temporária."""
   mustChangePassword: Boolean!
@@ -149,21 +150,47 @@ type UserAccount {
   locked: Boolean!
 }
 
-type UserAccountPage {
-  items: [UserAccount!]!
-  total: Int!
-  page: Int!
-  limit: Int!
-  totalPages: Int!
-}
-
 """Senha temporária, exibida uma única vez para quem a gerou."""
 type TemporaryAccess {
   user: UserAccount!
-  temporaryPassword: String!
+
+  """Null quando a pessoa já tinha conta no Dora."""
+  temporaryPassword: String
 
   """Se o e-mail com o acesso foi enviado."""
   emailSent: Boolean!
+
+  """A pessoa já tinha conta no Dora: só ganhou acesso a este condomínio."""
+  existingAccount: Boolean!
+}
+
+type EnrollmentRequest {
+  id: ID!
+  status: EnrollmentStatus!
+  fullName: String!
+  email: String!
+  phone: String!
+  unitId: ID
+
+  """Unidade escolhida: "Bloco A · 101"."""
+  unitLabel: String
+  createdAt: DateTime!
+  reviewedAt: DateTime
+  rejectionReason: String
+  userId: ID
+  photoUrl: String
+}
+
+"""Situação do cadastro enviado pelo link público."""
+enum EnrollmentStatus {
+  PENDENTE
+  APROVADA
+  RECUSADA
+}
+
+type EnrollmentApproval {
+  request: EnrollmentRequest!
+  access: TemporaryAccess!
 }
 
 """Código de convite para o formulário público de cadastro."""
@@ -179,26 +206,6 @@ type EnrollmentInvite {
   requestCount: Int!
 }
 
-type EnrollmentRequest {
-  id: ID!
-  status: EnrollmentStatus!
-  fullName: String!
-  email: String!
-  phone: String!
-  createdAt: DateTime!
-  reviewedAt: DateTime
-  rejectionReason: String
-  userId: ID
-  photoUrl: String
-}
-
-"""Situação do cadastro enviado pelo link público."""
-enum EnrollmentStatus {
-  PENDENTE
-  APROVADA
-  RECUSADA
-}
-
 type EnrollmentRequestPage {
   items: [EnrollmentRequest!]!
   total: Int!
@@ -207,9 +214,122 @@ type EnrollmentRequestPage {
   totalPages: Int!
 }
 
-type EnrollmentApproval {
-  request: EnrollmentRequest!
-  access: TemporaryAccess!
+type EnrollmentUnitOption {
+  id: ID!
+  label: String!
+}
+
+"""O que o formulário público mostra depois do código."""
+type EnrollmentForm {
+  condominiumName: String!
+
+  """Unidades para escolher (vazio: o condomínio não tem)."""
+  units: [EnrollmentUnitOption!]!
+}
+
+type AuthTokens {
+  accessToken: String!
+  accessTokenExpiresAt: DateTime!
+  refreshToken: String!
+  refreshTokenExpiresAt: DateTime!
+}
+
+"""Usuário da sessão atual."""
+type SessionUser {
+  id: ID!
+  name: String!
+  username: String!
+  email: String!
+
+  """
+  Grupo no contexto atual: papel no condomínio, ou ADMIN_MASTER (plataforma).
+  """
+  group: UserGroup!
+
+  """Administra a plataforma (todos os condomínios)."""
+  platformAdmin: Boolean!
+
+  """Precisa trocar a senha temporária antes de usar o app."""
+  mustChangePassword: Boolean!
+
+  """Permissões efetivas no condomínio atual."""
+  permissions: [Permission!]!
+
+  """Já viu (ou pulou) a apresentação guiada do app."""
+  onboardingCompleted: Boolean!
+
+  """Condomínio atual (null: nenhum escolhido ou disponível)."""
+  condominium: CurrentCondominium
+
+  """Condomínios que a pessoa pode abrir."""
+  condominiums: [MemberCondominium!]!
+
+  """Link temporário da foto de perfil (null: sem foto)."""
+  photoUrl: String
+}
+
+"""Capacidade verificada pela API."""
+enum Permission {
+  DASHBOARD_READ
+  NOTIFICATIONS_BROADCAST
+  USERS_MANAGE
+  PERMISSIONS_MANAGE
+  UNITS_MANAGE
+  AUDIT_READ
+  SUPPORT_MANAGE
+  CONDOMINIUMS_MANAGE
+}
+
+type LoginResult {
+  accessToken: String!
+  accessTokenExpiresAt: DateTime!
+  refreshToken: String!
+  refreshTokenExpiresAt: DateTime!
+  user: SessionUser!
+}
+
+"""Condomínio em que a sessão está trabalhando."""
+type CurrentCondominium {
+  id: ID!
+  name: String!
+  city: String!
+  state: String!
+  status: CondominiumStatus!
+}
+
+"""Condomínio que a pessoa pode abrir (é membro ativo)."""
+type MemberCondominium {
+  id: ID!
+  name: String!
+  city: String!
+  state: String!
+
+  """Papel nele."""
+  role: UserGroup!
+}
+
+type PermissionOverride {
+  permission: Permission!
+  allowed: Boolean!
+}
+
+type PermissionMatrix {
+  """O que o usuário pode fazer (padrão do grupo + exceções)."""
+  effective: [Permission!]!
+
+  """O que o grupo concede."""
+  defaults: [Permission!]!
+
+  """Exceções do usuário em relação ao grupo."""
+  overrides: [PermissionOverride!]!
+}
+
+type UserAccountPage {
+  items: [UserAccount!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
 }
 
 type Notification {
@@ -256,6 +376,9 @@ type SupportRequest {
   protocol: Int!
   userId: ID!
   userName: String!
+
+  """Condomínio em que a pessoa estava ao pedir ajuda."""
+  condominiumName: String
   category: SupportCategory!
   subject: String!
   message: String!
@@ -302,6 +425,12 @@ type SupportRequestPage {
   totalPages: Int!
 }
 
+type SystemLogSummary {
+  level: String!
+  last24h: Int!
+  last7d: Int!
+}
+
 """Registro do log do sistema."""
 type SystemLog {
   id: ID!
@@ -328,12 +457,6 @@ The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://
 """
 scalar JSON
 
-type SystemLogSummary {
-  level: String!
-  last24h: Int!
-  last7d: Int!
-}
-
 type SystemLogPage {
   items: [SystemLog!]!
   total: Int!
@@ -353,17 +476,26 @@ type Query {
 
   """Últimos 50 comunicados."""
   broadcasts: [Broadcast!]!
-  dashboard: Dashboard!
+  condominiums(filter: CondominiumFilterInput): [Condominium!]!
+  condominium(id: ID!): Condominium!
 
-  """Confere se o token do formulário ainda vale."""
-  enrollmentFormValid(formToken: String!): Boolean!
+  """Unidades do condomínio atual."""
+  units: [Unit!]!
+  dashboard: Dashboard!
   enrollmentInvites: [EnrollmentInvite!]!
   enrollmentRequests(filter: EnrollmentRequestFilterInput, page: PageInput): EnrollmentRequestPage!
 
   """Cadastros aguardando aprovação."""
   pendingEnrollmentCount: Int!
   enrollmentRequest(id: ID!): EnrollmentRequest!
+
+  """
+  Confere se o token do formulário ainda vale e diz o condomínio e as unidades.
+  """
+  enrollmentForm(formToken: String!): EnrollmentForm!
   me: SessionUser!
+
+  """Membros do condomínio."""
   users(filter: UserFilterInput, page: PageInput): UserAccountPage!
   user(id: ID!): UserAccount!
   userPermissions(id: ID!): PermissionMatrix!
@@ -392,6 +524,11 @@ type Query {
   systemLogSummary: [SystemLogSummary!]!
 }
 
+input CondominiumFilterInput {
+  search: String
+  status: CondominiumStatus
+}
+
 input EnrollmentRequestFilterInput {
   status: EnrollmentStatus
   search: String
@@ -406,6 +543,7 @@ input UserFilterInput {
   search: String
   group: UserGroup
   active: Boolean
+  unitId: ID
 }
 
 input SystemLogFilterInput {
@@ -419,6 +557,26 @@ input SystemLogFilterInput {
 
 type Mutation {
   sendBroadcast(input: BroadcastInput!): Broadcast!
+  createCondominium(input: CondominiumInput!): Condominium!
+  updateCondominium(id: ID!, input: CondominiumInput!): Condominium!
+
+  """Suspende ou reativa. Suspenso, ninguém trabalha nele."""
+  setCondominiumStatus(id: ID!, status: CondominiumStatus!): Condominium!
+
+  """Cria várias unidades de um bloco de uma vez."""
+  createUnits(input: CreateUnitsInput!): [Unit!]!
+  updateUnit(id: ID!, input: UpdateUnitInput!): Unit!
+
+  """Exclui a unidade (só sem moradores vinculados)."""
+  deleteUnit(id: ID!): Boolean!
+  createEnrollmentInvite(input: CreateEnrollmentInviteInput!): EnrollmentInvite!
+  revokeEnrollmentInvite(id: ID!): EnrollmentInvite!
+
+  """
+  Aprova o cadastro (com as correções) e dá acesso ao condomínio: cria a conta, ou vincula a conta que já existe com este e-mail.
+  """
+  approveEnrollmentRequest(id: ID!, data: EnrollmentDataInput!, group: UserGroup!): EnrollmentApproval!
+  rejectEnrollmentRequest(id: ID!, reason: String!): EnrollmentRequest!
 
   """
   Confere o código de convite e devolve o token do formulário (vale 60 min).
@@ -427,12 +585,6 @@ type Mutation {
 
   """Envia o cadastro, que aguarda a aprovação da administração."""
   submitEnrollment(input: SubmitEnrollmentInput!): Boolean!
-  createEnrollmentInvite(input: CreateEnrollmentInviteInput!): EnrollmentInvite!
-  revokeEnrollmentInvite(id: ID!): EnrollmentInvite!
-
-  """Aprova o cadastro (com as correções) e cria o usuário."""
-  approveEnrollmentRequest(id: ID!, data: EnrollmentDataInput!, group: UserGroup!): EnrollmentApproval!
-  rejectEnrollmentRequest(id: ID!, reason: String!): EnrollmentRequest!
 
   """Entra com usuário (ou e-mail) e senha."""
   login(input: LoginInput!): LoginResult!
@@ -461,11 +613,20 @@ type Mutation {
   """Marca a apresentação guiada como vista (concluída ou pulada)."""
   completeOnboarding: Boolean!
 
-  """Cria o usuário com senha temporária (enviada por e-mail)."""
+  """
+  Troca o condomínio da sessão. null: sai de todos (visão da plataforma).
+  """
+  switchCondominium(condominiumId: ID): Boolean!
+
+  """
+  Adiciona ao condomínio. Conta nova: senha temporária (também por e-mail). E-mail já cadastrado: só ganha acesso.
+  """
   createUser(input: CreateUserInput!): TemporaryAccess!
   updateUser(id: ID!, input: UpdateUserInput!): UserAccount!
 
-  """Ativa ou desativa o acesso. Desativar encerra as sessões."""
+  """
+  Ativa ou desativa o acesso a este condomínio (a conta e outros condomínios não mudam).
+  """
   setUserActive(id: ID!, active: Boolean!): UserAccount!
 
   """Gera nova senha temporária e encerra as sessões do usuário."""
@@ -521,6 +682,49 @@ input BroadcastInput {
   sendEmail: Boolean!
 }
 
+input CondominiumInput {
+  name: String!
+
+  """CNPJ (opcional)."""
+  document: String
+  city: String!
+
+  """UF."""
+  state: String!
+}
+
+input CreateUnitsInput {
+  """Bloco ou torre."""
+  block: String
+
+  """Números e faixas: "101-104, 201"."""
+  numbers: String!
+}
+
+input UpdateUnitInput {
+  block: String
+  number: String!
+}
+
+input CreateEnrollmentInviteInput {
+  label: String!
+
+  """Validade em dias (1 a 30)."""
+  validDays: Int!
+}
+
+"""Dados do cadastro (formulário ou correção)."""
+input EnrollmentDataInput {
+  fullName: String!
+  email: String!
+  phone: String!
+
+  """
+  Unidade (obrigatória quando o condomínio tem unidades). Na aprovação, ausente mantém a escolhida.
+  """
+  unitId: ID
+}
+
 input SubmitEnrollmentInput {
   formToken: String!
   data: EnrollmentDataInput!
@@ -530,20 +734,6 @@ input SubmitEnrollmentInput {
 
   """Foto de perfil em base64 (JPEG, PNG ou WebP, até 2 MB)."""
   photo: String
-}
-
-"""Dados do cadastro (formulário ou correção)."""
-input EnrollmentDataInput {
-  fullName: String!
-  email: String!
-  phone: String!
-}
-
-input CreateEnrollmentInviteInput {
-  label: String!
-
-  """Validade em dias (1 a 30)."""
-  validDays: Int!
 }
 
 input LoginInput {
@@ -576,9 +766,12 @@ input CreateUserInput {
   name: String!
   email: String!
 
-  """Login: 3 a 32 caracteres (a-z, 0-9, ., -, _)."""
-  username: String!
+  """Login: 3 a 32 caracteres (a-z, 0-9, ., -, _). Vazio: gerado do nome."""
+  username: String
+
+  """USER (morador) ou ADMIN (gestor)."""
   group: UserGroup!
+  unitId: ID
 }
 
 input UpdateUserInput {
@@ -586,6 +779,9 @@ input UpdateUserInput {
   email: String
   username: String
   group: UserGroup
+
+  """Ausente: não muda. null: sem unidade."""
+  unitId: ID
 }
 
 input SetUserPermissionsInput {

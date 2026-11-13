@@ -9,7 +9,7 @@ import { IS_INTERNAL_ROUTE_KEY } from "@/common/decorators/internal-route.decora
 import { IS_PUBLIC_KEY } from "@/common/decorators/public.decorator";
 import { CLIENT_IP_HEADER } from "@/common/decorators/request-meta.decorator";
 import { requestFromContext } from "@/common/http/request-from-context";
-import { AuthenticateUseCase } from "@/modules/identity/application/use-cases/session.use-cases";
+import { AuthenticateUseCase } from "@/modules/identity/application/use-cases/authenticate.use-case";
 
 // Global guard: every operation requires a live session of an active user,
 // unless @Public() or @InternalRoute(). Sets request.user for the guards and

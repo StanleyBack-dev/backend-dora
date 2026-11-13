@@ -13,22 +13,22 @@ export class PermissionOverrideTypeormRepository implements PermissionOverrideRe
     @InjectDataSource() private readonly dataSource: DataSource,
   ) {}
 
-  async findByUser(userId: string): Promise<PermissionOverride[]> {
-    const rows = await this.repository.find({ where: { userId } });
+  async findByMembership(membershipId: string): Promise<PermissionOverride[]> {
+    const rows = await this.repository.find({ where: { membershipId } });
     return rows.map(({ permission, allowed }) => ({ permission, allowed }));
   }
 
-  async replaceForUser(
-    userId: string,
+  async replaceForMembership(
+    membershipId: string,
     overrides: readonly PermissionOverride[],
   ): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
       const repository = manager.getRepository(PermissionOverrideOrmEntity);
-      await repository.delete({ userId });
+      await repository.delete({ membershipId });
       if (overrides.length > 0) {
         await repository.insert(
           overrides.map(({ permission, allowed }) => ({
-            userId,
+            membershipId,
             permission,
             allowed,
           })),

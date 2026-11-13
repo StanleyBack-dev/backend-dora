@@ -13,11 +13,20 @@ import {
 } from "@/modules/access-control/domain/permission-policy";
 import type { UserGroup } from "@/modules/access-control/domain/user-group";
 
-type Subject = { id: string; group: UserGroup };
+/**
+ * Whose permissions: the group someone has in the current context and the
+ * membership that holds their overrides (null outside a condominium, where
+ * only the group's defaults apply).
+ */
+export type PermissionSubject = {
+  membershipId: string | null;
+  group: UserGroup;
+};
 
 // The access-control module's public API. It knows nothing about users
-// beyond id + group: who may change whose access is decided by the caller
-// (identity module) with the management policy from this module's domain.
+// beyond membership + group: who may change whose access is decided by the
+// caller (identity module) with the management policy from this module's
+// domain.
 @Injectable()
 export class PermissionsService {
   constructor(
@@ -25,21 +34,23 @@ export class PermissionsService {
     private readonly overrides: PermissionOverrideRepositoryPort,
   ) {}
 
-  async matrixFor(subject: Subject): Promise<PermissionMatrix> {
+  async matrixFor(subject: PermissionSubject): Promise<PermissionMatrix> {
     return resolvePermissionMatrix(
       subject.group,
-      await this.overrides.findByUser(subject.id),
+      subject.membershipId
+        ? await this.overrides.findByMembership(subject.membershipId)
+        : [],
     );
   }
 
   // The request's user object lives for one request: the guard and every
   // field resolver of that request share one lookup.
   private readonly perRequest = new WeakMap<
-    Subject,
+    PermissionSubject,
     Promise<ReadonlySet<Permission>>
   >();
 
-  effectiveFor(subject: Subject): Promise<ReadonlySet<Permission>> {
+  effectiveFor(subject: PermissionSubject): Promise<ReadonlySet<Permission>> {
     let found = this.perRequest.get(subject);
     if (!found) {
       found = this.matrixFor(subject).then(
@@ -54,11 +65,11 @@ export class PermissionsService {
 
   /** `desired = null` drops every override (back to the group defaults). */
   async replace(
-    subject: Subject,
+    subject: { membershipId: string; group: UserGroup },
     desired: readonly Permission[] | null,
   ): Promise<PermissionMatrix> {
     if (desired === null) {
-      await this.overrides.replaceForUser(subject.id, []);
+      await this.overrides.replaceForMembership(subject.membershipId, []);
       return resolvePermissionMatrix(subject.group, []);
     }
 
@@ -70,15 +81,18 @@ export class PermissionsService {
         { permissions: plan.lockedChanges },
       );
     }
-    await this.overrides.replaceForUser(subject.id, plan.overrides);
+    await this.overrides.replaceForMembership(
+      subject.membershipId,
+      plan.overrides,
+    );
     return resolvePermissionMatrix(subject.group, plan.overrides);
   }
 
   /**
-   * Called when a user changes group: overrides were exceptions to the old
-   * group's defaults, so they are dropped and the new group's defaults apply.
+   * Called when a member changes role: overrides were exceptions to the old
+   * role's defaults, so they are dropped and the new role's defaults apply.
    */
-  async resetToGroupDefaults(userId: string): Promise<void> {
-    await this.overrides.replaceForUser(userId, []);
+  async resetToGroupDefaults(membershipId: string): Promise<void> {
+    await this.overrides.replaceForMembership(membershipId, []);
   }
 }

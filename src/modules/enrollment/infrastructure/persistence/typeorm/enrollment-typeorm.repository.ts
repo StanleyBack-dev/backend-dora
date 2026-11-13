@@ -4,6 +4,7 @@ import { IsNull, MoreThan, type Repository } from "typeorm";
 import type {
   EnrollmentRepositoryPort,
   EnrollmentRequestFilter,
+  EnrollmentRequestView,
 } from "@/modules/enrollment/application/ports/enrollment-repository.port";
 import {
   EnrollmentStatus,
@@ -11,10 +12,8 @@ import {
   type EnrollmentInvite,
   type EnrollmentRequest,
 } from "@/modules/enrollment/domain/enrollment";
-import {
-  EnrollmentInviteOrmEntity,
-  EnrollmentRequestOrmEntity,
-} from "@/modules/enrollment/infrastructure/persistence/typeorm/enrollment.orm-entity";
+import { EnrollmentInviteOrmEntity } from "@/modules/enrollment/infrastructure/persistence/typeorm/enrollment-invite.orm-entity";
+import { EnrollmentRequestOrmEntity } from "@/modules/enrollment/infrastructure/persistence/typeorm/enrollment-request.orm-entity";
 import type { OutboxDraft } from "@/modules/outbox/domain/outbox";
 import { OutboxTypeormWriter } from "@/modules/outbox/infrastructure/persistence/typeorm/outbox-typeorm.repository";
 import {
@@ -33,6 +32,7 @@ const toInvite = (
   requestCount: number,
 ): EnrollmentInvite => ({
   id: row.id,
+  condominiumId: row.condominiumId,
   code: row.code,
   label: row.label,
   expiresAt: row.expiresAt,
@@ -44,11 +44,13 @@ const toInvite = (
 
 const toRequest = (row: EnrollmentRequestOrmEntity): EnrollmentRequest => ({
   id: row.id,
+  condominiumId: row.condominiumId,
   inviteId: row.inviteId,
   status: row.status,
   fullName: row.fullName,
   email: row.email,
   phone: row.phone,
+  unitId: row.unitId,
   consentAt: row.consentAt,
   createdAt: row.createdAt,
   reviewedBy: row.reviewedBy,
@@ -57,6 +59,8 @@ const toRequest = (row: EnrollmentRequestOrmEntity): EnrollmentRequest => ({
   userId: row.userId,
   photoKey: row.photoKey,
 });
+
+type UnitRaw = { unit_block: string | null; unit_number: string | null };
 
 @Injectable()
 export class EnrollmentTypeormRepository implements EnrollmentRepositoryPort {
@@ -70,10 +74,14 @@ export class EnrollmentTypeormRepository implements EnrollmentRepositoryPort {
 
   // === invites ===
 
-  async listInvites(limit: number): Promise<EnrollmentInvite[]> {
+  async listInvites(
+    condominiumId: string,
+    limit: number,
+  ): Promise<EnrollmentInvite[]> {
     const { entities, raw } = await this.invites
       .createQueryBuilder("invite")
       .addSelect(REQUEST_COUNT, "request_count")
+      .where("invite.idtb_condominiums = :condominiumId", { condominiumId })
       .orderBy("invite.created_at", "DESC")
       .limit(limit)
       .getRawAndEntities<{ request_count: string }>();
@@ -104,6 +112,7 @@ export class EnrollmentTypeormRepository implements EnrollmentRepositoryPort {
   }
 
   async createInvite(data: {
+    condominiumId: string;
     code: string;
     label: string;
     expiresAt: Date;
@@ -122,12 +131,35 @@ export class EnrollmentTypeormRepository implements EnrollmentRepositoryPort {
 
   // === requests ===
 
+  // The unit's block and number come from tb_units (condominiums module),
+  // read-only.
+  private requestQuery() {
+    return this.requests
+      .createQueryBuilder("request")
+      .leftJoin("tb_units", "unit", "unit.idtb_units = request.idtb_units")
+      .addSelect("unit.block", "unit_block")
+      .addSelect("unit.number", "unit_number");
+  }
+
+  private toView(
+    row: EnrollmentRequestOrmEntity,
+    raw: UnitRaw | undefined,
+  ): EnrollmentRequestView {
+    return {
+      ...toRequest(row),
+      unitBlock: raw?.unit_block ?? null,
+      unitNumber: raw?.unit_number ?? null,
+    };
+  }
+
   async pageRequests(
     filter: EnrollmentRequestFilter,
     page: PageRequest,
-  ): Promise<Paginated<EnrollmentRequest>> {
-    const query = this.requests
-      .createQueryBuilder("request")
+  ): Promise<Paginated<EnrollmentRequestView>> {
+    const query = this.requestQuery()
+      .where("request.idtb_condominiums = :condominiumId", {
+        condominiumId: filter.condominiumId,
+      })
       .orderBy("request.created_at", "DESC")
       .offset((page.page - 1) * page.limit)
       .limit(page.limit);
@@ -142,32 +174,48 @@ export class EnrollmentTypeormRepository implements EnrollmentRepositoryPort {
         { term: `%${escapeLike(search)}%` },
       );
     }
-    const [rows, total] = await query.getManyAndCount();
-    return paginate(rows.map(toRequest), total, page);
+    const [{ entities, raw }, total] = await Promise.all([
+      query.getRawAndEntities<UnitRaw>(),
+      query.getCount(),
+    ]);
+    return paginate(
+      entities.map((row, index) => this.toView(row, raw[index])),
+      total,
+      page,
+    );
   }
 
-  async findRequest(id: string): Promise<EnrollmentRequest | null> {
-    const row = await this.requests.findOne({ where: { id } });
-    return row ? toRequest(row) : null;
+  async findRequest(id: string): Promise<EnrollmentRequestView | null> {
+    const { entities, raw } = await this.requestQuery()
+      .where("request.idtb_enrollment_requests = :id", { id })
+      .getRawAndEntities<UnitRaw>();
+    const row = entities[0];
+    return row ? this.toView(row, raw[0]) : null;
   }
 
   async findPending(input: {
     email: string;
+    condominiumId: string;
   }): Promise<EnrollmentRequest | null> {
     const row = await this.requests.findOne({
-      where: { status: EnrollmentStatus.PENDENTE, email: input.email },
+      where: {
+        status: EnrollmentStatus.PENDENTE,
+        email: input.email,
+        condominiumId: input.condominiumId,
+      },
     });
     return row ? toRequest(row) : null;
   }
 
-  countPending(): Promise<number> {
+  countPending(condominiumId: string): Promise<number> {
     return this.requests.count({
-      where: { status: EnrollmentStatus.PENDENTE },
+      where: { status: EnrollmentStatus.PENDENTE, condominiumId },
     });
   }
 
   async createRequest(
     data: EnrollmentData & {
+      condominiumId: string;
       inviteId: string;
       consentAt: Date;
       photoKey: string | null;
@@ -195,7 +243,7 @@ export class EnrollmentTypeormRepository implements EnrollmentRepositoryPort {
       userId?: string;
       photoKey?: string | null;
     },
-  ): Promise<EnrollmentRequest> {
+  ): Promise<EnrollmentRequestView> {
     await this.requests.update({ id }, patch);
     const request = await this.findRequest(id);
     if (!request) throw new Error(`Enrollment request ${id} vanished`);

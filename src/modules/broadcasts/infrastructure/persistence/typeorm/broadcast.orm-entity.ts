@@ -12,6 +12,9 @@ export class BroadcastOrmEntity {
   @PrimaryGeneratedColumn("uuid", { name: "idtb_broadcasts" })
   id!: string;
 
+  @Column({ name: "idtb_condominiums", type: "uuid" })
+  condominiumId!: string;
+
   @Column({ type: "varchar", length: 120 })
   title!: string;
 

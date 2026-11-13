@@ -12,6 +12,8 @@ export enum EnrollmentStatus {
  */
 export type EnrollmentInvite = {
   id: string;
+  /** The condominium people join with this code. */
+  condominiumId: string;
   code: string;
   label: string;
   expiresAt: Date;
@@ -28,10 +30,13 @@ export type EnrollmentData = {
   email: string;
   /** Digits only (DDD + number). */
   phone: string;
+  /** Unit chosen on the form (required when the condominium has units). */
+  unitId: string | null;
 };
 
 export type EnrollmentRequest = EnrollmentData & {
   id: string;
+  condominiumId: string;
   inviteId: string | null;
   status: EnrollmentStatus;
   consentAt: Date;
@@ -60,22 +65,8 @@ export function normalizePhone(value: string): string | null {
   return /^\d{10,11}$/.test(digits) ? digits : null;
 }
 
-/**
- * Login suggested from the full name: first and last names, without accents,
- * e.g. "Ana Maria de Souza" → "ana.souza". A number is appended when taken.
- */
-export function usernameBase(fullName: string): string {
-  const words = fullName
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]/g, " ")
-    .split(/\s+/)
-    .filter((word) => word && !NAME_PARTICLES.has(word));
-  const first = words[0] ?? "morador";
-  const last = words.length > 1 ? words[words.length - 1] : "";
-  return (last ? `${first}.${last}` : first).slice(0, 28);
-}
+// The login suggested from a name lives with the other login rules.
+export { usernameBase } from "@/modules/identity/domain/username";
 
 /** Full name as typed, single spaces; null when too short or too long. */
 export function normalizeFullName(value: string): string | null {

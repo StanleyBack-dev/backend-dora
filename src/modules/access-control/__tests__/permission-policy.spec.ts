@@ -15,10 +15,13 @@ import {
 import { UserGroup } from "@/modules/access-control/domain/user-group";
 
 describe("group defaults", () => {
-  it("gives ADMIN the overview and announcements", () => {
+  it("lets a manager (ADMIN) run their condominium", () => {
     expect(GROUP_DEFAULT_PERMISSIONS[UserGroup.ADMIN]).toEqual([
       Permission.DASHBOARD_READ,
       Permission.NOTIFICATIONS_BROADCAST,
+      Permission.USERS_MANAGE,
+      Permission.PERMISSIONS_MANAGE,
+      Permission.UNITS_MANAGE,
     ]);
   });
 
@@ -28,12 +31,11 @@ describe("group defaults", () => {
     );
   });
 
-  it("keeps accounts, access, history and support with ADMIN_MASTER", () => {
+  it("keeps history, support and condominiums with the platform", () => {
     for (const permission of [
-      Permission.USERS_MANAGE,
-      Permission.PERMISSIONS_MANAGE,
       Permission.AUDIT_READ,
       Permission.SUPPORT_MANAGE,
+      Permission.CONDOMINIUMS_MANAGE,
     ]) {
       expect(LOCKED_PERMISSIONS.has(permission)).toBe(true);
       expect(GROUP_DEFAULT_PERMISSIONS[UserGroup.ADMIN]).not.toContain(
@@ -45,7 +47,20 @@ describe("group defaults", () => {
     }
   });
 
-  it("ignores a stored per-user grant of a locked permission", () => {
+  it("never lets an override grant member or permission management", () => {
+    for (const permission of [
+      Permission.USERS_MANAGE,
+      Permission.PERMISSIONS_MANAGE,
+    ]) {
+      expect(LOCKED_PERMISSIONS.has(permission)).toBe(true);
+      expect(
+        resolvePermissionMatrix(UserGroup.USER, [{ permission, allowed: true }])
+          .effective,
+      ).not.toContain(permission);
+    }
+  });
+
+  it("ignores a stored per-member grant of a locked permission", () => {
     const matrix = resolvePermissionMatrix(UserGroup.USER, [
       { permission: Permission.AUDIT_READ, allowed: true },
     ]);
@@ -58,7 +73,7 @@ describe("resolvePermissionMatrix", () => {
     const matrix = resolvePermissionMatrix(UserGroup.ADMIN, [
       { permission: Permission.NOTIFICATIONS_BROADCAST, allowed: false },
     ]);
-    expect(matrix.effective).toEqual([Permission.DASHBOARD_READ]);
+    expect(matrix.effective).not.toContain(Permission.NOTIFICATIONS_BROADCAST);
     expect(matrix.overrides).toHaveLength(1);
 
     const resident = resolvePermissionMatrix(UserGroup.USER, [
@@ -69,10 +84,12 @@ describe("resolvePermissionMatrix", () => {
 
   it("ignores overrides on locked permissions and no-op overrides", () => {
     const matrix = resolvePermissionMatrix(UserGroup.ADMIN, [
-      { permission: Permission.PERMISSIONS_MANAGE, allowed: true },
+      { permission: Permission.AUDIT_READ, allowed: true },
+      { permission: Permission.USERS_MANAGE, allowed: false },
       { permission: Permission.DASHBOARD_READ, allowed: true },
     ]);
-    expect(matrix.effective).not.toContain(Permission.PERMISSIONS_MANAGE);
+    expect(matrix.effective).not.toContain(Permission.AUDIT_READ);
+    expect(matrix.effective).toContain(Permission.USERS_MANAGE);
     expect(matrix.overrides).toEqual([]);
   });
 
@@ -91,7 +108,12 @@ describe("resolvePermissionMatrix", () => {
 describe("planOverrides", () => {
   it("stores only the differences from the group", () => {
     expect(
-      planOverrides(UserGroup.ADMIN, [Permission.NOTIFICATIONS_BROADCAST]),
+      planOverrides(
+        UserGroup.ADMIN,
+        GROUP_DEFAULT_PERMISSIONS[UserGroup.ADMIN].filter(
+          (p) => p !== Permission.DASHBOARD_READ,
+        ),
+      ),
     ).toEqual({
       ok: true,
       overrides: [{ permission: Permission.DASHBOARD_READ, allowed: false }],

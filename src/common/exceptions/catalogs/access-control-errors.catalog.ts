@@ -25,6 +25,6 @@ export const accessControlErrors = {
     code: "ACCESS_LOCKED_PERMISSIONS",
     status: HttpStatus.UNPROCESSABLE_ENTITY,
     message:
-      "Gerenciar permissões e ler a auditoria só podem ser concedidos pelo grupo Administrador geral.",
+      "Gerenciar moradores e permissões vem com o papel de Gestor; auditoria, suporte e condomínios ficam com a administração da plataforma.",
   },
 } as const;

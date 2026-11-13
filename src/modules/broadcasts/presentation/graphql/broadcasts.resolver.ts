@@ -1,91 +1,12 @@
-import {
-  Args,
-  Field,
-  ID,
-  InputType,
-  Int,
-  Mutation,
-  ObjectType,
-  Query,
-  Resolver,
-  registerEnumType,
-} from "@nestjs/graphql";
-import {
-  IsBoolean,
-  IsEnum,
-  IsOptional,
-  IsString,
-  MaxLength,
-} from "class-validator";
+import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { Permission } from "@/modules/access-control/domain/permission";
 import { RequirePermissions } from "@/modules/access-control/presentation/decorators/require-permissions.decorator";
-import { BroadcastsUseCase } from "@/modules/broadcasts/application/broadcasts.use-cases";
+import { BroadcastsUseCase } from "@/modules/broadcasts/application/use-cases/broadcasts.use-case";
 import type { BroadcastView } from "@/modules/broadcasts/application/ports/broadcast-repository.port";
-import { BroadcastAudience } from "@/modules/broadcasts/domain/broadcast";
-import { UserGroup } from "@/modules/access-control/domain/user-group";
-
-registerEnumType(BroadcastAudience, {
-  name: "BroadcastAudience",
-  description: "Quem recebe o comunicado.",
-});
-
-@ObjectType("Broadcast", { description: "Comunicado enviado por um gestor." })
-class BroadcastType {
-  @Field(() => ID)
-  id!: string;
-
-  @Field()
-  title!: string;
-
-  @Field()
-  body!: string;
-
-  @Field(() => BroadcastAudience)
-  audience!: BroadcastAudience;
-
-  @Field(() => UserGroup, { nullable: true })
-  targetGroup!: UserGroup | null;
-
-  @Field()
-  sendEmail!: boolean;
-
-  @Field(() => Int, { description: "Quantas pessoas receberam." })
-  recipients!: number;
-
-  @Field(() => String, { nullable: true })
-  authorName!: string | null;
-
-  @Field()
-  createdAt!: Date;
-}
-
-@InputType()
-class BroadcastInput {
-  @Field()
-  @IsString()
-  @MaxLength(200)
-  title!: string;
-
-  @Field()
-  @IsString()
-  @MaxLength(4000)
-  body!: string;
-
-  @Field(() => BroadcastAudience)
-  @IsEnum(BroadcastAudience)
-  audience!: BroadcastAudience;
-
-  @Field(() => UserGroup, { nullable: true })
-  @IsOptional()
-  @IsEnum(UserGroup)
-  targetGroup?: UserGroup | null;
-
-  @Field({ description: "Também envia por e-mail." })
-  @IsBoolean()
-  sendEmail!: boolean;
-}
+import { BroadcastType } from "@/modules/broadcasts/presentation/graphql/dto/outputs/broadcast.output";
+import { BroadcastInput } from "@/modules/broadcasts/presentation/graphql/dto/inputs/broadcast.input";
 
 @Resolver()
 export class BroadcastsResolver {
@@ -93,8 +14,10 @@ export class BroadcastsResolver {
 
   @RequirePermissions(Permission.NOTIFICATIONS_BROADCAST)
   @Query(() => [BroadcastType], { description: "Últimos 50 comunicados." })
-  broadcasts(): Promise<BroadcastView[]> {
-    return this.broadcastsUseCase.list();
+  broadcasts(
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<BroadcastView[]> {
+    return this.broadcastsUseCase.list(actor);
   }
 
   @RequirePermissions(Permission.NOTIFICATIONS_BROADCAST)

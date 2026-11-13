@@ -2,12 +2,14 @@ import { Module, type OnApplicationBootstrap } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AccessControlModule } from "@/modules/access-control/access-control.module";
 import { AuditModule } from "@/modules/audit/audit.module";
+import { CondominiumsModule } from "@/modules/condominiums/condominiums.module";
 import { AuthThrottleService } from "@/modules/identity/application/auth-throttle.service";
 import { IdentityConfig } from "@/modules/identity/application/identity.config";
 import { IdentityMaintenanceService } from "@/modules/identity/application/identity-maintenance.service";
 import { PasswordService } from "@/modules/identity/application/password.service";
 import { ACCESS_TOKEN } from "@/modules/identity/application/ports/access-token.port";
 import { CREDENTIAL_REPOSITORY } from "@/modules/identity/application/ports/credential-repository.port";
+import { MEMBERSHIP_REPOSITORY } from "@/modules/identity/application/ports/membership-repository.port";
 import { IDENTITY_NOTIFIER } from "@/modules/identity/application/ports/identity-notifier.port";
 import { PASSWORD_HASHER } from "@/modules/identity/application/ports/password-hasher.port";
 import { PRINCIPAL_READER } from "@/modules/identity/application/ports/principal-reader.port";
@@ -17,38 +19,36 @@ import { USER_REPOSITORY } from "@/modules/identity/application/ports/user-repos
 import { VERIFICATION_CODE_REPOSITORY } from "@/modules/identity/application/ports/verification-code-repository.port";
 import { SessionTokensService } from "@/modules/identity/application/session-tokens.service";
 import { UserLookupService } from "@/modules/identity/application/user-lookup.service";
+import { CondominiumContextUseCase } from "@/modules/identity/application/use-cases/condominium-context.use-case";
 import { BootstrapAdminMasterUseCase } from "@/modules/identity/application/use-cases/bootstrap-admin-master.use-case";
 import { LoginUseCase } from "@/modules/identity/application/use-cases/login.use-case";
-import {
-  ManageUsersUseCase,
-  UserDirectoryUseCase,
-  UserManagementPolicy,
-  UserPermissionsUseCase,
-} from "@/modules/identity/application/use-cases/manage-users.use-cases";
-import {
-  ChangeOwnPasswordUseCase,
-  UpdateOwnProfileUseCase,
-} from "@/modules/identity/application/use-cases/own-account.use-cases";
+import { ManageUsersUseCase } from "@/modules/identity/application/use-cases/manage-users.use-case";
+import { UserDirectoryUseCase } from "@/modules/identity/application/use-cases/user-directory.use-case";
+import { UserManagementPolicy } from "@/modules/identity/application/user-management.policy";
+import { UserPermissionsUseCase } from "@/modules/identity/application/use-cases/user-permissions.use-case";
+import { ChangeOwnPasswordUseCase } from "@/modules/identity/application/use-cases/change-own-password.use-case";
+import { UpdateOwnProfileUseCase } from "@/modules/identity/application/use-cases/update-own-profile.use-case";
 import { PasswordRecoveryUseCase } from "@/modules/identity/application/use-cases/password-recovery.use-case";
-import {
-  AuthenticateUseCase,
-  LogoutUseCase,
-  RefreshSessionUseCase,
-} from "@/modules/identity/application/use-cases/session.use-cases";
+import { AuthenticateUseCase } from "@/modules/identity/application/use-cases/authenticate.use-case";
+import { LogoutUseCase } from "@/modules/identity/application/use-cases/logout.use-case";
+import { RefreshSessionUseCase } from "@/modules/identity/application/use-cases/refresh-session.use-case";
 import { JwtAccessTokenService } from "@/modules/identity/infrastructure/crypto/jwt-access-token.service";
 import { NodeSecrets } from "@/modules/identity/infrastructure/crypto/node-secrets";
 import { ScryptPasswordHasher } from "@/modules/identity/infrastructure/crypto/scrypt-password-hasher";
 import { MailIdentityNotifier } from "@/modules/identity/infrastructure/notifications/mail-identity.notifier";
 import { CredentialOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/credential.orm-entity";
+import { MembershipOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/membership.orm-entity";
 import { SessionOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/session.orm-entity";
 import { UserOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/user.orm-entity";
 import { VerificationCodeOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/verification-code.orm-entity";
+import { MembershipTypeormRepository } from "@/modules/identity/infrastructure/persistence/typeorm/repositories/membership-typeorm.repository";
 import { CredentialTypeormRepository } from "@/modules/identity/infrastructure/persistence/typeorm/repositories/credential-typeorm.repository";
 import { PrincipalTypeormReader } from "@/modules/identity/infrastructure/persistence/typeorm/repositories/principal-typeorm.reader";
 import { SessionTypeormRepository } from "@/modules/identity/infrastructure/persistence/typeorm/repositories/session-typeorm.repository";
 import { UserTypeormRepository } from "@/modules/identity/infrastructure/persistence/typeorm/repositories/user-typeorm.repository";
 import { VerificationCodeTypeormRepository } from "@/modules/identity/infrastructure/persistence/typeorm/repositories/verification-code-typeorm.repository";
 import { AuthResolver } from "@/modules/identity/presentation/graphql/auth.resolver";
+import { SessionCondominiumResolver } from "@/modules/identity/presentation/graphql/session-condominium.resolver";
 import { OnboardingResolver } from "@/modules/identity/presentation/graphql/onboarding.resolver";
 import { UserAccountFieldsResolver } from "@/modules/identity/presentation/graphql/user-account-fields.resolver";
 import { UsersAdminResolver } from "@/modules/identity/presentation/graphql/users-admin.resolver";
@@ -66,9 +66,11 @@ import { MailModule } from "@/modules/mails/mail.module";
       CredentialOrmEntity,
       SessionOrmEntity,
       VerificationCodeOrmEntity,
+      MembershipOrmEntity,
     ]),
     AccessControlModule,
     AuditModule,
+    CondominiumsModule,
     MailModule,
   ],
   providers: [
@@ -91,7 +93,9 @@ import { MailModule } from "@/modules/mails/mail.module";
     ManageUsersUseCase,
     UserPermissionsUseCase,
     BootstrapAdminMasterUseCase,
+    CondominiumContextUseCase,
     // adapters
+    { provide: MEMBERSHIP_REPOSITORY, useClass: MembershipTypeormRepository },
     { provide: USER_REPOSITORY, useClass: UserTypeormRepository },
     { provide: CREDENTIAL_REPOSITORY, useClass: CredentialTypeormRepository },
     { provide: SESSION_REPOSITORY, useClass: SessionTypeormRepository },
@@ -106,6 +110,7 @@ import { MailModule } from "@/modules/mails/mail.module";
     { provide: IDENTITY_NOTIFIER, useClass: MailIdentityNotifier },
     // presentation
     AuthResolver,
+    SessionCondominiumResolver,
     UsersAdminResolver,
     UserAccountFieldsResolver,
     OnboardingResolver,
