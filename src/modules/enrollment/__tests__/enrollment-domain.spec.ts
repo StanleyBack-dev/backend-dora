@@ -62,6 +62,7 @@ describe("enrollment domain", () => {
     const now = new Date("2026-10-25T12:00:00Z");
     const invite: EnrollmentInvite = {
       id: "i",
+      condominiumId: "c",
       code: "123456",
       label: "Bloco A",
       expiresAt: new Date("2026-10-26T12:00:00Z"),

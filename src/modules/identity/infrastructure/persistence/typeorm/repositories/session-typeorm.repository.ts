@@ -32,6 +32,13 @@ export class SessionTypeormRepository implements SessionRepositoryPort {
     };
   }
 
+  async setCondominium(
+    id: string,
+    condominiumId: string | null,
+  ): Promise<void> {
+    await this.repository.update({ id }, { condominiumId });
+  }
+
   async touch(id: string, expiresAt: Date, usedAt: Date): Promise<void> {
     await this.repository.update(
       { id, revokedAt: IsNull() },

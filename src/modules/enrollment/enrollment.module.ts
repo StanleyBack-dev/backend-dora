@@ -2,28 +2,24 @@ import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AccessControlModule } from "@/modules/access-control/access-control.module";
 import { AuditModule } from "@/modules/audit/audit.module";
-import {
-  EnrollmentInvitesUseCase,
-  EnrollmentReviewUseCase,
-  PublicEnrollmentUseCase,
-} from "@/modules/enrollment/application/enrollment.use-cases";
+import { CondominiumsModule } from "@/modules/condominiums/condominiums.module";
+import { EnrollmentInvitesUseCase } from "@/modules/enrollment/application/use-cases/enrollment-invites.use-case";
+import { EnrollmentReviewUseCase } from "@/modules/enrollment/application/use-cases/enrollment-review.use-case";
+import { PublicEnrollmentUseCase } from "@/modules/enrollment/application/use-cases/public-enrollment.use-case";
 import { ENROLLMENT_REPOSITORY } from "@/modules/enrollment/application/ports/enrollment-repository.port";
-import {
-  EnrollmentInviteOrmEntity,
-  EnrollmentRequestOrmEntity,
-} from "@/modules/enrollment/infrastructure/persistence/typeorm/enrollment.orm-entity";
+import { EnrollmentInviteOrmEntity } from "@/modules/enrollment/infrastructure/persistence/typeorm/enrollment-invite.orm-entity";
+import { EnrollmentRequestOrmEntity } from "@/modules/enrollment/infrastructure/persistence/typeorm/enrollment-request.orm-entity";
 import { EnrollmentTypeormRepository } from "@/modules/enrollment/infrastructure/persistence/typeorm/enrollment-typeorm.repository";
-import {
-  EnrollmentAdminResolver,
-  EnrollmentRequestFieldsResolver,
-  PublicEnrollmentResolver,
-} from "@/modules/enrollment/presentation/graphql/enrollment.resolver";
+import { EnrollmentAdminResolver } from "@/modules/enrollment/presentation/graphql/enrollment-admin.resolver";
+import { EnrollmentRequestFieldsResolver } from "@/modules/enrollment/presentation/graphql/enrollment-request-fields.resolver";
+import { PublicEnrollmentResolver } from "@/modules/enrollment/presentation/graphql/public-enrollment.resolver";
 import { IdentityModule } from "@/modules/identity/identity.module";
 import { OutboxModule } from "@/modules/outbox/outbox.module";
 
-// Self-service sign-up through a public link: an invite code opens the form,
-// each answer waits for a manager (ADMIN_MASTER is notified through the
-// outbox), and approving it creates the account (identity).
+// Self-service sign-up through a public link: an invite code (one
+// condominium's) opens the form, each answer waits for that condominium's
+// managers (notified through the outbox; the platform when it has none), and
+// approving it gives the person access (identity).
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -32,6 +28,7 @@ import { OutboxModule } from "@/modules/outbox/outbox.module";
     ]),
     AccessControlModule,
     AuditModule,
+    CondominiumsModule,
     IdentityModule,
     OutboxModule,
   ],

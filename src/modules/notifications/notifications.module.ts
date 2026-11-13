@@ -2,17 +2,15 @@ import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { IdentityModule } from "@/modules/identity/identity.module";
 import { MailModule } from "@/modules/mails/mail.module";
-import { NotificationsUseCase } from "@/modules/notifications/application/notifications.use-cases";
+import { NotificationsUseCase } from "@/modules/notifications/application/use-cases/notifications.use-case";
 import { NOTIFICATION_REPOSITORY } from "@/modules/notifications/application/ports/notification-repository.port";
 import {
   PUSH_SENDER,
   PUSH_SUBSCRIPTION_REPOSITORY,
 } from "@/modules/notifications/application/ports/push.ports";
 import { PushNotificationsService } from "@/modules/notifications/application/push-notifications.service";
-import {
-  NotificationOrmEntity,
-  NotificationPrefOrmEntity,
-} from "@/modules/notifications/infrastructure/persistence/typeorm/notification.orm-entity";
+import { NotificationOrmEntity } from "@/modules/notifications/infrastructure/persistence/typeorm/notification.orm-entity";
+import { NotificationPrefOrmEntity } from "@/modules/notifications/infrastructure/persistence/typeorm/notification-pref.orm-entity";
 import { NotificationTypeormRepository } from "@/modules/notifications/infrastructure/persistence/typeorm/notification-typeorm.repository";
 import { PushSubscriptionOrmEntity } from "@/modules/notifications/infrastructure/persistence/typeorm/push-subscription.orm-entity";
 import { PushSubscriptionTypeormRepository } from "@/modules/notifications/infrastructure/persistence/typeorm/push-subscription-typeorm.repository";

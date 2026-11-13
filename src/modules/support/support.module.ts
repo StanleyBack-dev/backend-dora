@@ -4,7 +4,7 @@ import { AuditModule } from "@/modules/audit/audit.module";
 import { IdentityModule } from "@/modules/identity/identity.module";
 import { OutboxModule } from "@/modules/outbox/outbox.module";
 import { SUPPORT_REPOSITORY } from "@/modules/support/application/ports/support-repository.port";
-import { SupportUseCase } from "@/modules/support/application/support.use-cases";
+import { SupportUseCase } from "@/modules/support/application/use-cases/support.use-case";
 import { SupportRequestOrmEntity } from "@/modules/support/infrastructure/persistence/typeorm/support-request.orm-entity";
 import { SupportTypeormRepository } from "@/modules/support/infrastructure/persistence/typeorm/support-typeorm.repository";
 import { SupportResolver } from "@/modules/support/presentation/graphql/support.resolver";

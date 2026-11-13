@@ -5,6 +5,9 @@
 /** The tables that carry stamps, by the name the API and the UI use. */
 export const STAMPED_TABLES = {
   user: { table: "tb_users", key: "idtb_users" },
+  membership: { table: "tb_memberships", key: "idtb_memberships" },
+  condominium: { table: "tb_condominiums", key: "idtb_condominiums" },
+  unit: { table: "tb_units", key: "idtb_units" },
   broadcast: { table: "tb_broadcasts", key: "idtb_broadcasts" },
   enrollment_invite: {
     table: "tb_enrollment_invites",

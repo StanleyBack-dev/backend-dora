@@ -9,6 +9,8 @@ import type { PageRequest, Paginated } from "@/shared/application/pagination";
 /** The request with the names the screens show. */
 export type SupportRequestView = SupportRequest & {
   userName: string;
+  /** Condominium the person was working in when asking (context only). */
+  condominiumName: string | null;
   repliedByName: string | null;
   finalizedByName: string | null;
 };
@@ -21,6 +23,7 @@ export type SupportFilter = {
 
 export type NewSupportRequest = {
   userId: string;
+  condominiumId: string | null;
   category: SupportCategory;
   subject: string;
   message: string;

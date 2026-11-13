@@ -9,8 +9,8 @@ export interface BroadcastRepositoryPort {
     broadcast: Omit<Broadcast, "id" | "createdAt">,
     deliveries: (broadcastId: string) => OutboxDraft[],
   ): Promise<BroadcastView>;
-  /** Most recent first. */
-  list(limit: number): Promise<BroadcastView[]>;
+  /** The condominium's, most recent first. */
+  list(condominiumId: string, limit: number): Promise<BroadcastView[]>;
 }
 
 export const BROADCAST_REPOSITORY = Symbol("BROADCAST_REPOSITORY");

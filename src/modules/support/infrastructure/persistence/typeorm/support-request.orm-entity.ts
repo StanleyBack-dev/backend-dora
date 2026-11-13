@@ -25,6 +25,9 @@ export class SupportRequestOrmEntity {
   @Column({ name: "idtb_users", type: "uuid" })
   userId!: string;
 
+  @Column({ name: "idtb_condominiums", type: "uuid", nullable: true })
+  condominiumId!: string | null;
+
   @Column({ type: "varchar", length: 16 })
   category!: SupportCategory;
 

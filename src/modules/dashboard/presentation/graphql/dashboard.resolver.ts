@@ -1,25 +1,11 @@
-import { Field, Int, ObjectType, Query, Resolver } from "@nestjs/graphql";
+import { Query, Resolver } from "@nestjs/graphql";
+import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
+import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { Permission } from "@/modules/access-control/domain/permission";
 import { RequirePermissions } from "@/modules/access-control/presentation/decorators/require-permissions.decorator";
-import {
-  DashboardUseCase,
-  type Dashboard,
-} from "@/modules/dashboard/application/dashboard";
-
-@ObjectType("Dashboard", { description: "Painel do gestor." })
-class DashboardType implements Dashboard {
-  @Field(() => Int, { description: "Contas ativas." })
-  activeUsers!: number;
-
-  @Field(() => Int, { description: "Cadastros aguardando aprovação." })
-  pendingEnrollments!: number;
-
-  @Field(() => Int, { description: "Pedidos de suporte sem resposta." })
-  openSupportRequests!: number;
-
-  @Field(() => Int, { description: "Notificações que falharam de vez." })
-  failedNotifications!: number;
-}
+import { DashboardUseCase } from "@/modules/dashboard/application/dashboard.use-case";
+import { type Dashboard } from "@/modules/dashboard/application/ports/dashboard-reader.port";
+import { DashboardType } from "@/modules/dashboard/presentation/graphql/dto/outputs/dashboard.output";
 
 @Resolver()
 export class DashboardResolver {
@@ -27,7 +13,7 @@ export class DashboardResolver {
 
   @RequirePermissions(Permission.DASHBOARD_READ)
   @Query(() => DashboardType)
-  dashboard(): Promise<Dashboard> {
-    return this.dashboardUseCase.get();
+  dashboard(@CurrentUser() actor: AuthenticatedUser): Promise<Dashboard> {
+    return this.dashboardUseCase.get(actor);
   }
 }

@@ -10,6 +10,6 @@ export const broadcastsErrors = {
     code: "BROADCAST_NO_RECIPIENTS",
     status: HttpStatus.UNPROCESSABLE_ENTITY,
     message:
-      "Ninguém recebe este comunicado (nenhuma conta ativa no grupo escolhido).",
+      "Ninguém recebe este comunicado (nenhum membro ativo no grupo escolhido).",
   },
 } as const;

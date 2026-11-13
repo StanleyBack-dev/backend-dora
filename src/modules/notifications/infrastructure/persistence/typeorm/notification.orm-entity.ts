@@ -3,7 +3,6 @@ import {
   CreateDateColumn,
   Entity,
   Index,
-  PrimaryColumn,
   PrimaryGeneratedColumn,
 } from "typeorm";
 import { NotificationType } from "@/modules/notifications/domain/notification";
@@ -38,16 +37,4 @@ export class NotificationOrmEntity {
 
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;
-}
-
-@Entity("tb_notification_prefs")
-export class NotificationPrefOrmEntity {
-  @PrimaryColumn({ name: "idtb_users", type: "uuid" })
-  userId!: string;
-
-  @PrimaryColumn({ type: "varchar", length: 32 })
-  type!: NotificationType;
-
-  @Column({ name: "email_enabled", type: "boolean" })
-  emailEnabled!: boolean;
 }

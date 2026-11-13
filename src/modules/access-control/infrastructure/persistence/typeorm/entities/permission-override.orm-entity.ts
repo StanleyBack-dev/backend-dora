@@ -7,16 +7,18 @@ import {
 } from "typeorm";
 import { Permission } from "@/modules/access-control/domain/permission";
 
-@Entity("tb_user_permission_overrides")
-@Index(["userId", "permission"], { unique: true })
+@Entity("tb_membership_permission_overrides")
+@Index(["membershipId", "permission"], { unique: true })
 export class PermissionOverrideOrmEntity {
-  @PrimaryGeneratedColumn("uuid", { name: "idtb_user_permission_overrides" })
+  @PrimaryGeneratedColumn("uuid", {
+    name: "idtb_membership_permission_overrides",
+  })
   id!: string;
 
-  // FK to tb_users (ON DELETE CASCADE) lives in the migration: this module
-  // does not map the identity module's entity.
-  @Column({ name: "idtb_users", type: "uuid" })
-  userId!: string;
+  // FK to tb_memberships (ON DELETE CASCADE) lives in the migration: this
+  // module does not map the identity module's entity.
+  @Column({ name: "idtb_memberships", type: "uuid" })
+  membershipId!: string;
 
   @Column({ type: "varchar", length: 64 })
   permission!: Permission;

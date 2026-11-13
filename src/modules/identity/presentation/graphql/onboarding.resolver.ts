@@ -2,7 +2,7 @@ import { Mutation, Parent, ResolveField, Resolver } from "@nestjs/graphql";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { UserLookupService } from "@/modules/identity/application/user-lookup.service";
-import { SessionUserType } from "@/modules/identity/presentation/graphql/identity.graphql-types";
+import { SessionUserType } from "@/modules/identity/presentation/graphql/dto/outputs/session-user.output";
 
 // The guided tour of the app (onboarding): shown until the person finishes
 // or skips it once, on any device.

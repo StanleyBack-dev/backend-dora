@@ -47,7 +47,8 @@ export const enrollmentErrors = {
   alreadyUser: {
     code: "ENROLLMENT_ALREADY_USER",
     status: HttpStatus.CONFLICT,
-    message: "Já existe um usuário com este e-mail. Fale com a administração.",
+    message:
+      "Este e-mail já faz parte deste condomínio. Entre com a sua conta ou fale com a administração.",
   },
   notFound: {
     code: "ENROLLMENT_NOT_FOUND",
@@ -74,9 +75,9 @@ export const enrollmentErrors = {
     status: HttpStatus.UNPROCESSABLE_ENTITY,
     message: "Informe o motivo da recusa (de 3 a 500 caracteres).",
   },
-  noUsername: {
-    code: "ENROLLMENT_NO_USERNAME",
-    status: HttpStatus.SERVICE_UNAVAILABLE,
-    message: "Não foi possível gerar o usuário de acesso. Tente de novo.",
+  invalidUnit: {
+    code: "ENROLLMENT_INVALID_UNIT",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: "Escolha a sua unidade na lista.",
   },
 } as const;

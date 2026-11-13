@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuditModule } from "@/modules/audit/audit.module";
-import { BroadcastsUseCase } from "@/modules/broadcasts/application/broadcasts.use-cases";
+import { BroadcastsUseCase } from "@/modules/broadcasts/application/use-cases/broadcasts.use-case";
 import { BROADCAST_REPOSITORY } from "@/modules/broadcasts/application/ports/broadcast-repository.port";
 import { BroadcastOrmEntity } from "@/modules/broadcasts/infrastructure/persistence/typeorm/broadcast.orm-entity";
 import { BroadcastTypeormRepository } from "@/modules/broadcasts/infrastructure/persistence/typeorm/broadcast-typeorm.repository";

@@ -36,6 +36,7 @@ type SupportRow = {
   finalized_by: string | null;
   created_at: Date;
   user_name: string;
+  condominium_name: string | null;
   replied_by_name: string | null;
   finalized_by_name: string | null;
 };
@@ -55,20 +56,22 @@ const toView = (row: SupportRow): SupportRequestView => ({
   finalizedBy: row.finalized_by,
   createdAt: row.created_at,
   userName: row.user_name,
+  condominiumName: row.condominium_name,
   repliedByName: row.replied_by_name,
   finalizedByName: row.finalized_by_name,
 });
 
-// Joins tb_users (identity) read-only for the names
-// the screens show, without a query per row.
+// Joins tb_users (identity) and tb_condominiums read-only for the names the
+// screens show, without a query per row.
 const SELECT = `
   SELECT s.idtb_support_requests AS id, s.protocol, s.idtb_users AS user_id,
          s.category, s.subject, s.message, s.status, s.reply, s.replied_at,
          s.replied_by, s.finalized_at, s.finalized_by, s.created_at,
-         u.name AS user_name,
+         u.name AS user_name, c.name AS condominium_name,
          ru.name AS replied_by_name, fu.name AS finalized_by_name
     FROM tb_support_requests s
     JOIN tb_users u ON u.idtb_users = s.idtb_users
+    LEFT JOIN tb_condominiums c ON c.idtb_condominiums = s.idtb_condominiums
     LEFT JOIN tb_users ru ON ru.idtb_users = s.replied_by
     LEFT JOIN tb_users fu ON fu.idtb_users = s.finalized_by`;
 

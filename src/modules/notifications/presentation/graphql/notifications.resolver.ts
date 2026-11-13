@@ -10,18 +10,17 @@ import { PageInput } from "@/common/graphql/pagination.graphql";
 import {
   NotificationsUseCase,
   type NotificationPreference,
-} from "@/modules/notifications/application/notifications.use-cases";
+} from "@/modules/notifications/application/use-cases/notifications.use-case";
 import { PushNotificationsService } from "@/modules/notifications/application/push-notifications.service";
 import {
   NotificationType,
   type Notification,
 } from "@/modules/notifications/domain/notification";
-import {
-  NotificationPage,
-  NotificationPreferenceType,
-  PushSubscriptionInput,
-} from "@/modules/notifications/presentation/graphql/notifications.graphql-types";
+import { NotificationPage } from "@/modules/notifications/presentation/graphql/dto/outputs/notification-page.output";
+import { NotificationPreferenceType } from "@/modules/notifications/presentation/graphql/dto/outputs/notification-preference.output";
+import { PushSubscriptionInput } from "@/modules/notifications/presentation/graphql/dto/inputs/push-subscription.input";
 import type { Paginated } from "@/shared/application/pagination";
+import "@/modules/notifications/presentation/graphql/notifications.graphql-enums";
 
 // Each user's own inbox: only a session is needed, never someone else's.
 @Resolver()

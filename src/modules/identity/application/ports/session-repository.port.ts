@@ -14,6 +14,8 @@ export type NewSession = {
   expiresAt: Date;
   ipAddress: string | null;
   userAgent: string | null;
+  /** Condominium the session starts in (null: none). */
+  condominiumId: string | null;
 };
 
 export interface SessionRepositoryPort {
@@ -22,6 +24,8 @@ export interface SessionRepositoryPort {
   /** Slides the expiry and records the use. */
   touch(id: string, expiresAt: Date, usedAt: Date): Promise<void>;
   revoke(id: string, at: Date): Promise<void>;
+  /** Moves the session to another condominium (null: none). */
+  setCondominium(id: string, condominiumId: string | null): Promise<void>;
   /** Deletes sessions that expired or were revoked before `before`. */
   purgeEndedBefore(before: Date): Promise<number>;
   revokeAllForUser(

@@ -14,6 +14,7 @@ type BroadcastRow = BroadcastOrmEntity & { authorName: string | null };
 
 const toView = (row: BroadcastRow): BroadcastView => ({
   id: row.id,
+  condominiumId: row.condominiumId,
   title: row.title,
   body: row.body,
   audience: row.audience,
@@ -47,8 +48,8 @@ export class BroadcastTypeormRepository implements BroadcastRepositoryPort {
     return found;
   }
 
-  list(limit: number): Promise<BroadcastView[]> {
-    return this.query("", [], limit);
+  list(condominiumId: string, limit: number): Promise<BroadcastView[]> {
+    return this.query("WHERE b.idtb_condominiums = $1", [condominiumId], limit);
   }
 
   // The author's name comes from tb_users (identity), read-only.
@@ -58,7 +59,8 @@ export class BroadcastTypeormRepository implements BroadcastRepositoryPort {
     limit: number,
   ): Promise<BroadcastView[]> {
     const rows = await this.dataSource.query<BroadcastRow[]>(
-      `SELECT b.idtb_broadcasts AS id, b.title, b.body, b.audience,
+      `SELECT b.idtb_broadcasts AS id,
+              b.idtb_condominiums AS "condominiumId", b.title, b.body, b.audience,
               b.target_group AS "targetGroup", b.send_email AS "sendEmail",
               b.recipients, b.created_by AS "createdBy",
               b.created_at AS "createdAt", u.name AS "authorName"

@@ -9,10 +9,8 @@ import type {
   Notification,
   NotificationType,
 } from "@/modules/notifications/domain/notification";
-import {
-  NotificationOrmEntity,
-  NotificationPrefOrmEntity,
-} from "@/modules/notifications/infrastructure/persistence/typeorm/notification.orm-entity";
+import { NotificationOrmEntity } from "@/modules/notifications/infrastructure/persistence/typeorm/notification.orm-entity";
+import { NotificationPrefOrmEntity } from "@/modules/notifications/infrastructure/persistence/typeorm/notification-pref.orm-entity";
 import {
   paginate,
   type PageRequest,
