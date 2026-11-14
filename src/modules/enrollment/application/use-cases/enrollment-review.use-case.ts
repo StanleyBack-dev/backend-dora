@@ -1,3 +1,4 @@
+import { UnitRegistryService } from "@/modules/condominiums/application/unit-registry.service";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { tenantOf } from "@/common/auth/tenant";
@@ -29,6 +30,7 @@ import type { PageRequest, Paginated } from "@/shared/application/pagination";
 import {
   EnrollmentInput,
   validateEnrollment,
+  validatePlace,
 } from "@/modules/enrollment/application/enrollment-input";
 
 export type EnrollmentApproval = {
@@ -45,6 +47,7 @@ export class EnrollmentReviewUseCase {
     private readonly users: UserLookupService,
     private readonly manageUsers: ManageUsersUseCase,
     private readonly audit: AuditTrailService,
+    private readonly unitRegistry: UnitRegistryService,
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStoragePort,
   ) {}
 
@@ -99,13 +102,40 @@ export class EnrollmentReviewUseCase {
   ): Promise<EnrollmentApproval> {
     const request = await this.pending(actor, id);
     const data = validateEnrollment(input);
-    const unitId = input.unitId === undefined ? request.unitId : input.unitId;
+    // The manager's corrections win; what wasn't sent keeps the request's.
+    const typed = input.unitNumber !== undefined;
+    const place = typed
+      ? validatePlace(input, true)
+      : {
+          ...validatePlace(
+            {
+              ...input,
+              unitComplement: input.unitComplement ?? request.unitComplement,
+            },
+            false,
+          ),
+          typedUnitBlock: request.typedUnitBlock,
+          typedUnitNumber: request.typedUnitNumber,
+        };
+    let unitId = input.unitId === undefined ? request.unitId : input.unitId;
+    // No unit picked but one typed: link the unit with that name, or
+    // create it (the manager is approving what the resident typed).
+    if (!unitId && place.typedUnitNumber) {
+      const unit = await this.unitRegistry.ensure(
+        request.condominiumId,
+        { block: place.typedUnitBlock, number: place.typedUnitNumber },
+        actor.id,
+      );
+      unitId = unit.id;
+    }
 
     const access = await this.manageUsers.create(actor, {
       name: data.fullName,
       email: data.email,
+      phone: data.phone,
       group,
       unitId,
+      unitComplement: place.unitComplement,
     });
     // The photo sent with the sign-up becomes the account's photo, unless
     // an existing account already has one.
@@ -115,6 +145,7 @@ export class EnrollmentReviewUseCase {
 
     const approved = await this.repository.updateRequest(id, {
       ...data,
+      ...place,
       unitId,
       status: EnrollmentStatus.APROVADA,
       reviewedBy: actor.id,

@@ -19,6 +19,7 @@ const toMembership = (row: MembershipOrmEntity): Membership => ({
   condominiumId: row.condominiumId,
   role: row.role,
   unitId: row.unitId,
+  unitComplement: row.unitComplement,
   active: row.active,
   lastSelectedAt: row.lastSelectedAt,
   createdAt: row.createdAt,

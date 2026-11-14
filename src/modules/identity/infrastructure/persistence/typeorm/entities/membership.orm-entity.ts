@@ -26,6 +26,14 @@ export class MembershipOrmEntity {
   @Column({ name: "idtb_units", type: "uuid", nullable: true })
   unitId!: string | null;
 
+  @Column({
+    name: "unit_complement",
+    type: "varchar",
+    length: 80,
+    nullable: true,
+  })
+  unitComplement!: string | null;
+
   @Column({ type: "boolean", default: true })
   active!: boolean;
 

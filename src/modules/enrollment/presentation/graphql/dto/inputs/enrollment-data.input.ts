@@ -26,4 +26,33 @@ export class EnrollmentDataInput {
   @IsOptional()
   @IsUUID()
   unitId?: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Complemento do endereço no condomínio ("casa dos fundos").',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  unitComplement?: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "Bloco ou torre digitado (quando o condomínio ainda não tem unidades).",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  unitBlock?: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "Número da casa ou apartamento digitado (quando o condomínio ainda não tem unidades). Na aprovação, ausente mantém o informado.",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  unitNumber?: string | null;
 }

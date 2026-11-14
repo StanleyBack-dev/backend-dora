@@ -28,6 +28,32 @@ export class EnrollmentRequestType {
   })
   unitLabel!: string | null;
 
+  @Field(() => String, {
+    nullable: true,
+    description: 'Complemento do endereço no condomínio ("casa dos fundos").',
+  })
+  unitComplement!: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'Unidade digitada (condomínio sem unidades cadastradas): "Bloco A · 101".',
+  })
+  typedUnitLabel!: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "Bloco ou torre digitado (null: sem bloco ou unidade escolhida).",
+  })
+  typedUnitBlock!: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description: "Número digitado (null: unidade escolhida na lista).",
+  })
+  typedUnitNumber!: string | null;
+
   @Field()
   createdAt!: Date;
 

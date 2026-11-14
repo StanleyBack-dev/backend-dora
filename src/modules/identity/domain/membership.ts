@@ -11,6 +11,8 @@ export type Membership = {
   /** USER (resident) or ADMIN (manager). */
   role: UserGroup;
   unitId: string | null;
+  /** Address detail inside the condominium ("casa dos fundos"). */
+  unitComplement: string | null;
   active: boolean;
   lastSelectedAt: Date | null;
   createdAt: Date;

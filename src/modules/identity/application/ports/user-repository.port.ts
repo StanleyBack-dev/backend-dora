@@ -8,6 +8,7 @@ export type NewUser = {
   email: string;
   username: string;
   group: UserGroup;
+  phone?: string | null;
 };
 
 export type UserPatch = Partial<
@@ -18,8 +19,10 @@ export type UserPatch = Partial<
     | "username"
     | "group"
     | "active"
+    | "phone"
     | "avatarKey"
     | "onboardingCompletedAt"
+    | "lastCondominiumId"
   >
 >;
 
@@ -48,6 +51,8 @@ export type MemberAccount = UserAccount & {
   unitId: string | null;
   unitBlock: string | null;
   unitNumber: string | null;
+  /** Address detail inside the condominium. */
+  unitComplement: string | null;
   /**
    * The account is also used outside this condominium (another membership,
    * or the platform administrator): its login data is not this

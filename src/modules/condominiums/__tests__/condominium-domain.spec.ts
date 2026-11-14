@@ -6,6 +6,7 @@ import {
   expandUnitNumbers,
   MAX_UNITS_PER_BATCH,
   normalizeBlock,
+  normalizeUnitComplement,
   unitKey,
   unitLabel,
 } from "@/modules/condominiums/domain/unit";
@@ -58,6 +59,15 @@ describe("units", () => {
     expect(unitKey({ block: "Bloco A", number: "10B" })).toBe(
       unitKey({ block: "bloco a", number: "10b" }),
     );
+  });
+
+  it("normalizes the address complement", () => {
+    expect(normalizeUnitComplement("  Casa   dos fundos ")).toBe(
+      "Casa dos fundos",
+    );
+    expect(normalizeUnitComplement("   ")).toBeNull();
+    expect(normalizeUnitComplement(null)).toBeNull();
+    expect(normalizeUnitComplement("x".repeat(81))).toBe("too-long");
   });
 
   it("accepts an empty block and rejects long ones", () => {

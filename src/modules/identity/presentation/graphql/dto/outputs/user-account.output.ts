@@ -31,6 +31,21 @@ export class UserAccountType {
   })
   unitLabel!: string | null;
 
+  @Field(() => String, {
+    nullable: true,
+    description: 'Complemento do endereço no condomínio ("casa dos fundos").',
+  })
+  unitComplement!: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description: "Telefone de contato (só dígitos: DDD + número).",
+  })
+  phone!: string | null;
+
+  /** Resolved into a signed link by the `photoUrl` field. */
+  avatarKey!: string | null;
+
   @Field({
     description:
       "A conta também é usada fora deste condomínio: os dados de login só mudam pela própria pessoa ou pela plataforma.",

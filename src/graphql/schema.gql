@@ -250,6 +250,12 @@ type UserAccount {
   """Unidade: "Bloco A · 101"."""
   unitLabel: String
 
+  """Complemento do endereço no condomínio ("casa dos fundos")."""
+  unitComplement: String
+
+  """Telefone de contato (só dígitos: DDD + número)."""
+  phone: String
+
   """
   A conta também é usada fora deste condomínio: os dados de login só mudam pela própria pessoa ou pela plataforma.
   """
@@ -263,6 +269,9 @@ type UserAccount {
   lastLoginAt: DateTime
   deactivatedAt: DateTime
   createdAt: DateTime!
+
+  """Link temporário da foto de perfil (null: sem foto)."""
+  photoUrl: String
 
   """Bloqueado agora por tentativas inválidas de login."""
   locked: Boolean!
@@ -292,6 +301,20 @@ type EnrollmentRequest {
 
   """Unidade escolhida: "Bloco A · 101"."""
   unitLabel: String
+
+  """Complemento do endereço no condomínio ("casa dos fundos")."""
+  unitComplement: String
+
+  """
+  Unidade digitada (condomínio sem unidades cadastradas): "Bloco A · 101".
+  """
+  typedUnitLabel: String
+
+  """Bloco ou torre digitado (null: sem bloco ou unidade escolhida)."""
+  typedUnitBlock: String
+
+  """Número digitado (null: unidade escolhida na lista)."""
+  typedUnitNumber: String
   createdAt: DateTime!
   reviewedAt: DateTime
   rejectionReason: String
@@ -381,6 +404,9 @@ type SessionUser {
 
   """Condomínios que a pessoa pode abrir."""
   condominiums: [MemberCondominium!]!
+
+  """Telefone de contato (só dígitos: DDD + número)."""
+  phone: String
 
   """Link temporário da foto de perfil (null: sem foto)."""
   photoUrl: String
@@ -1009,6 +1035,17 @@ input EnrollmentDataInput {
   Unidade (obrigatória quando o condomínio tem unidades). Na aprovação, ausente mantém a escolhida.
   """
   unitId: ID
+
+  """Complemento do endereço no condomínio ("casa dos fundos")."""
+  unitComplement: String
+
+  """Bloco ou torre digitado (quando o condomínio ainda não tem unidades)."""
+  unitBlock: String
+
+  """
+  Número da casa ou apartamento digitado (quando o condomínio ainda não tem unidades). Na aprovação, ausente mantém o informado.
+  """
+  unitNumber: String
 }
 
 input SubmitEnrollmentInput {
@@ -1036,6 +1073,9 @@ input ChangePasswordInput {
 input UpdateMyProfileInput {
   name: String!
   email: String!
+
+  """Telefone de contato (ausente: mantém; vazio: remove)."""
+  phone: String
 }
 
 input VerifyRecoveryCodeInput {
@@ -1058,6 +1098,12 @@ input CreateUserInput {
   """USER (morador) ou ADMIN (gestor)."""
   group: UserGroup!
   unitId: ID
+
+  """Complemento do endereço no condomínio ("casa dos fundos")."""
+  unitComplement: String
+
+  """Telefone de contato."""
+  phone: String
 }
 
 input UpdateUserInput {
@@ -1068,6 +1114,12 @@ input UpdateUserInput {
 
   """Ausente: não muda. null: sem unidade."""
   unitId: ID
+
+  """Complemento do endereço no condomínio ("casa dos fundos")."""
+  unitComplement: String
+
+  """Telefone de contato."""
+  phone: String
 }
 
 input SetUserPermissionsInput {

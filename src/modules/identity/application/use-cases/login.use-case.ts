@@ -38,6 +38,7 @@ import {
   resolveTenantContext,
   type TenantContext,
 } from "@/modules/identity/domain/membership";
+import { CondominiumContextUseCase } from "@/modules/identity/application/use-cases/condominium-context.use-case";
 import type { User } from "@/modules/identity/domain/user";
 import {
   isEmailLogin,
@@ -71,6 +72,7 @@ export class LoginUseCase {
     private readonly sessionTokens: SessionTokensService,
     private readonly config: IdentityConfig,
     private readonly throttle: AuthThrottleService,
+    private readonly context: CondominiumContextUseCase,
   ) {}
 
   async execute(
@@ -134,9 +136,10 @@ export class LoginUseCase {
     }
     await this.users.touchLastLogin(user.id, now);
 
-    // The session opens in the condominium the person used last (only
-    // active memberships of active condominiums are candidates).
-    const condominiumId = await this.memberships.defaultCondominiumId(user.id);
+    // The session opens in the condominium the person used last, while they
+    // can still enter it.
+    const starting = await this.context.startingFor(user);
+    const condominiumId = starting?.id ?? null;
     const membership = condominiumId
       ? await this.memberships.find(user.id, condominiumId)
       : null;
@@ -148,7 +151,7 @@ export class LoginUseCase {
       context: resolveTenantContext({
         accountGroup: user.group,
         condominiumId,
-        condominiumStatus: condominiumId ? "ACTIVE" : null,
+        condominiumStatus: starting?.status ?? null,
         membershipId: membership?.id ?? null,
         membershipRole: membership?.role ?? null,
       }),

@@ -101,6 +101,16 @@ export const identityErrors = {
     status: HttpStatus.CONFLICT,
     message: "Este e-mail já está em uso por outro usuário.",
   },
+  invalidPhone: {
+    code: "USER_INVALID_PHONE",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: "Telefone inválido. Informe o DDD e o número.",
+  },
+  invalidComplement: {
+    code: "USER_INVALID_COMPLEMENT",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: "O complemento deve ter até 80 caracteres.",
+  },
   alreadyMember: {
     code: "USER_ALREADY_MEMBER",
     status: HttpStatus.CONFLICT,

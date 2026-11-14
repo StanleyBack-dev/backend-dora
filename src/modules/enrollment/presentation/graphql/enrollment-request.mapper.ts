@@ -14,4 +14,11 @@ export const toRequestType = (
           number: request.unitNumber,
         })
       : null,
+  typedUnitLabel:
+    request.typedUnitNumber !== null
+      ? unitLabel({
+          block: request.typedUnitBlock ?? "",
+          number: request.typedUnitNumber,
+        })
+      : null,
 });

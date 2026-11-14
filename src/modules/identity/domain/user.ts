@@ -12,8 +12,15 @@ export type User = {
   updatedAt: Date;
   deactivatedAt: Date | null;
   lastLoginAt: Date | null;
+  /** Contact phone, digits only (DDD + number; null: not informed). */
+  phone: string | null;
   /** Profile photo in the object storage (null: none). */
   avatarKey: string | null;
+  /**
+   * Condominium the person worked in last; a new login reopens it while they
+   * can still enter it (null: none chosen, or the platform view).
+   */
+  lastCondominiumId: string | null;
   /** When the guided tour was finished or skipped (null: not yet). */
   onboardingCompletedAt: Date | null;
 };

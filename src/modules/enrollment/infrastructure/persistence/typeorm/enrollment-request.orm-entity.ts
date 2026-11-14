@@ -17,6 +17,30 @@ export class EnrollmentRequestOrmEntity {
   @Column({ name: "idtb_units", type: "uuid", nullable: true })
   unitId!: string | null;
 
+  @Column({
+    name: "unit_complement",
+    type: "varchar",
+    length: 80,
+    nullable: true,
+  })
+  unitComplement!: string | null;
+
+  @Column({
+    name: "typed_unit_block",
+    type: "varchar",
+    length: 30,
+    nullable: true,
+  })
+  typedUnitBlock!: string | null;
+
+  @Column({
+    name: "typed_unit_number",
+    type: "varchar",
+    length: 20,
+    nullable: true,
+  })
+  typedUnitNumber!: string | null;
+
   @Column({ name: "idtb_enrollment_invites", type: "uuid", nullable: true })
   inviteId!: string | null;
 

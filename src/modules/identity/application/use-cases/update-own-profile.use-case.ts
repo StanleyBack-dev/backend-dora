@@ -9,6 +9,7 @@ import {
 } from "@/modules/identity/application/ports/user-repository.port";
 import type { User } from "@/modules/identity/domain/user";
 import { normalizeEmail } from "@/modules/identity/domain/username";
+import { normalizePhone } from "@/shared/domain/phone";
 
 @Injectable()
 export class UpdateOwnProfileUseCase {
@@ -19,7 +20,8 @@ export class UpdateOwnProfileUseCase {
 
   async execute(
     actor: AuthenticatedUser,
-    input: { name: string; email: string },
+    /** phone: undefined keeps it; null or "" removes it. */
+    input: { name: string; email: string; phone?: string | null },
   ): Promise<User> {
     const before = await this.users.findById(actor.id);
     if (!before) {
@@ -35,12 +37,26 @@ export class UpdateOwnProfileUseCase {
     }
 
     const name = input.name.trim();
-    const updated = await this.users.update(actor.id, { name, email });
+    const updated = await this.users.update(actor.id, {
+      name,
+      email,
+      phone: this.phone(input.phone),
+    });
     await this.audit.stamp({
       actorId: actor.id,
       entity: "user",
       entityId: actor.id,
     });
     return updated;
+  }
+
+  private phone(value: string | null | undefined): string | null | undefined {
+    if (value === undefined) return undefined;
+    if (value === null || value.trim() === "") return null;
+    const phone = normalizePhone(value);
+    if (!phone) {
+      throw AppException.from(APP_ERRORS.identity.invalidPhone, undefined);
+    }
+    return phone;
   }
 }

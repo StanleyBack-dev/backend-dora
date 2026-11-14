@@ -33,7 +33,9 @@ import {
   normalizeEmail,
   normalizeUsername,
 } from "@/modules/identity/domain/username";
+import { normalizeUnitComplement } from "@/modules/condominiums/domain/unit";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
+import { normalizePhone } from "@/shared/domain/phone";
 import { UserManagementPolicy } from "@/modules/identity/application/user-management.policy";
 
 export type CreateMemberInput = {
@@ -44,6 +46,10 @@ export type CreateMemberInput = {
   /** Role in the condominium: USER (resident) or ADMIN (manager). */
   group: UserGroup;
   unitId?: string | null;
+  /** Address detail inside the condominium ("casa dos fundos"). */
+  unitComplement?: string | null;
+  /** Contact phone (any format; stored as digits). */
+  phone?: string | null;
 };
 
 export type UpdateMemberInput = {
@@ -53,6 +59,10 @@ export type UpdateMemberInput = {
   group?: UserGroup;
   /** undefined: unchanged; null: no unit. */
   unitId?: string | null;
+  /** undefined: unchanged; null or "": none. */
+  unitComplement?: string | null;
+  /** undefined: unchanged; null or "": none. */
+  phone?: string | null;
 };
 
 /**
@@ -97,6 +107,8 @@ export class ManageUsersUseCase {
     const condominiumId = tenantOf(actor);
     this.policy.assertCanAssign(actor, input.group);
     const unitId = await this.policy.unitOf(condominiumId, input.unitId);
+    const unitComplement = this.complement(input.unitComplement) ?? null;
+    const phone = this.phone(input.phone) ?? null;
     const email = normalizeEmail(input.email);
 
     const existing = await this.users.findByEmail(email);
@@ -109,7 +121,13 @@ export class ManageUsersUseCase {
         condominiumId,
         role: input.group,
         unitId,
+        unitComplement,
       });
+      // The account's own data stays the person's: only a missing phone is
+      // filled in.
+      if (phone && !existing.phone) {
+        await this.users.update(existing.id, { phone });
+      }
       await this.audit.stamp({
         actorId: actor.id,
         entity: "membership",
@@ -132,9 +150,9 @@ export class ManageUsersUseCase {
 
     const { temporary, hash } = await this.passwords.hashTemporary();
     const created = await this.users.createWithCredential(
-      { name, email, username, group: UserGroup.USER },
+      { name, email, username, group: UserGroup.USER, phone },
       { passwordHash: hash, mustChangePassword: true },
-      { condominiumId, role: input.group, unitId },
+      { condominiumId, role: input.group, unitId, unitComplement },
     );
     const emailSent = await this.notifier.accessCreated(created, temporary);
 
@@ -168,8 +186,10 @@ export class ManageUsersUseCase {
       input.username !== undefined
         ? normalizeUsername(input.username)
         : undefined;
+    const phone = this.phone(input.phone);
     const accountPatch = {
       name: name !== undefined && name !== target.name ? name : undefined,
+      phone: phone !== undefined && phone !== target.phone ? phone : undefined,
       email: email !== undefined && email !== target.email ? email : undefined,
       username:
         username !== undefined && username !== target.username
@@ -202,10 +222,18 @@ export class ManageUsersUseCase {
       input.unitId === undefined
         ? undefined
         : await this.policy.unitOf(condominiumId, input.unitId);
-    if (roleChanged || (unitId !== undefined && unitId !== target.unitId)) {
+    const complement = this.complement(input.unitComplement);
+    const complementChanged =
+      complement !== undefined && complement !== target.unitComplement;
+    if (
+      roleChanged ||
+      complementChanged ||
+      (unitId !== undefined && unitId !== target.unitId)
+    ) {
       await this.memberships.update(target.membershipId, {
         role: roleChanged ? input.group : undefined,
         unitId,
+        unitComplement: complementChanged ? complement : undefined,
       });
       if (roleChanged) {
         await this.permissions.resetToGroupDefaults(target.membershipId);
@@ -291,6 +319,29 @@ export class ManageUsersUseCase {
       entityId: userId,
     });
     return this.reload(tenantOf(actor), userId);
+  }
+
+  /** undefined: not sent; null: cleared; digits otherwise. */
+  private phone(value: string | null | undefined): string | null | undefined {
+    if (value === undefined) return undefined;
+    if (value === null || value.trim() === "") return null;
+    const phone = normalizePhone(value);
+    if (!phone) {
+      throw AppException.from(APP_ERRORS.identity.invalidPhone, undefined);
+    }
+    return phone;
+  }
+
+  /** undefined: not sent; null: cleared. */
+  private complement(
+    value: string | null | undefined,
+  ): string | null | undefined {
+    if (value === undefined) return undefined;
+    const complement = normalizeUnitComplement(value);
+    if (complement === "too-long") {
+      throw AppException.from(APP_ERRORS.identity.invalidComplement, undefined);
+    }
+    return complement;
   }
 
   private reload(

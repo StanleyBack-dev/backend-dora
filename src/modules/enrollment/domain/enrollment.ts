@@ -32,6 +32,14 @@ export type EnrollmentData = {
   phone: string;
   /** Unit chosen on the form (required when the condominium has units). */
   unitId: string | null;
+  /** Address detail inside the condominium ("casa dos fundos"). */
+  unitComplement: string | null;
+  /**
+   * Block and number typed when the condominium has no units registered
+   * yet; the manager links (or creates) the unit on approval.
+   */
+  typedUnitBlock: string | null;
+  typedUnitNumber: string | null;
 };
 
 export type EnrollmentRequest = EnrollmentData & {
@@ -59,11 +67,8 @@ const NAME_PARTICLES = new Set(["da", "das", "de", "di", "do", "dos", "e"]);
 
 export const INVITE_CODE_DIGITS = 6;
 
-/** Digits only; accepts Brazilian landlines (10) and mobiles (11). */
-export function normalizePhone(value: string): string | null {
-  const digits = value.replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "");
-  return /^\d{10,11}$/.test(digits) ? digits : null;
-}
+// The phone rule is shared with identity (residents' contact).
+export { normalizePhone } from "@/shared/domain/phone";
 
 // The login suggested from a name lives with the other login rules.
 export { usernameBase } from "@/modules/identity/domain/username";
