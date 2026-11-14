@@ -34,8 +34,14 @@ export class UserOrmEntity {
   @Column({ name: "last_login_at", type: "timestamptz", nullable: true })
   lastLoginAt!: Date | null;
 
+  @Column({ type: "varchar", length: 11, nullable: true })
+  phone!: string | null;
+
   @Column({ name: "avatar_key", type: "varchar", length: 200, nullable: true })
   avatarKey!: string | null;
+
+  @Column({ name: "last_condominium_id", type: "uuid", nullable: true })
+  lastCondominiumId!: string | null;
 
   @Column({
     name: "onboarding_completed_at",

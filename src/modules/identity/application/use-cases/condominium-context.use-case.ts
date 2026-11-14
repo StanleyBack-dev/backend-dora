@@ -9,10 +9,16 @@ import {
   type MembershipRepositoryPort,
 } from "@/modules/identity/application/ports/membership-repository.port";
 import {
+  USER_REPOSITORY,
+  type UserRepositoryPort,
+} from "@/modules/identity/application/ports/user-repository.port";
+import {
   SESSION_REPOSITORY,
   type SessionRepositoryPort,
 } from "@/modules/identity/application/ports/session-repository.port";
 import type { MemberCondominium } from "@/modules/identity/domain/membership";
+import { UserGroup } from "@/modules/access-control/domain/user-group";
+import type { User } from "@/modules/identity/domain/user";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
 
 /** The condominium the caller is working in, as the app header shows it. */
@@ -34,13 +40,49 @@ export class CondominiumContextUseCase {
     private readonly memberships: MembershipRepositoryPort,
     @Inject(SESSION_REPOSITORY)
     private readonly sessions: SessionRepositoryPort,
+    @Inject(USER_REPOSITORY) private readonly users: UserRepositoryPort,
     @Inject(CLOCK) private readonly clock: ClockPort,
     private readonly condominiums: CondominiumLookupService,
   ) {}
 
-  /** Condominiums the caller can open through a membership. */
-  mine(userId: string): Promise<MemberCondominium[]> {
-    return this.memberships.listOpenable(userId);
+  /**
+   * Condominiums the caller can open: their memberships, or every
+   * condominium for the platform administrator.
+   */
+  async mine(user: {
+    id: string;
+    platformAdmin: boolean;
+  }): Promise<MemberCondominium[]> {
+    if (!user.platformAdmin) return this.memberships.listOpenable(user.id);
+    return (await this.condominiums.listAll()).map((condominium) => ({
+      id: condominium.id,
+      name: condominium.name,
+      city: condominium.city,
+      state: condominium.state,
+      role: UserGroup.ADMIN_MASTER,
+    }));
+  }
+
+  /**
+   * Where a new session starts: the condominium used last, while the person
+   * can still enter it; otherwise the most recent active membership (the
+   * platform administrator: the platform view).
+   */
+  async startingFor(
+    user: Pick<User, "id" | "group" | "lastCondominiumId">,
+  ): Promise<{ id: string; status: CondominiumStatus } | null> {
+    const platformAdmin = user.group === UserGroup.ADMIN_MASTER;
+    if (user.lastCondominiumId) {
+      const last = await this.condominiums.find(user.lastCondominiumId);
+      if (last && platformAdmin) return { id: last.id, status: last.status };
+      if (last?.status === CondominiumStatus.ACTIVE) {
+        const membership = await this.memberships.find(user.id, last.id);
+        if (membership?.active) return { id: last.id, status: last.status };
+      }
+    }
+    if (platformAdmin) return null;
+    const fallback = await this.memberships.defaultCondominiumId(user.id);
+    return fallback ? { id: fallback, status: CondominiumStatus.ACTIVE } : null;
   }
 
   async current(
@@ -69,6 +111,8 @@ export class CondominiumContextUseCase {
   ): Promise<void> {
     if (condominiumId === null) {
       await this.sessions.setCondominium(user.sessionId, null);
+      // Remembered too: the platform view is a choice like any other.
+      await this.users.update(user.id, { lastCondominiumId: null });
       return;
     }
 
@@ -91,6 +135,8 @@ export class CondominiumContextUseCase {
     }
 
     await this.sessions.setCondominium(user.sessionId, condominiumId);
+    // The next login (after logging out or losing the session) reopens it.
+    await this.users.update(user.id, { lastCondominiumId: condominiumId });
     await this.memberships.touchSelected(
       user.id,
       condominiumId,

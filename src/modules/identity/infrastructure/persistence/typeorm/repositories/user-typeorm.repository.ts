@@ -39,8 +39,10 @@ const toUser = (row: UserOrmEntity): User => ({
   updatedAt: row.updatedAt,
   deactivatedAt: row.deactivatedAt,
   lastLoginAt: row.lastLoginAt,
+  phone: row.phone,
   avatarKey: row.avatarKey,
   onboardingCompletedAt: row.onboardingCompletedAt,
+  lastCondominiumId: row.lastCondominiumId,
 });
 
 type MemberRaw = {
@@ -50,6 +52,7 @@ type MemberRaw = {
   membership_role: UserGroup;
   membership_active: boolean;
   membership_unit_id: string | null;
+  membership_unit_complement: string | null;
   unit_block: string | null;
   unit_number: string | null;
   other_memberships: string | number;
@@ -200,6 +203,7 @@ export class UserTypeormRepository implements UserRepositoryPort {
       .addSelect("membership.role", "membership_role")
       .addSelect("membership.active", "membership_active")
       .addSelect("membership.idtb_units", "membership_unit_id")
+      .addSelect("membership.unit_complement", "membership_unit_complement")
       .addSelect("unit.block", "unit_block")
       .addSelect("unit.number", "unit_number")
       .addSelect(
@@ -235,7 +239,10 @@ export class UserTypeormRepository implements UserRepositoryPort {
           where
             .where("unaccent(account.name) ILIKE unaccent(:term)", { term })
             .orWhere("account.username ILIKE :term", { term })
-            .orWhere("account.email ILIKE :term", { term }),
+            .orWhere("account.email ILIKE :term", { term })
+            .orWhere("account.phone LIKE :digits", {
+              digits: `%${search.replace(/\D/g, "") || "-"}%`,
+            }),
         ),
       );
     }
@@ -257,6 +264,7 @@ export class UserTypeormRepository implements UserRepositoryPort {
         unitId: extra.membership_unit_id,
         unitBlock: extra.unit_block,
         unitNumber: extra.unit_number,
+        unitComplement: extra.membership_unit_complement,
         sharedAccount:
           user.group === UserGroup.ADMIN_MASTER ||
           Number(extra.other_memberships) > 0,

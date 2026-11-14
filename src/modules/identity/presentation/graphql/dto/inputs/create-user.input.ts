@@ -41,4 +41,19 @@ export class CreateUserInput {
   @IsOptional()
   @IsUUID()
   unitId?: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Complemento do endereço no condomínio ("casa dos fundos").',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  unitComplement?: string | null;
+
+  @Field(() => String, { nullable: true, description: "Telefone de contato." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  phone?: string | null;
 }

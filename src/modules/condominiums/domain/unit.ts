@@ -27,6 +27,18 @@ export function normalizeUnitNumber(value: string): string | null {
   return number.length >= 1 && number.length <= 20 ? number : null;
 }
 
+/**
+ * Address detail inside the condominium ("casa dos fundos"): trimmed, null
+ * when empty, "too-long" past 80 characters.
+ */
+export function normalizeUnitComplement(
+  value: string | null | undefined,
+): string | null | "too-long" {
+  const complement = collapse(value ?? "");
+  if (complement === "") return null;
+  return complement.length <= 80 ? complement : "too-long";
+}
+
 /** How a unit is shown: "Bloco A · 101", or just "101". */
 export function unitLabel(unit: Pick<Unit, "block" | "number">): string {
   return unit.block ? `${unit.block} · ${unit.number}` : unit.number;

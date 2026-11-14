@@ -23,6 +23,11 @@ export class CondominiumLookupService {
     return this.condominiums.findById(id);
   }
 
+  /** Every condominium (the platform administrator's switcher). */
+  listAll(): Promise<Condominium[]> {
+    return this.condominiums.list({});
+  }
+
   /** The unit, only when it belongs to this condominium. */
   async unitIn(condominiumId: string, unitId: string): Promise<Unit | null> {
     return this.units.findById(condominiumId, unitId);

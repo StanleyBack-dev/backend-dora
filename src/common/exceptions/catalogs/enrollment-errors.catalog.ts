@@ -75,6 +75,17 @@ export const enrollmentErrors = {
     status: HttpStatus.UNPROCESSABLE_ENTITY,
     message: "Informe o motivo da recusa (de 3 a 500 caracteres).",
   },
+  invalidTypedUnit: {
+    code: "ENROLLMENT_INVALID_TYPED_UNIT",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message:
+      "Informe o número da sua casa ou apartamento (e o bloco ou torre, se houver).",
+  },
+  invalidComplement: {
+    code: "ENROLLMENT_INVALID_COMPLEMENT",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: "O complemento deve ter até 80 caracteres.",
+  },
   invalidUnit: {
     code: "ENROLLMENT_INVALID_UNIT",
     status: HttpStatus.UNPROCESSABLE_ENTITY,

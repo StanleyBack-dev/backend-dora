@@ -45,6 +45,7 @@ import { rateStatus, type RateRule } from "@/shared/domain/rate-limit";
 import {
   EnrollmentInput,
   validateEnrollment,
+  validatePlace,
 } from "@/modules/enrollment/application/enrollment-input";
 
 /** Time to fill in the form after typing the code. */
@@ -65,7 +66,7 @@ export type EnrollmentForm = {
 /** Tells a reviewer that a sign-up awaits approval. */
 export function submittedNotice(
   userId: string,
-  data: Omit<EnrollmentData, "unitId">,
+  data: Pick<EnrollmentData, "fullName" | "email">,
   condominiumName: string,
 ): NotificationDelivery {
   return {
@@ -163,6 +164,11 @@ export class PublicEnrollmentUseCase {
     });
 
     const unitId = await this.formUnit(invite.condominiumId, input.unitId);
+    // No units registered yet: the block/number are typed instead.
+    const place = validatePlace(
+      input,
+      (await this.condominiums.unitsOf(invite.condominiumId)).length === 0,
+    );
 
     // Someone with a Dora account elsewhere may join this condominium too.
     if (await this.users.isMemberEmail(data.email, invite.condominiumId)) {
@@ -201,6 +207,7 @@ export class PublicEnrollmentUseCase {
       await this.repository.createRequest(
         {
           ...data,
+          ...place,
           unitId,
           condominiumId: invite.condominiumId,
           inviteId: invite.id,

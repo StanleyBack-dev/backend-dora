@@ -26,6 +26,9 @@ export function toAccountType(member: MemberAccount): UserAccountType {
             number: member.unitNumber,
           })
         : null,
+    unitComplement: member.unitComplement,
+    phone: member.phone,
+    avatarKey: member.avatarKey,
     sharedAccount: member.sharedAccount,
     mustChangePassword: member.mustChangePassword,
     lockedUntil: member.lockedUntil,

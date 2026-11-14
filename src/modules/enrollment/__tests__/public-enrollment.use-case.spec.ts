@@ -120,10 +120,14 @@ function setup(options: Setup = {}) {
   };
 }
 
+// The default condominium has no units yet: the block/number are typed.
 const form = {
   fullName: "joão DA silva",
   email: "Joao@Example.com",
   phone: "(62) 99999-1234",
+  unitBlock: " Torre  2 ",
+  unitNumber: "1204",
+  unitComplement: " Final  4 ",
 };
 
 describe("PublicEnrollmentUseCase", () => {
@@ -139,6 +143,42 @@ describe("PublicEnrollmentUseCase", () => {
         inviteId: "invite-1",
         condominiumId: "condo-1",
         unitId: null,
+        typedUnitBlock: "Torre 2",
+        typedUnitNumber: "1204",
+        unitComplement: "Final 4",
+      }),
+    ]);
+  });
+
+  it("asks for the typed number when the condominium has no units", async () => {
+    const { useCase, created } = setup();
+    const token = await useCase.verify("123456", null);
+    await expect(
+      useCase.submit(token, { ...form, unitNumber: "  " }, true, null),
+    ).rejects.toThrow("Informe o número da sua casa ou apartamento");
+    await expect(
+      useCase.submit(
+        token,
+        { ...form, unitComplement: "x".repeat(81) },
+        true,
+        null,
+      ),
+    ).rejects.toThrow("O complemento deve ter até 80 caracteres.");
+    expect(created).toHaveLength(0);
+  });
+
+  it("ignores typed block/number when the unit comes from the list", async () => {
+    const { useCase, created } = setup({
+      units: [{ id: "unit-1", block: "A", number: "101" }],
+    });
+    const token = await useCase.verify("123456", null);
+    await useCase.submit(token, { ...form, unitId: "unit-1" }, true, null);
+    expect(created).toEqual([
+      expect.objectContaining({
+        unitId: "unit-1",
+        typedUnitBlock: null,
+        typedUnitNumber: null,
+        unitComplement: "Final 4",
       }),
     ]);
   });

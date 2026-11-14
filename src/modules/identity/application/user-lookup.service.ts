@@ -86,6 +86,11 @@ export class UserLookupService {
     await this.users.update(id, { avatarKey });
   }
 
+  /** Contact phone of the account, digits only (null: none). */
+  async phoneOf(id: string): Promise<string | null> {
+    return (await this.users.findById(id))?.phone ?? null;
+  }
+
   /** Whether the person already saw (or skipped) the guided tour. */
   async onboardingCompleted(id: string): Promise<boolean> {
     return Boolean((await this.users.findById(id))?.onboardingCompletedAt);

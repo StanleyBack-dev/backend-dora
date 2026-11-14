@@ -41,7 +41,7 @@ export class SessionCondominiumResolver {
   condominiums(
     @Parent() parent: SessionUserType,
   ): Promise<MemberCondominium[]> {
-    return this.context.mine(parent.id);
+    return this.context.mine(parent);
   }
 
   @AllowFirstAccess()

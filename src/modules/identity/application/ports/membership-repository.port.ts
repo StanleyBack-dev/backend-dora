@@ -9,10 +9,11 @@ export type NewMembership = {
   condominiumId: string;
   role: UserGroup;
   unitId: string | null;
+  unitComplement?: string | null;
 };
 
 export type MembershipPatch = Partial<
-  Pick<Membership, "role" | "unitId" | "active">
+  Pick<Membership, "role" | "unitId" | "unitComplement" | "active">
 >;
 
 export interface MembershipRepositoryPort {

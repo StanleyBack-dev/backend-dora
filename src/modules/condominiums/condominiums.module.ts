@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuditModule } from "@/modules/audit/audit.module";
 import { CondominiumLookupService } from "@/modules/condominiums/application/condominium-lookup.service";
+import { UnitRegistryService } from "@/modules/condominiums/application/unit-registry.service";
 import { CondominiumsUseCase } from "@/modules/condominiums/application/use-cases/condominiums.use-case";
 import { UnitsUseCase } from "@/modules/condominiums/application/use-cases/units.use-case";
 import { CONDOMINIUM_REPOSITORY } from "@/modules/condominiums/application/ports/condominium-repository.port";
@@ -26,11 +27,12 @@ import { UnitsResolver } from "@/modules/condominiums/presentation/graphql/units
     CondominiumsUseCase,
     UnitsUseCase,
     CondominiumLookupService,
+    UnitRegistryService,
     CondominiumsResolver,
     UnitsResolver,
     { provide: CONDOMINIUM_REPOSITORY, useClass: CondominiumTypeormRepository },
     { provide: UNIT_REPOSITORY, useClass: UnitTypeormRepository },
   ],
-  exports: [CondominiumLookupService],
+  exports: [CondominiumLookupService, UnitRegistryService],
 })
 export class CondominiumsModule {}
