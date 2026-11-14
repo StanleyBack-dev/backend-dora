@@ -22,7 +22,7 @@ export class AuditResolver {
   @Query(() => RecordStampType, {
     nullable: true,
     description:
-      "Criação e última alteração de um registro (null: não existe). Para todos; contas e cadastros só para quem gerencia usuários.",
+      "Criação e última alteração de um registro (null: não existe ou é de outro condomínio). Contas e cadastros só para quem gerencia usuários.",
   })
   async recordStamp(
     @CurrentUser() user: AuthenticatedUser,
@@ -43,6 +43,16 @@ export class AuditResolver {
         { missing: [required] },
       );
     }
-    return this.audit.find(entity, id);
+    return this.audit.find(
+      entity,
+      id,
+      user.platformAdmin
+        ? { platform: true }
+        : {
+            platform: false,
+            userId: user.id,
+            condominiumId: user.condominiumId,
+          },
+    );
   }
 }

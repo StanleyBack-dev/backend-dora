@@ -3,6 +3,10 @@ import { InjectDataSource } from "@nestjs/typeorm";
 import type { DataSource } from "typeorm";
 import type { RecordStampRepositoryPort } from "@/modules/audit/application/ports/record-stamp-repository.port";
 import {
+  STAMP_SCOPE,
+  type StampViewer,
+} from "@/modules/audit/domain/record-stamp-access";
+import {
   STAMPED_TABLES,
   type RecordStamp,
   type StampedEntity,
@@ -44,8 +48,31 @@ export class RecordStampTypeormRepository implements RecordStampRepositoryPort {
     );
   }
 
-  async find(entity: StampedEntity, id: string): Promise<RecordStamp | null> {
+  async find(
+    entity: StampedEntity,
+    id: string,
+    viewer: StampViewer,
+  ): Promise<RecordStamp | null> {
     const { table, key } = STAMPED_TABLES[entity];
+    // The tenant rule (STAMP_SCOPE) as SQL; out of scope reads as missing.
+    let scope = "";
+    const params: unknown[] = [id];
+    if (!viewer.platform) {
+      const rule = STAMP_SCOPE[entity];
+      if (rule === "owner") {
+        scope = `AND t.idtb_users = $2`;
+        params.push(viewer.userId);
+      } else {
+        if (!viewer.condominiumId) return null;
+        scope =
+          rule === "member"
+            ? `AND EXISTS (SELECT 1 FROM tb_memberships m
+                          WHERE m.idtb_users = t."${key}"
+                            AND m.idtb_condominiums = $2)`
+            : `AND t.idtb_condominiums = $2`;
+        params.push(viewer.condominiumId);
+      }
+    }
     const rows: {
       created_at: Date;
       created_by: string | null;
@@ -59,8 +86,8 @@ export class RecordStampTypeormRepository implements RecordStampRepositoryPort {
          FROM "${table}" t
          LEFT JOIN tb_users c ON c.idtb_users = t.created_by
          LEFT JOIN tb_users u ON u.idtb_users = t.updated_by
-        WHERE t."${key}"::text = $1`,
-      [id],
+        WHERE t."${key}"::text = $1 ${scope}`,
+      params,
     );
     const row = rows[0];
     return row

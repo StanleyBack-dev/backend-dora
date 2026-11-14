@@ -1,3 +1,4 @@
+import type { StampViewer } from "@/modules/audit/domain/record-stamp-access";
 import type {
   RecordStamp,
   StampedEntity,
@@ -11,8 +12,15 @@ export interface RecordStampRepositoryPort {
   stampMany(
     input: Omit<StampInput, "entityId"> & { entityIds: readonly string[] },
   ): Promise<void>;
-  /** The record's stamps with the people's names; null if it doesn't exist. */
-  find(entity: StampedEntity, id: string): Promise<RecordStamp | null>;
+  /**
+   * The record's stamps with the people's names; null if it doesn't exist
+   * or is outside what the viewer may see (STAMP_SCOPE).
+   */
+  find(
+    entity: StampedEntity,
+    id: string,
+    viewer: StampViewer,
+  ): Promise<RecordStamp | null>;
 }
 
 export const RECORD_STAMP_REPOSITORY = Symbol("RECORD_STAMP_REPOSITORY");

@@ -1,3 +1,4 @@
+import type { StampViewer } from "@/modules/audit/domain/record-stamp-access";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import {
   RECORD_STAMP_REPOSITORY,
@@ -46,7 +47,11 @@ export class AuditTrailService {
     }
   }
 
-  find(entity: StampedEntity, id: string): Promise<RecordStamp | null> {
-    return this.repository.find(entity, id);
+  find(
+    entity: StampedEntity,
+    id: string,
+    viewer: StampViewer,
+  ): Promise<RecordStamp | null> {
+    return this.repository.find(entity, id, viewer);
   }
 }
