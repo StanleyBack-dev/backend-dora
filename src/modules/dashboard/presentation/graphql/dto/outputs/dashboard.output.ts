@@ -12,6 +12,9 @@ export class DashboardType implements Dashboard {
   @Field(() => Int, { description: "Unidades cadastradas." })
   units!: number;
 
+  @Field(() => Int, { description: "Espaços ativos para reserva." })
+  activeSpaces!: number;
+
   @Field(() => Int, {
     nullable: true,
     description: "Pedidos de suporte sem resposta (só a plataforma vê).",

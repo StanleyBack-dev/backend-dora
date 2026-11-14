@@ -13,6 +13,8 @@ export enum Permission {
   PERMISSIONS_MANAGE = "PERMISSIONS_MANAGE",
   /** Blocks and units of the condominium. */
   UNITS_MANAGE = "UNITS_MANAGE",
+  /** Bookable spaces (courts, party room…) and their booking rules. */
+  SPACES_MANAGE = "SPACES_MANAGE",
   AUDIT_READ = "AUDIT_READ",
   /** Answer and close the app's support requests (platform). */
   SUPPORT_MANAGE = "SUPPORT_MANAGE",

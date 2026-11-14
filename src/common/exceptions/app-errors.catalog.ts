@@ -8,6 +8,7 @@ import { enrollmentErrors } from "@/common/exceptions/catalogs/enrollment-errors
 import { identityErrors } from "@/common/exceptions/catalogs/identity-errors.catalog";
 import { mailsErrors } from "@/common/exceptions/catalogs/mails-errors.catalog";
 import { notificationsErrors } from "@/common/exceptions/catalogs/notifications-errors.catalog";
+import { spacesErrors } from "@/common/exceptions/catalogs/spaces-errors.catalog";
 import { storageErrors } from "@/common/exceptions/catalogs/storage-errors.catalog";
 import { supportErrors } from "@/common/exceptions/catalogs/support-errors.catalog";
 import { tenancyErrors } from "@/common/exceptions/catalogs/tenancy-errors.catalog";
@@ -22,6 +23,7 @@ export const APP_ERRORS = {
   identity: identityErrors,
   mails: mailsErrors,
   notifications: notificationsErrors,
+  spaces: spacesErrors,
   storage: storageErrors,
   support: supportErrors,
   tenancy: tenancyErrors,

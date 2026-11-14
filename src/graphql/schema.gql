@@ -108,6 +108,9 @@ type Dashboard {
   """Unidades cadastradas."""
   units: Int!
 
+  """Espaços ativos para reserva."""
+  activeSpaces: Int!
+
   """Pedidos de suporte sem resposta (só a plataforma vê)."""
   openSupportRequests: Int
 
@@ -275,6 +278,7 @@ enum Permission {
   USERS_MANAGE
   PERMISSIONS_MANAGE
   UNITS_MANAGE
+  SPACES_MANAGE
   AUDIT_READ
   SUPPORT_MANAGE
   CONDOMINIUMS_MANAGE
@@ -366,6 +370,85 @@ type NotificationPreference {
 
   """Também recebe por e-mail."""
   emailEnabled: Boolean!
+}
+
+"""Horário de um dia da semana (dia ausente: fechado)."""
+type OpeningHours {
+  """0 = domingo … 6 = sábado."""
+  weekday: Int!
+
+  """"HH:MM"."""
+  opensAt: String!
+
+  """"HH:MM" ("24:00" = até meia-noite)."""
+  closesAt: String!
+}
+
+"""No máximo `count` reservas por unidade a cada período."""
+type UnitLimit {
+  count: Int!
+  period: LimitPeriod!
+}
+
+"""Período do limite de reservas por unidade."""
+enum LimitPeriod {
+  DAY
+  WEEK
+  MONTH
+}
+
+"""Regras de reserva do espaço."""
+type SpaceRules {
+  openingHours: [OpeningHours!]!
+
+  """Duração de cada reserva, em minutos."""
+  slotMinutes: Int!
+
+  """Antecedência mínima, em horas."""
+  minAdvanceHours: Int!
+
+  """A agenda abre até tantos dias à frente."""
+  maxAdvanceDays: Int!
+
+  """Limite por unidade (null: sem limite)."""
+  unitLimit: UnitLimit
+
+  """As reservas aguardam a aprovação de um gestor."""
+  requiresApproval: Boolean!
+
+  """Cancelamento permitido até tantas horas antes do início."""
+  cancelUntilHours: Int!
+}
+
+"""Espaço reservável do condomínio (quadra, salão…)."""
+type Space {
+  id: ID!
+  name: String!
+  kind: SpaceKind!
+  description: String
+
+  """Capacidade de pessoas."""
+  capacity: Int
+
+  """Regras de uso mostradas antes de reservar."""
+  usageRules: String
+
+  """Inativo: fora da lista dos moradores (manutenção)."""
+  active: Boolean!
+  rules: SpaceRules!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""Tipo de espaço (quadra, salão de festas…)."""
+enum SpaceKind {
+  COURT
+  PARTY_ROOM
+  BARBECUE
+  POOL
+  GYM
+  GAME_ROOM
+  OTHER
 }
 
 """Solicitação de suporte."""
@@ -507,6 +590,12 @@ type Query {
 
   """Chave VAPID para o navegador assinar o push (null = desligado)."""
   pushPublicKey: String
+
+  """
+  Espaços do condomínio atual. Inativos só com includeInactive, para quem gerencia espaços.
+  """
+  spaces(includeInactive: Boolean! = false): [Space!]!
+  space(id: ID!): Space!
 
   """Quantas solicitações de suporte ainda posso enviar hoje."""
   supportQuota: SupportQuota!
@@ -656,6 +745,14 @@ type Mutation {
 
   """Remove a própria foto de perfil."""
   removeMyPhoto: Boolean!
+  createSpace(input: SpaceInput!): Space!
+  updateSpace(id: ID!, input: SpaceInput!): Space!
+
+  """Ativa ou desativa (manutenção) o espaço."""
+  setSpaceActive(id: ID!, active: Boolean!): Space!
+
+  """Exclui o espaço."""
+  deleteSpace(id: ID!): Boolean!
 
   """
   Envia uma solicitação de suporte (até 3 por dia); avisa os administradores.
@@ -803,6 +900,42 @@ input PushSubscriptionInput {
 
   """Segredo de autenticação (base64url)."""
   auth: String!
+}
+
+"""O formulário completo do espaço."""
+input SpaceInput {
+  name: String!
+  kind: SpaceKind!
+  description: String
+  capacity: Int
+  usageRules: String
+  rules: SpaceRulesInput!
+}
+
+input SpaceRulesInput {
+  openingHours: [OpeningHoursInput!]!
+  slotMinutes: Int!
+  minAdvanceHours: Int!
+  maxAdvanceDays: Int!
+  unitLimit: UnitLimitInput
+  requiresApproval: Boolean!
+  cancelUntilHours: Int!
+}
+
+input OpeningHoursInput {
+  """0 = domingo … 6 = sábado."""
+  weekday: Int!
+
+  """"HH:MM"."""
+  opensAt: String!
+
+  """"HH:MM" ("24:00" = até meia-noite)."""
+  closesAt: String!
+}
+
+input UnitLimitInput {
+  count: Int!
+  period: LimitPeriod!
 }
 
 input SupportRequestInput {

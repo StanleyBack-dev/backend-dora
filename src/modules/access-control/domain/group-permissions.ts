@@ -6,7 +6,8 @@ import { UserGroup } from "./user-group";
 const RESIDENT_DEFAULTS: Permission[] = [];
 
 // Managers (síndico, administration) run their own condominium: overview,
-// announcements, members and sign-ups, units and members' permissions.
+// announcements, members and sign-ups, units, spaces and members'
+// permissions.
 const MANAGER_DEFAULTS: Permission[] = [
   ...RESIDENT_DEFAULTS,
   Permission.DASHBOARD_READ,
@@ -14,6 +15,7 @@ const MANAGER_DEFAULTS: Permission[] = [
   Permission.USERS_MANAGE,
   Permission.PERMISSIONS_MANAGE,
   Permission.UNITS_MANAGE,
+  Permission.SPACES_MANAGE,
 ];
 
 export const GROUP_DEFAULT_PERMISSIONS: Record<
