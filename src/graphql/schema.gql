@@ -519,6 +519,169 @@ type NotificationPreference {
   emailEnabled: Boolean!
 }
 
+"""Reservas de um intervalo da série."""
+type BookingsPoint {
+  """Primeiro dia do intervalo (YYYY-MM-DD)."""
+  bucket: String!
+
+  """Reservas com horário no intervalo."""
+  total: Int!
+
+  """Delas, canceladas."""
+  cancelled: Int!
+}
+
+"""Reservas de um condomínio no período."""
+type CondominiumBookings {
+  condominiumId: ID!
+  name: String!
+  total: Int!
+  cancelled: Int!
+}
+
+"""Reservas com horário no período."""
+type BookingMetrics {
+  """Todas, em qualquer situação."""
+  total: Int!
+  confirmed: Int!
+  pending: Int!
+  cancelled: Int!
+  rejected: Int!
+
+  """Pendentes há mais de 48 horas (agora, não no período)."""
+  stalePending: Int!
+
+  """Tamanho de cada intervalo da série."""
+  granularity: MetricsGranularity!
+
+  """Reservas por dia, semana ou mês."""
+  series: [BookingsPoint!]!
+
+  """Os 10 condomínios com mais reservas."""
+  byCondominium: [CondominiumBookings!]!
+}
+
+"""Tamanho de cada intervalo da série: dia, semana ou mês."""
+enum MetricsGranularity {
+  DAY
+  WEEK
+  MONTH
+}
+
+"""Uso de um espaço no período."""
+type SpaceUsage {
+  spaceId: ID!
+  name: String!
+  condominiumName: String!
+
+  """Reservas ativas (pendentes ou confirmadas)."""
+  bookings: Int!
+
+  """Horas reservadas."""
+  hours: Float!
+}
+
+"""Reservas por dia da semana."""
+type UsageByWeekday {
+  """0 = domingo … 6 = sábado."""
+  weekday: Int!
+  bookings: Int!
+}
+
+"""Reservas pelo horário de início."""
+type UsageByHour {
+  """0–23, no fuso do app."""
+  hour: Int!
+  bookings: Int!
+}
+
+"""Uso dos espaços no período."""
+type SpaceMetrics {
+  activeSpaces: Int!
+
+  """Os 10 espaços mais reservados."""
+  mostUsed: [SpaceUsage!]!
+
+  """Espaços ativos sem nenhuma reserva (até 10)."""
+  unused: [SpaceUsage!]!
+  unusedCount: Int!
+
+  """Os 7 dias, de domingo a sábado."""
+  byWeekday: [UsageByWeekday!]!
+
+  """Só os horários com reservas."""
+  byHour: [UsageByHour!]!
+}
+
+"""Condomínio sem acessos há 30 dias."""
+type InactiveCondominium {
+  condominiumId: ID!
+  name: String!
+
+  """Último acesso de um membro (null: nunca)."""
+  lastActivityAt: DateTime
+}
+
+"""Moradores e acessos."""
+type EngagementMetrics {
+  """Pessoas com acesso (cada uma conta uma vez)."""
+  members: Int!
+
+  """Entraram no app nos últimos 7 dias."""
+  active7d: Int!
+
+  """Entraram no app nos últimos 30 dias."""
+  active30d: Int!
+
+  """Acessos criados no período."""
+  newMembers: Int!
+
+  """Cadastros pelo link recebidos no período."""
+  enrollments: Int!
+
+  """Até 10, os mais parados primeiro."""
+  inactiveCondominiums: [InactiveCondominium!]!
+  inactiveCount: Int!
+}
+
+"""O que precisa de atenção agora."""
+type HealthMetrics {
+  """Cadastros esperando análise há mais de 3 dias."""
+  staleEnrollments: Int!
+
+  """Avisos que a fila desistiu de entregar (toda a plataforma)."""
+  failedNotifications: Int!
+
+  """Avisos na fila há mais de 1 hora (toda a plataforma)."""
+  delayedNotifications: Int!
+
+  """Condomínios ativos sem gestor ativo."""
+  withoutManager: Int!
+
+  """Condomínios ativos sem unidades."""
+  withoutUnits: Int!
+
+  """Solicitações de suporte sem resposta."""
+  openSupport: Int!
+}
+
+"""Os números da plataforma no período."""
+type PlatformMetrics {
+  """Primeiro dia (YYYY-MM-DD)."""
+  from: String!
+
+  """Último dia (YYYY-MM-DD)."""
+  to: String!
+  days: Int!
+
+  """Filtro de condomínio (null: todos)."""
+  condominiumId: ID
+  bookings: BookingMetrics!
+  spaces: SpaceMetrics!
+  engagement: EngagementMetrics!
+  health: HealthMetrics!
+}
+
 """Foto do espaço."""
 type SpacePhoto {
   id: ID!
@@ -700,7 +863,7 @@ type Query {
   ping: String!
 
   """
-  Criação e última alteração de um registro (null: não existe). Para todos; contas e cadastros só para quem gerencia usuários.
+  Criação e última alteração de um registro (null: não existe ou é de outro condomínio). Contas e cadastros só para quem gerencia usuários.
   """
   recordStamp(entity: String!, id: ID!): RecordStamp
 
@@ -756,6 +919,11 @@ type Query {
   pushPublicKey: String
 
   """
+  Números da plataforma no período: reservas, uso dos espaços, moradores e o que precisa de atenção.
+  """
+  platformMetrics(filter: PlatformMetricsFilterInput): PlatformMetrics!
+
+  """
   Espaços do condomínio atual. Inativos só com includeInactive, para quem gerencia espaços.
   """
   spaces(includeInactive: Boolean! = false): [Space!]!
@@ -809,6 +977,17 @@ input UserFilterInput {
   group: UserGroup
   active: Boolean
   unitId: ID
+}
+
+input PlatformMetricsFilterInput {
+  """Primeiro dia (YYYY-MM-DD). Padrão: 30 dias antes do fim."""
+  from: String
+
+  """Último dia (YYYY-MM-DD). Padrão: hoje."""
+  to: String
+
+  """Um condomínio (vazio: todos)."""
+  condominiumId: ID
 }
 
 input SystemLogFilterInput {
