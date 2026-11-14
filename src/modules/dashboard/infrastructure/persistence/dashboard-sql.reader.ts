@@ -7,7 +7,7 @@ import type {
 } from "@/modules/dashboard/application/ports/dashboard-reader.port";
 
 // Reporting query: reads (never writes) the tables of identity, enrollment,
-// condominiums, support and outbox in a single statement. Support and outbox
+// condominiums, spaces, support and outbox in a single statement. Support and outbox
 // are the platform's, so only the platform administrator gets them.
 @Injectable()
 export class DashboardSqlReader implements DashboardReaderPort {
@@ -25,6 +25,8 @@ export class DashboardSqlReader implements DashboardReaderPort {
            AS "pendingEnrollments",
          (SELECT count(*)::int FROM tb_units WHERE idtb_condominiums = $1)
            AS "units",
+         (SELECT count(*)::int FROM tb_spaces
+           WHERE idtb_condominiums = $1 AND active) AS "activeSpaces",
          CASE WHEN $2 THEN (SELECT count(*)::int FROM tb_support_requests
            WHERE status = 'ABERTO') END AS "openSupportRequests",
          CASE WHEN $2 THEN (SELECT count(*)::int FROM tb_outbox

@@ -26,6 +26,7 @@ import { MaintenanceModule } from "@/modules/maintenance/maintenance.module";
 import { NotificationsModule } from "@/modules/notifications/notifications.module";
 import { ProfilePhotosModule } from "@/modules/profile-photos/profile-photos.module";
 import { OutboxModule } from "@/modules/outbox/outbox.module";
+import { SpacesModule } from "@/modules/spaces/spaces.module";
 import { SharedModule } from "@/shared/shared.module";
 
 @Module({
@@ -41,6 +42,7 @@ import { SharedModule } from "@/shared/shared.module";
     CondominiumsModule,
     IdentityModule,
     EnrollmentModule,
+    SpacesModule,
     ProfilePhotosModule,
     OutboxModule,
     NotificationsModule,

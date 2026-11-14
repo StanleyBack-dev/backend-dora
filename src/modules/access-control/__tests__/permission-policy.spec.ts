@@ -22,6 +22,7 @@ describe("group defaults", () => {
       Permission.USERS_MANAGE,
       Permission.PERMISSIONS_MANAGE,
       Permission.UNITS_MANAGE,
+      Permission.SPACES_MANAGE,
     ]);
   });
 

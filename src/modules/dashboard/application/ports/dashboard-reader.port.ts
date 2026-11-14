@@ -5,6 +5,8 @@ export type Dashboard = {
   /** Sign-ups from the public link waiting for review. */
   pendingEnrollments: number;
   units: number;
+  /** Spaces residents can book. */
+  activeSpaces: number;
   /** Support requests not answered yet (platform only, else null). */
   openSupportRequests: number | null;
   /** Notifications the outbox gave up on (platform only, else null). */
