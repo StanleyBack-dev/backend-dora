@@ -1,9 +1,9 @@
 import { ALL_PERMISSIONS, Permission } from "./permission";
 import { UserGroup } from "./user-group";
 
-// Residents: for now only what every signed-in member already has (home,
-// profile, notifications, support). The bookings module grants theirs here.
-const RESIDENT_DEFAULTS: Permission[] = [];
+// Residents: what every member has (home, profile, notifications, support)
+// plus booking spaces.
+const RESIDENT_DEFAULTS: Permission[] = [Permission.BOOKINGS_CREATE];
 
 // Managers (síndico, administration) run their own condominium: overview,
 // announcements, members and sign-ups, units, spaces and members'
@@ -16,6 +16,7 @@ const MANAGER_DEFAULTS: Permission[] = [
   Permission.PERMISSIONS_MANAGE,
   Permission.UNITS_MANAGE,
   Permission.SPACES_MANAGE,
+  Permission.BOOKINGS_MANAGE,
 ];
 
 export const GROUP_DEFAULT_PERMISSIONS: Record<

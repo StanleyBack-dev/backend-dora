@@ -9,6 +9,8 @@ export const STAMPED_TABLES = {
   condominium: { table: "tb_condominiums", key: "idtb_condominiums" },
   unit: { table: "tb_units", key: "idtb_units" },
   space: { table: "tb_spaces", key: "idtb_spaces" },
+  booking: { table: "tb_bookings", key: "idtb_bookings" },
+  space_block: { table: "tb_space_blocks", key: "idtb_space_blocks" },
   broadcast: { table: "tb_broadcasts", key: "idtb_broadcasts" },
   enrollment_invite: {
     table: "tb_enrollment_invites",

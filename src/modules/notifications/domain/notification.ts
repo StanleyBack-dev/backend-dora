@@ -11,6 +11,14 @@ export enum NotificationType {
   SYSTEM_ALERT = "SYSTEM_ALERT",
   /** For ADMIN_MASTER: a sign-up from the public link awaits review. */
   ENROLLMENT_SUBMITTED = "ENROLLMENT_SUBMITTED",
+  /** Your booking is confirmed (straight away or after approval). */
+  BOOKING_CONFIRMED = "BOOKING_CONFIRMED",
+  /** For managers: a booking waits for approval. */
+  BOOKING_PENDING = "BOOKING_PENDING",
+  /** Your booking was rejected. */
+  BOOKING_REJECTED = "BOOKING_REJECTED",
+  /** A booking was cancelled (yours by a manager, or one you manage). */
+  BOOKING_CANCELLED = "BOOKING_CANCELLED",
 }
 
 export const ALL_NOTIFICATION_TYPES: readonly NotificationType[] =

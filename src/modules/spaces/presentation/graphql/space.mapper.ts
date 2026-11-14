@@ -17,6 +17,7 @@ export const toSpaceType = (space: Space): SpaceType => ({
     ...space.rules,
     openingHours: space.rules.openingHours.map((day) => ({ ...day })),
   },
+  photoRefs: space.photos,
   createdAt: space.createdAt,
   updatedAt: space.updatedAt,
 });

@@ -1,3 +1,4 @@
+import type { SpacePhoto } from "@/modules/spaces/domain/space-photo";
 import type { SpaceRules } from "@/modules/spaces/domain/space-rules";
 
 // A shared space of a condominium that residents book: a court, the party
@@ -26,6 +27,8 @@ export type Space = {
   /** Inactive: hidden from residents and not bookable (maintenance). */
   active: boolean;
   rules: SpaceRules;
+  /** Up to 3, in the order they were added. */
+  photos: SpacePhoto[];
   createdAt: Date;
   updatedAt: Date;
 };

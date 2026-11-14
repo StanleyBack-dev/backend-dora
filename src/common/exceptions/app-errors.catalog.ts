@@ -3,6 +3,7 @@ import { accessControlErrors } from "@/common/exceptions/catalogs/access-control
 import { auditErrors } from "@/common/exceptions/catalogs/audit-errors.catalog";
 import { authErrors } from "@/common/exceptions/catalogs/auth-errors.catalog";
 import { condominiumsErrors } from "@/common/exceptions/catalogs/condominiums-errors.catalog";
+import { bookingsErrors } from "@/common/exceptions/catalogs/bookings-errors.catalog";
 import { broadcastsErrors } from "@/common/exceptions/catalogs/broadcasts-errors.catalog";
 import { enrollmentErrors } from "@/common/exceptions/catalogs/enrollment-errors.catalog";
 import { identityErrors } from "@/common/exceptions/catalogs/identity-errors.catalog";
@@ -17,6 +18,7 @@ export const APP_ERRORS = {
   accessControl: accessControlErrors,
   audit: auditErrors,
   auth: authErrors,
+  bookings: bookingsErrors,
   broadcasts: broadcastsErrors,
   condominiums: condominiumsErrors,
   enrollment: enrollmentErrors,

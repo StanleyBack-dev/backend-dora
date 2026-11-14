@@ -17,6 +17,115 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+"""Reserva de um espaço."""
+type Booking {
+  id: ID!
+  spaceId: ID!
+  spaceName: String!
+  spaceKind: SpaceKind!
+  userId: ID!
+
+  """Quem reservou."""
+  userName: String!
+
+  """Unidade: "Bloco A · 101"."""
+  unitLabel: String
+  startsAt: DateTime!
+  endsAt: DateTime!
+  status: BookingStatus!
+  notes: String
+
+  """Até quando quem reservou pode cancelar."""
+  cancelUntil: DateTime!
+
+  """Motivo da recusa ou do cancelamento pela administração."""
+  reason: String
+  decidedAt: DateTime
+  cancelledAt: DateTime
+
+  """Cancelada por outra pessoa (a administração)."""
+  cancelledByManager: Boolean!
+  createdAt: DateTime!
+}
+
+"""Tipo de espaço (quadra, salão de festas…)."""
+enum SpaceKind {
+  COURT
+  PARTY_ROOM
+  BARBECUE
+  POOL
+  GYM
+  GAME_ROOM
+  OTHER
+}
+
+"""Situação da reserva."""
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  CANCELLED
+}
+
+type BookingPage {
+  items: [Booking!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+"""Um horário da grade do dia."""
+type AvailabilitySlot {
+  startsAt: DateTime!
+  endsAt: DateTime!
+  state: SlotState!
+
+  """A reserva no horário (a sua, ou qualquer uma para gestores)."""
+  bookingId: ID
+  bookingStatus: BookingStatus
+
+  """Quem reservou (gestores) ou o motivo do bloqueio."""
+  label: String
+}
+
+"""Situação de um horário na grade do dia."""
+enum SlotState {
+  FREE
+  MINE
+  TAKEN
+  BLOCKED
+  UNAVAILABLE
+}
+
+"""A grade de horários de um espaço em um dia."""
+type SpaceAvailability {
+  spaceId: ID!
+
+  """YYYY-MM-DD."""
+  date: String!
+
+  """Primeiro dia reservável (hoje)."""
+  firstDate: String!
+
+  """Último dia com agenda aberta."""
+  lastDate: String!
+
+  """Vazio: o espaço não abre neste dia."""
+  slots: [AvailabilitySlot!]!
+}
+
+"""Período em que o espaço não aceita reservas."""
+type SpaceBlock {
+  id: ID!
+  spaceId: ID!
+  startsAt: DateTime!
+  endsAt: DateTime!
+  reason: String!
+  createdByName: String
+  createdAt: DateTime!
+}
+
 """Comunicado enviado por um gestor aos membros do condomínio."""
 type Broadcast {
   id: ID!
@@ -110,6 +219,12 @@ type Dashboard {
 
   """Espaços ativos para reserva."""
   activeSpaces: Int!
+
+  """Reservas aguardando aprovação."""
+  pendingBookings: Int!
+
+  """Reservas ativas que começam hoje."""
+  bookingsToday: Int!
 
   """Pedidos de suporte sem resposta (só a plataforma vê)."""
   openSupportRequests: Int
@@ -279,6 +394,8 @@ enum Permission {
   PERMISSIONS_MANAGE
   UNITS_MANAGE
   SPACES_MANAGE
+  BOOKINGS_CREATE
+  BOOKINGS_MANAGE
   AUDIT_READ
   SUPPORT_MANAGE
   CONDOMINIUMS_MANAGE
@@ -355,6 +472,10 @@ enum NotificationType {
   SUPPORT_FINALIZED
   SYSTEM_ALERT
   ENROLLMENT_SUBMITTED
+  BOOKING_CONFIRMED
+  BOOKING_PENDING
+  BOOKING_REJECTED
+  BOOKING_CANCELLED
 }
 
 type NotificationPage {
@@ -370,6 +491,14 @@ type NotificationPreference {
 
   """Também recebe por e-mail."""
   emailEnabled: Boolean!
+}
+
+"""Foto do espaço."""
+type SpacePhoto {
+  id: ID!
+
+  """Link temporário (assinado) da imagem."""
+  url: String!
 }
 
 """Horário de um dia da semana (dia ausente: fechado)."""
@@ -438,17 +567,9 @@ type Space {
   rules: SpaceRules!
   createdAt: DateTime!
   updatedAt: DateTime!
-}
 
-"""Tipo de espaço (quadra, salão de festas…)."""
-enum SpaceKind {
-  COURT
-  PARTY_ROOM
-  BARBECUE
-  POOL
-  GYM
-  GAME_ROOM
-  OTHER
+  """Até 3 fotos."""
+  photos: [SpacePhoto!]!
 }
 
 """Solicitação de suporte."""
@@ -557,6 +678,23 @@ type Query {
   """
   recordStamp(entity: String!, id: ID!): RecordStamp
 
+  """Minhas reservas."""
+  myBookings(when: BookingWhen! = UPCOMING, page: PageInput): BookingPage!
+
+  """Todas as reservas do condomínio."""
+  bookings(filter: BookingFilterInput, page: PageInput): BookingPage!
+
+  """A grade de horários de um espaço em um dia."""
+  spaceAvailability(
+    spaceId: ID!
+
+    """YYYY-MM-DD."""
+    date: String!
+  ): SpaceAvailability!
+
+  """Bloqueios atuais e futuros do espaço."""
+  spaceBlocks(spaceId: ID!): [SpaceBlock!]!
+
   """Últimos 50 comunicados."""
   broadcasts: [Broadcast!]!
   condominiums(filter: CondominiumFilterInput): [Condominium!]!
@@ -613,6 +751,23 @@ type Query {
   systemLogSummary: [SystemLogSummary!]!
 }
 
+"""Próximas (ainda não terminaram) ou passadas."""
+enum BookingWhen {
+  UPCOMING
+  PAST
+}
+
+input PageInput {
+  page: Int! = 1
+  limit: Int! = 20
+}
+
+input BookingFilterInput {
+  spaceId: ID
+  status: BookingStatus
+  when: BookingWhen
+}
+
 input CondominiumFilterInput {
   search: String
   status: CondominiumStatus
@@ -621,11 +776,6 @@ input CondominiumFilterInput {
 input EnrollmentRequestFilterInput {
   status: EnrollmentStatus
   search: String
-}
-
-input PageInput {
-  page: Int! = 1
-  limit: Int! = 20
 }
 
 input UserFilterInput {
@@ -645,6 +795,17 @@ input SystemLogFilterInput {
 }
 
 type Mutation {
+  """
+  Reserva um horário. Confirmada na hora, ou aguardando aprovação quando o espaço exige.
+  """
+  createBooking(input: CreateBookingInput!): Booking!
+
+  """Cancela a reserva: a sua até o prazo, ou qualquer uma (gestores)."""
+  cancelBooking(id: ID!, reason: String): Booking!
+  approveBooking(id: ID!): Booking!
+  rejectBooking(id: ID!, reason: String!): Booking!
+  createSpaceBlock(input: CreateSpaceBlockInput!): SpaceBlock!
+  deleteSpaceBlock(id: ID!): Boolean!
   sendBroadcast(input: BroadcastInput!): Broadcast!
   createCondominium(input: CondominiumInput!): Condominium!
   updateCondominium(id: ID!, input: CondominiumInput!): Condominium!
@@ -751,6 +912,12 @@ type Mutation {
   """Ativa ou desativa (manutenção) o espaço."""
   setSpaceActive(id: ID!, active: Boolean!): Space!
 
+  """
+  Adiciona uma foto (até 3 por espaço): JPEG, PNG ou WebP em base64, até 1,2 MB.
+  """
+  addSpacePhoto(spaceId: ID!, photo: String!): Space!
+  removeSpacePhoto(spaceId: ID!, photoId: ID!): Space!
+
   """Exclui o espaço."""
   deleteSpace(id: ID!): Boolean!
 
@@ -767,6 +934,28 @@ type Mutation {
 
   """Erro de tela do app (o frontend avisa para o log do sistema)."""
   reportClientError(message: String!, url: String!, digest: String): Boolean!
+}
+
+input CreateBookingInput {
+  spaceId: ID!
+
+  """Início de um dos horários da grade."""
+  startsAt: DateTime!
+
+  """Observação (até 300)."""
+  notes: String
+}
+
+input CreateSpaceBlockInput {
+  spaceId: ID!
+  startsAt: DateTime!
+  endsAt: DateTime!
+  reason: String!
+
+  """
+  Cancela as reservas ativas do período (cada morador é avisado). Sem isso, a API diz quantas há.
+  """
+  cancelOverlapping: Boolean!
 }
 
 input BroadcastInput {

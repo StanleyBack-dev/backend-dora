@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
 import type {
   SpaceData,
+  SpacePatch,
   SpaceRepositoryPort,
 } from "@/modules/spaces/application/ports/space-repository.port";
 import type { Space } from "@/modules/spaces/domain/space";
@@ -29,14 +30,13 @@ const toSpace = (row: SpaceOrmEntity): Space => ({
     requiresApproval: row.requiresApproval,
     cancelUntilHours: row.cancelUntilHours,
   },
+  photos: row.photos ?? [],
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 });
 
 /** The space's data as columns (rules flattened). */
-function toColumns(
-  data: Partial<SpaceData> & { active?: boolean },
-): Partial<SpaceOrmEntity> {
+function toColumns(data: SpacePatch): Partial<SpaceOrmEntity> {
   const { rules, ...details } = data;
   const columns: Partial<SpaceOrmEntity> = Object.fromEntries(
     Object.entries(details).filter(([, value]) => value !== undefined),
@@ -97,10 +97,7 @@ export class SpaceTypeormRepository implements SpaceRepositoryPort {
     return toSpace(row);
   }
 
-  async update(
-    id: string,
-    patch: Partial<SpaceData> & { active?: boolean },
-  ): Promise<Space> {
+  async update(id: string, patch: SpacePatch): Promise<Space> {
     const columns = toColumns(patch);
     if (Object.keys(columns).length > 0) {
       await this.repository.update({ id }, columns);
@@ -110,5 +107,14 @@ export class SpaceTypeormRepository implements SpaceRepositoryPort {
 
   async delete(id: string): Promise<void> {
     await this.repository.delete({ id });
+  }
+
+  // tb_bookings belongs to the bookings module: read-only existence check.
+  async hasBookings(id: string): Promise<boolean> {
+    const rows = await this.repository.manager.query<unknown[]>(
+      `SELECT 1 FROM tb_bookings WHERE idtb_spaces = $1 LIMIT 1`,
+      [id],
+    );
+    return rows.length > 0;
   }
 }

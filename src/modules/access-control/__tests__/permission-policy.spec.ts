@@ -15,14 +15,22 @@ import {
 import { UserGroup } from "@/modules/access-control/domain/user-group";
 
 describe("group defaults", () => {
+  it("lets residents book spaces", () => {
+    expect(GROUP_DEFAULT_PERMISSIONS[UserGroup.USER]).toEqual([
+      Permission.BOOKINGS_CREATE,
+    ]);
+  });
+
   it("lets a manager (ADMIN) run their condominium", () => {
     expect(GROUP_DEFAULT_PERMISSIONS[UserGroup.ADMIN]).toEqual([
+      Permission.BOOKINGS_CREATE,
       Permission.DASHBOARD_READ,
       Permission.NOTIFICATIONS_BROADCAST,
       Permission.USERS_MANAGE,
       Permission.PERMISSIONS_MANAGE,
       Permission.UNITS_MANAGE,
       Permission.SPACES_MANAGE,
+      Permission.BOOKINGS_MANAGE,
     ]);
   });
 
@@ -80,7 +88,16 @@ describe("resolvePermissionMatrix", () => {
     const resident = resolvePermissionMatrix(UserGroup.USER, [
       { permission: Permission.DASHBOARD_READ, allowed: true },
     ]);
-    expect(resident.effective).toEqual([Permission.DASHBOARD_READ]);
+    expect(resident.effective).toEqual([
+      Permission.DASHBOARD_READ,
+      Permission.BOOKINGS_CREATE,
+    ]);
+
+    // A manager can take booking away from one resident (e.g. overdue fees).
+    const blocked = resolvePermissionMatrix(UserGroup.USER, [
+      { permission: Permission.BOOKINGS_CREATE, allowed: false },
+    ]);
+    expect(blocked.effective).toEqual([]);
   });
 
   it("ignores overrides on locked permissions and no-op overrides", () => {
@@ -102,6 +119,7 @@ describe("resolvePermissionMatrix", () => {
     expect(matrix.effective).toEqual([
       Permission.DASHBOARD_READ,
       Permission.NOTIFICATIONS_BROADCAST,
+      Permission.BOOKINGS_CREATE,
     ]);
   });
 });

@@ -15,6 +15,12 @@ export class DashboardType implements Dashboard {
   @Field(() => Int, { description: "Espaços ativos para reserva." })
   activeSpaces!: number;
 
+  @Field(() => Int, { description: "Reservas aguardando aprovação." })
+  pendingBookings!: number;
+
+  @Field(() => Int, { description: "Reservas ativas que começam hoje." })
+  bookingsToday!: number;
+
   @Field(() => Int, {
     nullable: true,
     description: "Pedidos de suporte sem resposta (só a plataforma vê).",

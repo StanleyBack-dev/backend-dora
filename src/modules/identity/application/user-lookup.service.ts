@@ -37,6 +37,15 @@ export class UserLookupService {
     return this.memberships.activeUserIds(condominiumId, role);
   }
 
+  /** The unit of the person's active membership there (null: none). */
+  async memberUnitId(
+    userId: string,
+    condominiumId: string,
+  ): Promise<string | null> {
+    const membership = await this.memberships.find(userId, condominiumId);
+    return membership?.active ? membership.unitId : null;
+  }
+
   /** Whether this e-mail's account already belongs to the condominium. */
   async isMemberEmail(email: string, condominiumId: string): Promise<boolean> {
     const user = await this.users.findByEmail(email);
