@@ -98,3 +98,11 @@ export function formatTime(date: Date, timeZone: string): string {
     minute: "2-digit",
   }).format(date);
 }
+
+/** The calendar date `days` after (or before, if negative) a YYYY-MM-DD. */
+export function addDays(localDate: string, days: number): string {
+  const [year, month, day] = localDate.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days))
+    .toISOString()
+    .slice(0, 10);
+}

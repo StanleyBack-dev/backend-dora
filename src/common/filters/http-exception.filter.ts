@@ -70,6 +70,23 @@ export class HttpExceptionFilter implements ExceptionFilter {
   }
 
   private toBody(exception: unknown): ErrorBody {
+    // Express's body parser rejects before Nest sees the request: a body
+    // over the limit or malformed JSON is the client's fault, not a 500.
+    const parserError = exception as { type?: unknown } | null;
+    if (parserError?.type === "entity.too.large") {
+      return {
+        statusCode: HttpStatus.PAYLOAD_TOO_LARGE,
+        code: "PAYLOAD_TOO_LARGE",
+        message: "O envio é grande demais. Use um arquivo menor.",
+      };
+    }
+    if (parserError?.type === "entity.parse.failed") {
+      return {
+        statusCode: HttpStatus.BAD_REQUEST,
+        code: "VALIDATION_FAILED",
+        message: "Dados inválidos.",
+      };
+    }
     if (!(exception instanceof HttpException)) {
       return {
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,

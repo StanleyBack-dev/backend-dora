@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 import type { SpaceKind } from "@/modules/spaces/domain/space";
+import type { SpacePhoto } from "@/modules/spaces/domain/space-photo";
 import type {
   LimitPeriod,
   OpeningHours,
@@ -71,6 +72,9 @@ export class SpaceOrmEntity {
 
   @Column({ name: "cancel_until_hours", type: "int" })
   cancelUntilHours!: number;
+
+  @Column({ type: "jsonb", default: () => "'[]'" })
+  photos!: SpacePhoto[];
 
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;

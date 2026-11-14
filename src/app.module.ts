@@ -13,6 +13,7 @@ import { EnrollmentModule } from "@/modules/enrollment/enrollment.module";
 import { AccessControlModule } from "@/modules/access-control/access-control.module";
 import { PermissionsGuard } from "@/modules/access-control/presentation/guards/permissions.guard";
 import { AuditModule } from "@/modules/audit/audit.module";
+import { BookingsModule } from "@/modules/bookings/bookings.module";
 import { BroadcastsModule } from "@/modules/broadcasts/broadcasts.module";
 import { SupportModule } from "@/modules/support/support.module";
 import { SystemLogsModule } from "@/modules/system-logs/system-logs.module";
@@ -43,6 +44,7 @@ import { SharedModule } from "@/shared/shared.module";
     IdentityModule,
     EnrollmentModule,
     SpacesModule,
+    BookingsModule,
     ProfilePhotosModule,
     OutboxModule,
     NotificationsModule,

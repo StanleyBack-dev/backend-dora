@@ -11,5 +11,7 @@ export const STAMP_READ_PERMISSION: Partial<Record<StampedEntity, Permission>> =
     broadcast: Permission.NOTIFICATIONS_BROADCAST,
     unit: Permission.UNITS_MANAGE,
     space: Permission.SPACES_MANAGE,
+    booking: Permission.BOOKINGS_MANAGE,
+    space_block: Permission.BOOKINGS_MANAGE,
     condominium: Permission.CONDOMINIUMS_MANAGE,
   };

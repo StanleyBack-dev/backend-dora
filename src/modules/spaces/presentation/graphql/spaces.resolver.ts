@@ -4,9 +4,11 @@ import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { UuidArg } from "@/common/graphql/uuid-arg.pipe";
 import { Permission } from "@/modules/access-control/domain/permission";
 import { RequirePermissions } from "@/modules/access-control/presentation/decorators/require-permissions.decorator";
+import { AddSpacePhotoUseCase } from "@/modules/spaces/application/use-cases/add-space-photo.use-case";
 import { CreateSpaceUseCase } from "@/modules/spaces/application/use-cases/create-space.use-case";
 import { DeleteSpaceUseCase } from "@/modules/spaces/application/use-cases/delete-space.use-case";
 import { ListSpacesUseCase } from "@/modules/spaces/application/use-cases/list-spaces.use-case";
+import { RemoveSpacePhotoUseCase } from "@/modules/spaces/application/use-cases/remove-space-photo.use-case";
 import { SetSpaceActiveUseCase } from "@/modules/spaces/application/use-cases/set-space-active.use-case";
 import { UpdateSpaceUseCase } from "@/modules/spaces/application/use-cases/update-space.use-case";
 import { SpaceInput } from "@/modules/spaces/presentation/graphql/dto/inputs/space.input";
@@ -26,6 +28,8 @@ export class SpacesResolver {
     private readonly updating: UpdateSpaceUseCase,
     private readonly activating: SetSpaceActiveUseCase,
     private readonly deleting: DeleteSpaceUseCase,
+    private readonly addingPhoto: AddSpacePhotoUseCase,
+    private readonly removingPhoto: RemoveSpacePhotoUseCase,
   ) {}
 
   @Query(() => [SpaceType], {
@@ -78,6 +82,31 @@ export class SpacesResolver {
     @Args("active") active: boolean,
   ): Promise<SpaceType> {
     return toSpaceType(await this.activating.execute(actor, id, active));
+  }
+
+  @RequirePermissions(Permission.SPACES_MANAGE)
+  @Mutation(() => SpaceType, {
+    description:
+      "Adiciona uma foto (até 3 por espaço): JPEG, PNG ou WebP em base64, até 1,2 MB.",
+  })
+  async addSpacePhoto(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Args("spaceId", { type: () => ID }, UuidArg()) spaceId: string,
+    @Args("photo") photo: string,
+  ): Promise<SpaceType> {
+    return toSpaceType(await this.addingPhoto.execute(actor, spaceId, photo));
+  }
+
+  @RequirePermissions(Permission.SPACES_MANAGE)
+  @Mutation(() => SpaceType)
+  async removeSpacePhoto(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Args("spaceId", { type: () => ID }, UuidArg()) spaceId: string,
+    @Args("photoId", { type: () => ID }, UuidArg()) photoId: string,
+  ): Promise<SpaceType> {
+    return toSpaceType(
+      await this.removingPhoto.execute(actor, spaceId, photoId),
+    );
   }
 
   @RequirePermissions(Permission.SPACES_MANAGE)
