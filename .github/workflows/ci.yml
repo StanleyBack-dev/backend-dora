@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+# Release PRs (release-please--…) only bump the version and the CHANGELOG:
+# every job is skipped there, which counts as passing for required checks.
+# Pushes to master still run everything (the deploy waits for this run).
+
 # A new push to the same PR cancels the run that became outdated.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
@@ -22,7 +26,7 @@ jobs:
   # (Conventional Commits: feat, fix, refactor…), so a PR must follow them.
   commits:
     name: commits
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release-please--')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +47,7 @@ jobs:
 
   format:
     name: format
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -56,6 +61,7 @@ jobs:
 
   lint:
     name: lint
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -69,6 +75,7 @@ jobs:
 
   typecheck:
     name: typecheck
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -81,6 +88,7 @@ jobs:
 
   test:
     name: test
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -93,6 +101,7 @@ jobs:
 
   build:
     name: build
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -105,6 +114,7 @@ jobs:
 
   schema:
     name: schema
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
