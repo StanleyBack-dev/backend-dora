@@ -18,6 +18,29 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Release notes and the next version come from the commit subjects
+  # (Conventional Commits: feat, fix, refactor…), so a PR must follow them.
+  commits:
+    name: commits
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Conventional Commit subjects
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          pattern='^(feat|fix|perf|refactor|revert|docs|test|build|ci|chore|style)(\([a-z0-9-]+\))?!?: .+'
+          bad=$(git log --no-merges --format='%s' "$BASE_SHA..$HEAD_SHA" | grep -Ev "$pattern" || true)
+          if [ -n "$bad" ]; then
+            echo "These commit subjects don't follow Conventional Commits (type: summary):"
+            echo "$bad"
+            exit 1
+          fi
+
   format:
     name: format
     runs-on: ubuntu-latest

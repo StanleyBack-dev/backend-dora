@@ -35,12 +35,13 @@ export const GROUP_DEFAULT_PERMISSIONS: Record<
 
 // Only ever granted by the group: a per-member override can neither grant
 // nor revoke them. Managing members and their permissions comes with the
-// manager role; record history, support and condominiums stay with the
+// manager role; record history, support, supporters and condominiums stay with the
 // platform (ADMIN_MASTER).
 export const LOCKED_PERMISSIONS: ReadonlySet<Permission> = new Set([
   Permission.USERS_MANAGE,
   Permission.PERMISSIONS_MANAGE,
   Permission.AUDIT_READ,
   Permission.SUPPORT_MANAGE,
+  Permission.SUPPORTERS_MANAGE,
   Permission.CONDOMINIUMS_MANAGE,
 ]);

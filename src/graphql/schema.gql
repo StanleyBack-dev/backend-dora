@@ -2,6 +2,15 @@
 # GENERATED FILE (npm run schema:generate) — do not edit
 # ------------------------------------------------------
 
+"""Versão da API em execução."""
+type AppInfo {
+  """Versão (ex.: "0.2.0"); "dev" fora de um deploy."""
+  version: String!
+
+  """Commit do deploy; nulo fora de um deploy."""
+  commit: String
+}
+
 """Quem criou e quem alterou por último um registro."""
 type RecordStamp {
   createdAt: DateTime!
@@ -569,6 +578,7 @@ enum Permission {
   GUESTS_CHECKIN
   AUDIT_READ
   SUPPORT_MANAGE
+  SUPPORTERS_MANAGE
   CONDOMINIUMS_MANAGE
 }
 
@@ -983,6 +993,60 @@ type SupportRequestPage {
   totalPages: Int!
 }
 
+type SupportRankingEntry {
+  """Totais iguais dividem a posição."""
+  position: Int!
+
+  """Nulo: o apoiador preferiu não mostrar o nome."""
+  name: String
+  totalCents: Int!
+  contributions: Int!
+}
+
+"""Ranking de quem apoia o Dora, geral ou de um ano."""
+type SupportRanking {
+  """Nulo: todos os anos."""
+  year: Int
+
+  """Apoiadores no período."""
+  supporters: Int!
+
+  """Total recebido no período."""
+  totalCents: Int!
+
+  """Os maiores apoiadores (até 20)."""
+  entries: [SupportRankingEntry!]!
+}
+
+"""Um apoio recebido por Pix."""
+type SupportContribution {
+  id: ID!
+  supporterId: ID!
+  amountCents: Int!
+
+  """YYYY-MM-DD."""
+  receivedOn: String!
+  note: String
+  createdAt: DateTime!
+}
+
+"""Quem apoia o Dora, com o total e cada apoio (administração)."""
+type Supporter {
+  id: ID!
+  name: String!
+
+  """Falso: aparece como "Apoiador anônimo"."""
+  showName: Boolean!
+  totalCents: Int!
+  contributions: Int!
+
+  """YYYY-MM-DD."""
+  lastReceivedOn: String
+
+  """Do mais recente ao mais antigo."""
+  history: [SupportContribution!]!
+}
+
 type SystemLogSummary {
   level: String!
   last24h: Int!
@@ -1026,6 +1090,9 @@ type SystemLogPage {
 type Query {
   """Verifica se a API GraphQL responde."""
   ping: String!
+
+  """Versão e commit da API em execução."""
+  appInfo: AppInfo!
 
   """
   Criação e última alteração de um registro (null: não existe ou é de outro condomínio). Contas e cadastros só para quem gerencia usuários.
@@ -1120,6 +1187,12 @@ type Query {
 
   """Todas as solicitações de suporte (administração)."""
   supportRequests(status: SupportStatus, page: PageInput): SupportRequestPage!
+
+  """Ranking de quem apoia o Dora: geral ou de um ano."""
+  supportRanking(year: Int): SupportRanking!
+
+  """Todos os apoiadores, com cada apoio (administração)."""
+  supporters: [Supporter!]!
 
   """Log do sistema (administração), do mais recente."""
   systemLogs(filter: SystemLogFilterInput, page: PageInput): SystemLogPage!
@@ -1354,6 +1427,20 @@ type Mutation {
 
   """Finaliza a solicitação; quem pediu é avisado."""
   finalizeSupportRequest(id: ID!): SupportRequest!
+
+  """
+  Registra um apoio recebido por Pix. Um nome já cadastrado soma a esse apoiador.
+  """
+  recordSupportContribution(input: RecordSupportContributionInput!): SupportContribution!
+
+  """Corrige o nome do apoiador ou se ele aparece no ranking."""
+  updateSupporter(id: ID!, input: UpdateSupporterInput!): Supporter!
+
+  """Remove o apoiador e todos os apoios dele."""
+  deleteSupporter(id: ID!): Boolean!
+
+  """Desfaz um apoio registrado."""
+  deleteSupportContribution(id: ID!): Boolean!
 
   """Erro de tela do app (o frontend avisa para o log do sistema)."""
   reportClientError(message: String!, url: String!, digest: String): Boolean!
@@ -1648,4 +1735,28 @@ input SupportRequestInput {
   category: SupportCategory!
   subject: String!
   message: String!
+}
+
+input RecordSupportContributionInput {
+  """Nome do apoiador. Um nome que já está na lista soma a esse apoiador."""
+  name: String!
+
+  """Falso: o ranking mostra "Apoiador anônimo" no lugar do nome."""
+  showName: Boolean!
+
+  """Valor em centavos."""
+  amountCents: Int!
+
+  """Dia em que o apoio chegou (YYYY-MM-DD)."""
+  receivedOn: String!
+
+  """Observação interna (não aparece no ranking)."""
+  note: String
+}
+
+input UpdateSupporterInput {
+  name: String!
+
+  """Falso: aparece como "Apoiador anônimo"."""
+  showName: Boolean!
 }

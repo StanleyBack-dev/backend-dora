@@ -1,0 +1,32 @@
+name: Release
+
+# Versioning (SemVer from Conventional Commits). On every push to master,
+# release-please opens or updates the "chore: release x.y.z" PR with the new
+# version in package.json and the CHANGELOG. Merging that PR creates the tag
+# and the GitHub Release; its deploy then reports the new version (AppInfo).
+#
+# PRs opened with the default GITHUB_TOKEN don't trigger CI. Set the
+# RELEASE_PLEASE_TOKEN secret (fine-grained PAT: contents and pull requests,
+# read and write) to have CI run on the release PR too.
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: release-please
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
