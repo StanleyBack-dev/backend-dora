@@ -11,7 +11,9 @@ import type {
 const TTL_SECONDS = 24 * 60 * 60;
 
 // Web Push with VAPID (works with Chrome/FCM, Firefox, Safari/iOS 16.4+
-// installed PWAs). Without the keys, push is simply off.
+// installed PWAs). Without the keys, push is simply off. Outside production
+// it is off too unless PUSH_IN_DEVELOPMENT=true: a development database may
+// be a copy of production's, with real people's devices in it.
 @Injectable()
 export class WebPushSender implements PushSenderPort {
   private readonly logger = new Logger(WebPushSender.name);
@@ -23,8 +25,16 @@ export class WebPushSender implements PushSenderPort {
     const privateKey = config.get<string>("VAPID_PRIVATE_KEY") || "";
     const subject = config.get<string>("VAPID_SUBJECT") || "";
     this.details = { publicKey, privateKey, subject };
-    this.key = publicKey && privateKey && subject ? publicKey : null;
-    if (!this.key && (publicKey || privateKey)) {
+    const allowed =
+      config.get<string>("NODE_ENV") === "production" ||
+      String(config.get("PUSH_IN_DEVELOPMENT")) === "true";
+    this.key = allowed && publicKey && privateKey && subject ? publicKey : null;
+    if (!allowed && publicKey) {
+      this.logger.warn(
+        "Web Push desligado fora de produção (PUSH_IN_DEVELOPMENT=true para testar num aparelho seu).",
+      );
+    }
+    if (allowed && !this.key && (publicKey || privateKey)) {
       this.logger.warn(
         "Web Push desligado: defina VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY e VAPID_SUBJECT.",
       );
