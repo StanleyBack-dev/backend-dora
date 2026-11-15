@@ -8,6 +8,15 @@ export enum CondominiumStatus {
   SUSPENDED = "SUSPENDED",
 }
 
+/**
+ * How homes are identified: apartments (block and number) or houses
+ * (street, quadra and lote). Decides what residents type on the sign-up.
+ */
+export enum AddressFormat {
+  APARTMENT = "APARTMENT",
+  HOUSE = "HOUSE",
+}
+
 export type Condominium = {
   id: string;
   name: string;
@@ -17,6 +26,7 @@ export type Condominium = {
   /** UF, e.g. "SP". */
   state: string;
   status: CondominiumStatus;
+  addressFormat: AddressFormat;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -26,6 +36,8 @@ export type CondominiumDraft = {
   document?: string | null;
   city: string;
   state: string;
+  /** Apartments when not given. */
+  addressFormat?: AddressFormat;
 };
 
 export type CondominiumViolation = "name" | "document" | "city" | "state";
@@ -81,7 +93,10 @@ export function isValidCnpj(digits: string): boolean {
 /** Trimmed and validated; the first problem found otherwise. */
 export function normalizeCondominium(
   draft: CondominiumDraft,
-): Required<CondominiumDraft> | CondominiumViolation {
+):
+  | (Required<Omit<CondominiumDraft, "addressFormat">> &
+      Pick<CondominiumDraft, "addressFormat">)
+  | CondominiumViolation {
   const name = collapse(draft.name);
   if (name.length < 2 || name.length > 120) return "name";
 
@@ -95,5 +110,11 @@ export function normalizeCondominium(
   const state = draft.state.trim().toUpperCase();
   if (!BRAZILIAN_STATES.includes(state)) return "state";
 
-  return { name, document, city, state };
+  return {
+    name,
+    document,
+    city,
+    state,
+    addressFormat: draft.addressFormat,
+  };
 }

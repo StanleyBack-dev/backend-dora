@@ -29,6 +29,14 @@ export class EnrollmentRequestOrmEntity {
   unitComplement!: string | null;
 
   @Column({
+    name: "typed_unit_street",
+    type: "varchar",
+    length: 80,
+    nullable: true,
+  })
+  typedUnitStreet!: string | null;
+
+  @Column({
     name: "typed_unit_block",
     type: "varchar",
     length: 30,

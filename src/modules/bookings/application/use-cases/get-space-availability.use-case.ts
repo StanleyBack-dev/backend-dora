@@ -115,7 +115,7 @@ export class GetSpaceAvailabilityUseCase {
           const mine = booking.userId === actor.id;
           const holder =
             booking.unitNumber !== null
-              ? `${unitLabel({ block: booking.unitBlock ?? "", number: booking.unitNumber })} · ${booking.userName}`
+              ? `${unitLabel({ street: booking.unitStreet, block: booking.unitBlock ?? "", number: booking.unitNumber })} · ${booking.userName}`
               : booking.userName;
           return {
             ...slot,

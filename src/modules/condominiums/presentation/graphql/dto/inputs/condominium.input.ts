@@ -1,5 +1,7 @@
 import { Field, InputType } from "@nestjs/graphql";
-import { IsOptional, IsString, MaxLength } from "class-validator";
+import { IsEnum, IsOptional, IsString, MaxLength } from "class-validator";
+import { AddressFormat } from "@/modules/condominiums/domain/condominium";
+import "@/modules/condominiums/presentation/graphql/condominiums.graphql-enums";
 
 @InputType()
 export class CondominiumInput {
@@ -23,4 +25,13 @@ export class CondominiumInput {
   @IsString()
   @MaxLength(2)
   state!: string;
+
+  @Field(() => AddressFormat, {
+    nullable: true,
+    description:
+      "Apartamentos (bloco e número, padrão) ou casas (rua, quadra e lote).",
+  })
+  @IsOptional()
+  @IsEnum(AddressFormat)
+  addressFormat?: AddressFormat | null;
 }

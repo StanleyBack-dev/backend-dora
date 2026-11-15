@@ -12,6 +12,7 @@ export type GateGuest = BookingGuest & {
   bookingStatus: BookingStatus;
   bookingUserId: string;
   hostName: string;
+  unitStreet: string | null;
   unitBlock: string | null;
   unitNumber: string | null;
 };

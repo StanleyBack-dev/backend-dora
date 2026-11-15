@@ -11,6 +11,7 @@ import {
 import {
   expandUnitNumbers,
   normalizeBlock,
+  normalizeStreet,
   normalizeUnitNumber,
   unitKey,
   unitLabel,
@@ -36,13 +37,17 @@ export class UnitsUseCase {
     return this.units.list(condominiumId);
   }
 
-  /** One block, many numbers ("101-104, 201"). All are created or none. */
+  /**
+   * One block, many numbers ("101-104, 201"); for houses, one street and
+   * quadra, many lotes. All are created or none.
+   */
   async create(
     actor: AuthenticatedUser,
     condominiumId: string,
-    input: { block?: string | null; numbers: string },
+    input: { street?: string | null; block?: string | null; numbers: string },
   ): Promise<UnitView[]> {
-    const block = this.block(input.block);
+    const street = this.street(input.street);
+    const block = this.block(input.block, street !== "");
     const numbers = expandUnitNumbers(input.numbers);
     if (typeof numbers === "string") {
       throw AppException.from(APP_ERRORS.condominiums.unitInvalid, {
@@ -57,7 +62,7 @@ export class UnitsUseCase {
         unit,
       ]),
     );
-    const wanted = numbers.map((number) => ({ block, number }));
+    const wanted = numbers.map((number) => ({ street, block, number }));
     const taken = wanted.flatMap((unit) => existing.get(unitKey(unit)) ?? []);
     if (taken.length > 0) {
       throw AppException.from(APP_ERRORS.condominiums.unitTaken, {
@@ -79,17 +84,18 @@ export class UnitsUseCase {
     actor: AuthenticatedUser,
     condominiumId: string,
     id: string,
-    input: { block?: string | null; number: string },
+    input: { street?: string | null; block?: string | null; number: string },
   ): Promise<UnitView> {
     const unit = await this.find(condominiumId, id);
-    const block = this.block(input.block);
+    const street = this.street(input.street);
+    const block = this.block(input.block, street !== "");
     const number = normalizeUnitNumber(input.number);
     if (!number) {
       throw AppException.from(APP_ERRORS.condominiums.unitInvalid, {
         reason: "O número deve ter de 1 a 20 caracteres.",
       });
     }
-    const next = { block, number };
+    const next = { street, block, number };
     const clash = (await this.units.list(condominiumId)).find(
       (other) => other.id !== id && unitKey(other) === unitKey(next),
     );
@@ -121,17 +127,32 @@ export class UnitsUseCase {
     return unit;
   }
 
-  private block(value: string | null | undefined): string {
-    const block = normalizeBlock(value);
-    if (block === null) {
+  /** A house's street ("" for apartments: none sent). */
+  private street(value: string | null | undefined): string {
+    if (!value?.trim()) return "";
+    const street = normalizeStreet(value);
+    if (street === null) {
       throw AppException.from(APP_ERRORS.condominiums.unitInvalid, {
-        reason: "O bloco deve ter até 30 caracteres.",
+        reason: "A rua deve ter de 2 a 80 caracteres.",
+      });
+    }
+    return street;
+  }
+
+  /** The block; for houses (with a street) the quadra, required. */
+  private block(value: string | null | undefined, house: boolean): string {
+    const block = normalizeBlock(value);
+    if (block === null || (house && block === "")) {
+      throw AppException.from(APP_ERRORS.condominiums.unitInvalid, {
+        reason: house
+          ? "Informe a quadra (até 30 caracteres)."
+          : "O bloco deve ter até 30 caracteres.",
       });
     }
     return block;
   }
 
-  private labels(units: Pick<Unit, "block" | "number">[]): string {
+  private labels(units: Pick<Unit, "street" | "block" | "number">[]): string {
     const shown = units.slice(0, 5).map(unitLabel).join(", ");
     return units.length > 5 ? `${shown} e mais ${units.length - 5}` : shown;
   }

@@ -24,7 +24,8 @@ const GATE_SQL = `
          b.starts_at AS "startsAt", b.ends_at AS "endsAt",
          b.status AS "bookingStatus", b.idtb_users AS "bookingUserId",
          s.name AS "spaceName", u.name AS "hostName",
-         un.block AS "unitBlock", un.number AS "unitNumber",
+         un.street AS "unitStreet", un.block AS "unitBlock",
+         un.number AS "unitNumber",
          c.name AS "condominiumName"
     FROM tb_booking_guests g
     JOIN tb_bookings b ON b.idtb_bookings = g.idtb_bookings

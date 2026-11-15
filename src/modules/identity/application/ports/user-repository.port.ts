@@ -54,6 +54,7 @@ export type MemberAccount = UserAccount & {
   role: UserGroup;
   membershipActive: boolean;
   unitId: string | null;
+  unitStreet: string | null;
   unitBlock: string | null;
   unitNumber: string | null;
   /** Address detail inside the condominium. */

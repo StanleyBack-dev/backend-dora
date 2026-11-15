@@ -1,5 +1,8 @@
 import { Field, ID, ObjectType } from "@nestjs/graphql";
-import { CondominiumStatus } from "@/modules/condominiums/domain/condominium";
+import {
+  AddressFormat,
+  CondominiumStatus,
+} from "@/modules/condominiums/domain/condominium";
 import "@/modules/condominiums/presentation/graphql/condominiums.graphql-enums";
 
 @ObjectType("CurrentCondominium", {
@@ -20,4 +23,9 @@ export class CurrentCondominiumType {
 
   @Field(() => CondominiumStatus)
   status!: CondominiumStatus;
+
+  @Field(() => AddressFormat, {
+    description: "Apartamentos (bloco e número) ou casas (rua, quadra e lote).",
+  })
+  addressFormat!: AddressFormat;
 }

@@ -117,7 +117,7 @@ export class EnrollmentReviewUseCase {
     // The manager's corrections win; what wasn't sent keeps the request's.
     const typed = input.unitNumber !== undefined;
     const place = typed
-      ? validatePlace(input, true)
+      ? validatePlace(input, true, Boolean(input.unitStreet?.trim()))
       : {
           ...validatePlace(
             {
@@ -126,6 +126,7 @@ export class EnrollmentReviewUseCase {
             },
             false,
           ),
+          typedUnitStreet: request.typedUnitStreet,
           typedUnitBlock: request.typedUnitBlock,
           typedUnitNumber: request.typedUnitNumber,
         };
@@ -135,7 +136,11 @@ export class EnrollmentReviewUseCase {
     if (!unitId && place.typedUnitNumber) {
       const unit = await this.unitRegistry.ensure(
         request.condominiumId,
-        { block: place.typedUnitBlock, number: place.typedUnitNumber },
+        {
+          street: place.typedUnitStreet,
+          block: place.typedUnitBlock,
+          number: place.typedUnitNumber,
+        },
         actor.id,
       );
       unitId = unit.id;

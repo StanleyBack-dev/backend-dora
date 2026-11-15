@@ -38,7 +38,10 @@ export class CondominiumsResolver {
     @CurrentUser() actor: AuthenticatedUser,
     @Args("input") input: CondominiumInput,
   ): Promise<CondominiumSummary> {
-    return this.useCase.create(actor, input);
+    return this.useCase.create(actor, {
+      ...input,
+      addressFormat: input.addressFormat ?? undefined,
+    });
   }
 
   @RequirePermissions(Permission.CONDOMINIUMS_MANAGE)
@@ -48,7 +51,10 @@ export class CondominiumsResolver {
     @Args("id", { type: () => ID }, UuidArg()) id: string,
     @Args("input") input: CondominiumInput,
   ): Promise<CondominiumSummary> {
-    return this.useCase.update(actor, id, input);
+    return this.useCase.update(actor, id, {
+      ...input,
+      addressFormat: input.addressFormat ?? undefined,
+    });
   }
 
   @RequirePermissions(Permission.CONDOMINIUMS_MANAGE)

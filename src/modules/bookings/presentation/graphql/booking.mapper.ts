@@ -17,6 +17,7 @@ export const toBookingType = (booking: BookingView): BookingType => ({
   unitLabel:
     booking.unitNumber !== null
       ? unitLabel({
+          street: booking.unitStreet,
           block: booking.unitBlock ?? "",
           number: booking.unitNumber,
         })
