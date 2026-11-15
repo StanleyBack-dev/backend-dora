@@ -38,6 +38,9 @@ const toBooking = (row: BookingOrmEntity): Booking => ({
   reason: row.reason,
   cancelledBy: row.cancelledBy,
   cancelledAt: row.cancelledAt,
+  feeCents: row.feeCents,
+  feeBilledAt: row.feeBilledAt,
+  seriesId: row.seriesId,
   createdAt: row.createdAt,
 });
 
@@ -50,8 +53,10 @@ const VIEW_SQL = `
          b.cancel_until AS "cancelUntil", b.decided_by AS "decidedBy",
          b.decided_at AS "decidedAt", b.reason,
          b.cancelled_by AS "cancelledBy", b.cancelled_at AS "cancelledAt",
-         b.created_at AS "createdAt",
-         s.name AS "spaceName", s.kind AS "spaceKind", u.name AS "userName",
+         b.fee_cents AS "feeCents", b.fee_billed_at AS "feeBilledAt",
+         b.series_id AS "seriesId", b.created_at AS "createdAt",
+         s.name AS "spaceName", s.kind AS "spaceKind",
+         s.guests_allowed AS "guestsAllowed", u.name AS "userName",
          un.block AS "unitBlock", un.number AS "unitNumber"
     FROM tb_bookings b
     JOIN tb_spaces s ON s.idtb_spaces = b.idtb_spaces
@@ -169,6 +174,56 @@ export class BookingTypeormRepository implements BookingRepositoryPort {
       ),
     ]);
     return paginate(rows, count?.total ?? 0, page);
+  }
+
+  feesInRange(
+    condominiumId: string,
+    from: Date,
+    to: Date,
+  ): Promise<BookingView[]> {
+    return this.dataSource.query<BookingView[]>(
+      `${VIEW_SQL}
+        WHERE b.idtb_condominiums = $1 AND b.status = 'CONFIRMED'
+          AND b.fee_cents IS NOT NULL
+          AND b.starts_at >= $2 AND b.starts_at < $3
+        ORDER BY un.block NULLS FIRST, un.number, b.starts_at`,
+      [condominiumId, from, to],
+    );
+  }
+
+  async setFeesBilled(
+    condominiumId: string,
+    ids: readonly string[],
+    at: Date | null,
+    actorId: string,
+  ): Promise<number> {
+    if (ids.length === 0) return 0;
+    // node-postgres returns [rows, affected] for UPDATE … RETURNING.
+    const [, affected] = await this.dataSource.query<[unknown, number]>(
+      `UPDATE tb_bookings
+          SET fee_billed_at = $3::timestamptz,
+              fee_billed_by = CASE WHEN $3::timestamptz IS NULL THEN NULL ELSE $4::uuid END,
+              updated_at = now(), updated_by = $4::uuid
+        WHERE idtb_condominiums = $1 AND idtb_bookings = ANY($2::uuid[])
+          AND status = 'CONFIRMED' AND fee_cents IS NOT NULL
+        RETURNING 1`,
+      [condominiumId, [...ids], at, actorId],
+    );
+    return affected;
+  }
+
+  activeInSeries(
+    condominiumId: string,
+    seriesId: string,
+    now: Date,
+  ): Promise<BookingView[]> {
+    return this.dataSource.query<BookingView[]>(
+      `${VIEW_SQL}
+        WHERE b.idtb_condominiums = $1 AND b.series_id = $2
+          AND b.status IN (${ACTIVE_SQL}) AND b.ends_at > $3
+        ORDER BY b.starts_at`,
+      [condominiumId, seriesId, now],
+    );
   }
 
   private async mustFind(id: string): Promise<BookingView> {

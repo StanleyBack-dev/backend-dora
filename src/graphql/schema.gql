@@ -45,6 +45,18 @@ type Booking {
 
   """Cancelada por outra pessoa (a administração)."""
   cancelledByManager: Boolean!
+
+  """O espaço aceita lista de convidados."""
+  guestsAllowed: Boolean!
+
+  """Taxa de uso em centavos, como era ao reservar (null: gratuita)."""
+  feeCents: Int
+
+  """Quando a taxa foi lançada na cobrança do condomínio."""
+  feeBilledAt: DateTime
+
+  """Reserva recorrente a que pertence (null: avulsa)."""
+  seriesId: ID
   createdAt: DateTime!
 }
 
@@ -67,12 +79,138 @@ enum BookingStatus {
   CANCELLED
 }
 
+"""Taxas de uso do mês, para a cobrança do condomínio."""
+type BookingFees {
+  """YYYY-MM."""
+  month: String!
+
+  """Reservas confirmadas com taxa, por unidade."""
+  items: [Booking!]!
+  totalCents: Int!
+
+  """Já lançado na cobrança."""
+  billedCents: Int!
+}
+
+"""Convidado de uma reserva."""
+type BookingGuest {
+  id: ID!
+  bookingId: ID!
+  name: String!
+
+  """Documento informado (null: não pedido)."""
+  document: String
+
+  """CPF ou RG (null: sem documento)."""
+  documentType: DocumentType
+
+  """Telefone, só dígitos."""
+  phone: String
+
+  """Código do convite (QR) que a portaria confere."""
+  code: String!
+
+  """Quando entrou (portaria)."""
+  checkedInAt: DateTime
+  createdAt: DateTime!
+}
+
+"""Documento de identidade: CPF ou RG."""
+enum DocumentType {
+  CPF
+  RG
+}
+
+"""Data de uma recorrente que não pôde ser reservada."""
+type SkippedDate {
+  startsAt: DateTime!
+  reason: String!
+}
+
+"""Resultado de uma reserva recorrente."""
+type BookingSeriesResult {
+  seriesId: ID!
+
+  """Reservas criadas, uma por semana."""
+  created: [Booking!]!
+
+  """Datas puladas e o motivo."""
+  skipped: [SkippedDate!]!
+}
+
+"""Resultado do cancelamento de uma recorrente."""
+type SeriesCancellation {
+  """Datas canceladas agora."""
+  cancelled: Int!
+
+  """Datas mantidas (fora do prazo de cancelamento)."""
+  kept: Int!
+}
+
 type BookingPage {
   items: [Booking!]!
   total: Int!
   page: Int!
   limit: Int!
   totalPages: Int!
+}
+
+"""Convidado na lista da portaria."""
+type GateGuest {
+  id: ID!
+  bookingId: ID!
+  name: String!
+  document: String
+
+  """CPF ou RG (null: sem documento)."""
+  documentType: DocumentType
+  phone: String
+  code: String!
+  checkedInAt: DateTime
+  spaceName: String!
+  startsAt: DateTime!
+  endsAt: DateTime!
+
+  """Quem reservou."""
+  hostName: String!
+
+  """Unidade de quem reservou."""
+  unitLabel: String
+
+  """Se a entrada já pode ser liberada."""
+  checkInWindow: GuestCheckInWindow!
+}
+
+"""Se a portaria já pode liberar a entrada do convidado."""
+enum GuestCheckInWindow {
+  OPEN
+  TOO_EARLY
+  FINISHED
+  CANCELLED
+}
+
+"""Convite de um convidado (página pública)."""
+type GuestInvite {
+  code: String!
+  guestName: String!
+
+  """Primeiro nome de quem convidou."""
+  hostFirstName: String!
+  spaceName: String!
+  condominiumName: String!
+  startsAt: DateTime!
+  endsAt: DateTime!
+  status: GuestInviteStatus!
+
+  """Já entrou pela portaria."""
+  checkedIn: Boolean!
+}
+
+"""Situação do convite: válido, cancelado ou encerrado."""
+enum GuestInviteStatus {
+  VALID
+  CANCELLED
+  ENDED
 }
 
 """Um horário da grade do dia."""
@@ -87,6 +225,9 @@ type AvailabilitySlot {
 
   """Quem reservou (gestores) ou o motivo do bloqueio."""
   label: String
+
+  """Você está na lista de espera deste horário."""
+  waitlisted: Boolean!
 }
 
 """Situação de um horário na grade do dia."""
@@ -147,13 +288,16 @@ enum BroadcastAudience {
   GRUPO
 }
 
-"""Perfil de acesso: Morador, Gestor ou Administrador geral."""
+"""Perfil de acesso: Morador, Gestor, Portaria ou Administrador geral."""
 enum UserGroup {
   """Morador"""
   USER
 
   """Gestor"""
   ADMIN
+
+  """Portaria"""
+  CONCIERGE
 
   """Administrador geral"""
   ADMIN_MASTER
@@ -422,6 +566,7 @@ enum Permission {
   SPACES_MANAGE
   BOOKINGS_CREATE
   BOOKINGS_MANAGE
+  GUESTS_CHECKIN
   AUDIT_READ
   SUPPORT_MANAGE
   CONDOMINIUMS_MANAGE
@@ -502,6 +647,7 @@ enum NotificationType {
   BOOKING_PENDING
   BOOKING_REJECTED
   BOOKING_CANCELLED
+  BOOKING_SLOT_FREED
 }
 
 type NotificationPage {
@@ -690,6 +836,18 @@ type SpacePhoto {
   url: String!
 }
 
+"""Regras de convidados do espaço."""
+type GuestRules {
+  """Quem reserva pode levar convidados."""
+  allowed: Boolean!
+
+  """Máximo de convidados por reserva (null: sem limite)."""
+  max: Int
+
+  """A portaria exige o documento de cada convidado."""
+  documentRequired: Boolean!
+}
+
 """Horário de um dia da semana (dia ausente: fechado)."""
 type OpeningHours {
   """0 = domingo … 6 = sábado."""
@@ -736,6 +894,13 @@ type SpaceRules {
 
   """Cancelamento permitido até tantas horas antes do início."""
   cancelUntilHours: Int!
+
+  """Taxa de uso por reserva, em centavos (null: gratuito)."""
+  feeCents: Int
+  guests: GuestRules!
+
+  """Moradores podem reservar toda semana no mesmo horário."""
+  recurringAllowed: Boolean!
 }
 
 """Espaço reservável do condomínio (quadra, salão…)."""
@@ -867,11 +1032,29 @@ type Query {
   """
   recordStamp(entity: String!, id: ID!): RecordStamp
 
+  """Taxas de uso de um mês (padrão: o atual), por unidade."""
+  bookingFees(
+    """YYYY-MM."""
+    month: String
+  ): BookingFees!
+
+  """Convidados de uma reserva (sua, ou qualquer para gestores)."""
+  bookingGuests(bookingId: ID!): [BookingGuest!]!
+
   """Minhas reservas."""
   myBookings(when: BookingWhen! = UPCOMING, page: PageInput): BookingPage!
 
   """Todas as reservas do condomínio."""
   bookings(filter: BookingFilterInput, page: PageInput): BookingPage!
+
+  """Convidados das reservas de um dia (padrão: hoje)."""
+  gateGuests(
+    """YYYY-MM-DD."""
+    date: String
+  ): [GateGuest!]!
+
+  """Convite de um convidado pelo código (null: não existe)."""
+  guestInvite(code: String!): GuestInvite
 
   """A grade de horários de um espaço em um dia."""
   spaceAvailability(
@@ -1001,6 +1184,35 @@ input SystemLogFilterInput {
 
 type Mutation {
   """
+  Marca (ou desmarca) taxas como lançadas na cobrança; devolve quantas mudaram.
+  """
+  setBookingFeesBilled(input: SetBookingFeesBilledInput!): Int!
+
+  """Adiciona convidados à reserva; cada um recebe o código do convite."""
+  addBookingGuests(input: AddBookingGuestsInput!): [BookingGuest!]!
+
+  """Tira um convidado da lista (o convite deixa de valer)."""
+  removeBookingGuest(id: ID!): Boolean!
+
+  """
+  Reserva o mesmo horário toda semana; datas que não puderem ser reservadas são puladas.
+  """
+  createBookingSeries(input: CreateBookingSeriesInput!): BookingSeriesResult!
+
+  """
+  Cancela as próximas datas de uma reserva recorrente (as fora do prazo ficam, para moradores).
+  """
+  cancelBookingSeries(seriesId: ID!): SeriesCancellation!
+
+  """
+  Entra na lista de espera de um horário reservado: se for liberado, você é avisado.
+  """
+  joinWaitlist(input: WaitlistSlotInput!): Boolean!
+
+  """Sai da lista de espera."""
+  leaveWaitlist(input: WaitlistSlotInput!): Boolean!
+
+  """
   Reserva um horário. Confirmada na hora, ou aguardando aprovação quando o espaço exige.
   """
   createBooking(input: CreateBookingInput!): Booking!
@@ -1009,6 +1221,12 @@ type Mutation {
   cancelBooking(id: ID!, reason: String): Booking!
   approveBooking(id: ID!): Booking!
   rejectBooking(id: ID!, reason: String!): Booking!
+
+  """Libera a entrada de um convidado (pelo código ou da lista)."""
+  checkInGuest(input: CheckInGuestInput!): GateGuest!
+
+  """Desfaz a entrada marcada por engano."""
+  undoGuestCheckIn(guestId: ID!): GateGuest!
   createSpaceBlock(input: CreateSpaceBlockInput!): SpaceBlock!
   deleteSpaceBlock(id: ID!): Boolean!
   sendBroadcast(input: BroadcastInput!): Broadcast!
@@ -1141,6 +1359,49 @@ type Mutation {
   reportClientError(message: String!, url: String!, digest: String): Boolean!
 }
 
+input SetBookingFeesBilledInput {
+  bookingIds: [ID!]!
+
+  """true: lançadas na cobrança; false: desfaz."""
+  billed: Boolean!
+}
+
+input AddBookingGuestsInput {
+  bookingId: ID!
+  guests: [GuestInput!]!
+}
+
+input GuestInput {
+  name: String!
+
+  """Tipo do documento (obrigatório com documento)."""
+  documentType: DocumentType
+
+  """CPF (11 números) ou RG (7 a 10: números e um X no fim)."""
+  document: String
+  phone: String
+}
+
+input CreateBookingSeriesInput {
+  spaceId: ID!
+
+  """Primeira data: um dos horários da grade."""
+  startsAt: DateTime!
+
+  """Quantas semanas (2 a 26)."""
+  weeks: Int!
+
+  """Observação (até 300)."""
+  notes: String
+}
+
+input WaitlistSlotInput {
+  spaceId: ID!
+
+  """Início do horário reservado."""
+  startsAt: DateTime!
+}
+
 input CreateBookingInput {
   spaceId: ID!
 
@@ -1149,6 +1410,13 @@ input CreateBookingInput {
 
   """Observação (até 300)."""
   notes: String
+}
+
+input CheckInGuestInput {
+  guestId: ID
+
+  """Código do convite."""
+  code: String
 }
 
 input CreateSpaceBlockInput {
@@ -1340,6 +1608,13 @@ input SpaceRulesInput {
   unitLimit: UnitLimitInput
   requiresApproval: Boolean!
   cancelUntilHours: Int!
+
+  """Taxa de uso por reserva, em centavos (vazio: gratuito)."""
+  feeCents: Int
+  guests: GuestRulesInput!
+
+  """Moradores podem reservar toda semana no mesmo horário."""
+  recurringAllowed: Boolean!
 }
 
 input OpeningHoursInput {
@@ -1356,6 +1631,17 @@ input OpeningHoursInput {
 input UnitLimitInput {
   count: Int!
   period: LimitPeriod!
+}
+
+input GuestRulesInput {
+  """Quem reserva pode levar convidados."""
+  allowed: Boolean!
+
+  """Máximo de convidados por reserva (vazio: sem limite)."""
+  max: Int
+
+  """A portaria exige o documento de cada convidado."""
+  documentRequired: Boolean!
 }
 
 input SupportRequestInput {

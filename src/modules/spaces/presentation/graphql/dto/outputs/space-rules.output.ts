@@ -1,4 +1,5 @@
 import { Field, Int, ObjectType } from "@nestjs/graphql";
+import { GuestRulesType } from "@/modules/spaces/presentation/graphql/dto/outputs/guest-rules.output";
 import { OpeningHoursType } from "@/modules/spaces/presentation/graphql/dto/outputs/opening-hours.output";
 import { UnitLimitType } from "@/modules/spaces/presentation/graphql/dto/outputs/unit-limit.output";
 
@@ -29,4 +30,18 @@ export class SpaceRulesType {
     description: "Cancelamento permitido até tantas horas antes do início.",
   })
   cancelUntilHours!: number;
+
+  @Field(() => Int, {
+    nullable: true,
+    description: "Taxa de uso por reserva, em centavos (null: gratuito).",
+  })
+  feeCents!: number | null;
+
+  @Field(() => GuestRulesType)
+  guests!: GuestRulesType;
+
+  @Field({
+    description: "Moradores podem reservar toda semana no mesmo horário.",
+  })
+  recurringAllowed!: boolean;
 }

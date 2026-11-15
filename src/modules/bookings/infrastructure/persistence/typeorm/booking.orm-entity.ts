@@ -56,6 +56,18 @@ export class BookingOrmEntity {
   @Column({ name: "cancelled_at", type: "timestamptz", nullable: true })
   cancelledAt!: Date | null;
 
+  @Column({ name: "fee_cents", type: "int", nullable: true })
+  feeCents!: number | null;
+
+  @Column({ name: "fee_billed_at", type: "timestamptz", nullable: true })
+  feeBilledAt!: Date | null;
+
+  @Column({ name: "fee_billed_by", type: "uuid", nullable: true })
+  feeBilledBy!: string | null;
+
+  @Column({ name: "series_id", type: "uuid", nullable: true })
+  seriesId!: string | null;
+
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;
 

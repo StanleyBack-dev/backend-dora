@@ -6,6 +6,7 @@ import { AppException } from "@/common/exceptions/app-exception";
 import { AuditTrailService } from "@/modules/audit/application/audit-trail.service";
 import { BookingAccessService } from "@/modules/bookings/application/booking-access.service";
 import { cancelledNotice } from "@/modules/bookings/application/booking-notices";
+import { FreedSlotNoticesService } from "@/modules/bookings/application/freed-slot-notices.service";
 import {
   BOOKING_REPOSITORY,
   type BookingRepositoryPort,
@@ -32,6 +33,7 @@ export class CancelBookingUseCase {
     private readonly access: BookingAccessService,
     private readonly audit: AuditTrailService,
     private readonly outbox: OutboxDispatcher,
+    private readonly freed: FreedSlotNoticesService,
   ) {}
 
   async execute(
@@ -80,6 +82,8 @@ export class CancelBookingUseCase {
           },
           this.clock.timeZone,
         ),
+        // The slot is free again: whoever waits for it is told.
+        ...(await this.freed.for(booking)),
       ],
     );
     this.outbox.kick();

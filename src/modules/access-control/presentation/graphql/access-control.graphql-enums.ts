@@ -9,10 +9,12 @@ registerEnumType(Permission, {
 
 registerEnumType(UserGroup, {
   name: "UserGroup",
-  description: "Perfil de acesso: Morador, Gestor ou Administrador geral.",
+  description:
+    "Perfil de acesso: Morador, Gestor, Portaria ou Administrador geral.",
   valuesMap: {
     USER: { description: "Morador" },
     ADMIN: { description: "Gestor" },
+    CONCIERGE: { description: "Portaria" },
     ADMIN_MASTER: { description: "Administrador geral" },
   },
 });

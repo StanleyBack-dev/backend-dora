@@ -17,7 +17,11 @@ const MANAGER_DEFAULTS: Permission[] = [
   Permission.UNITS_MANAGE,
   Permission.SPACES_MANAGE,
   Permission.BOOKINGS_MANAGE,
+  Permission.GUESTS_CHECKIN,
 ];
+
+// Portaria (gate staff): only the day's guests; they don't book.
+const CONCIERGE_DEFAULTS: Permission[] = [Permission.GUESTS_CHECKIN];
 
 export const GROUP_DEFAULT_PERMISSIONS: Record<
   UserGroup,
@@ -25,6 +29,7 @@ export const GROUP_DEFAULT_PERMISSIONS: Record<
 > = {
   [UserGroup.USER]: RESIDENT_DEFAULTS,
   [UserGroup.ADMIN]: MANAGER_DEFAULTS,
+  [UserGroup.CONCIERGE]: CONCIERGE_DEFAULTS,
   [UserGroup.ADMIN_MASTER]: ALL_PERMISSIONS,
 };
 

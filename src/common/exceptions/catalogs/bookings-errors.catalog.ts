@@ -87,4 +87,66 @@ export const bookingsErrors = {
     status: HttpStatus.NOT_FOUND,
     message: "Bloqueio não encontrado.",
   },
+  // --- weekly series ---
+  recurringNotAllowed: {
+    code: "BOOKING_RECURRING_NOT_ALLOWED",
+    status: HttpStatus.FORBIDDEN,
+    message:
+      "Este espaço não aceita reservas recorrentes de moradores. Fale com a administração.",
+  },
+  invalidSeries: {
+    code: "BOOKING_INVALID_SERIES",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: "Escolha de 2 a 26 semanas.",
+  },
+  seriesNotFound: {
+    code: "BOOKING_SERIES_NOT_FOUND",
+    status: HttpStatus.NOT_FOUND,
+    message: "Reserva recorrente não encontrada.",
+  },
+  // --- guests ---
+  guestsNotAllowed: {
+    code: "BOOKING_GUESTS_NOT_ALLOWED",
+    status: HttpStatus.FORBIDDEN,
+    message: "Este espaço não aceita lista de convidados.",
+  },
+  tooManyGuests: {
+    code: "BOOKING_TOO_MANY_GUESTS",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: (params: { max: number }) =>
+      `Este espaço aceita até ${params.max} convidado${params.max === 1 ? "" : "s"} por reserva.`,
+  },
+  invalidGuest: {
+    code: "BOOKING_INVALID_GUEST",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: (params: { reason: string }) => params.reason,
+  },
+  guestsClosed: {
+    code: "BOOKING_GUESTS_CLOSED",
+    status: HttpStatus.CONFLICT,
+    message:
+      "A lista de convidados só muda enquanto a reserva está ativa e não terminou.",
+  },
+  guestNotFound: {
+    code: "BOOKING_GUEST_NOT_FOUND",
+    status: HttpStatus.NOT_FOUND,
+    message: "Convidado não encontrado.",
+  },
+  checkInDenied: {
+    code: "BOOKING_CHECK_IN_DENIED",
+    status: HttpStatus.CONFLICT,
+    message: (params: { reason: string }) => params.reason,
+  },
+  // --- waiting list ---
+  waitlistNotTaken: {
+    code: "BOOKING_WAITLIST_NOT_TAKEN",
+    status: HttpStatus.CONFLICT,
+    message: "Este horário está livre: reserve direto.",
+  },
+  // --- fees ---
+  invalidMonth: {
+    code: "BOOKING_INVALID_MONTH",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: "Mês inválido.",
+  },
 } as const;

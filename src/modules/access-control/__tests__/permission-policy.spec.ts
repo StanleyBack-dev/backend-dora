@@ -31,6 +31,13 @@ describe("group defaults", () => {
       Permission.UNITS_MANAGE,
       Permission.SPACES_MANAGE,
       Permission.BOOKINGS_MANAGE,
+      Permission.GUESTS_CHECKIN,
+    ]);
+  });
+
+  it("gives the gate (Portaria) only the day's guests", () => {
+    expect(GROUP_DEFAULT_PERMISSIONS[UserGroup.CONCIERGE]).toEqual([
+      Permission.GUESTS_CHECKIN,
     ]);
   });
 

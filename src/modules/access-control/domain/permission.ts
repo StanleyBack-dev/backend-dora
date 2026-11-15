@@ -17,8 +17,10 @@ export enum Permission {
   SPACES_MANAGE = "SPACES_MANAGE",
   /** Book spaces (residents; a manager may turn it off per member). */
   BOOKINGS_CREATE = "BOOKINGS_CREATE",
-  /** Approve, reject and cancel any booking; block spaces. */
+  /** Approve, reject and cancel any booking; block spaces; usage fees. */
   BOOKINGS_MANAGE = "BOOKINGS_MANAGE",
+  /** The day's guests at the gate: list and check in (Portaria). */
+  GUESTS_CHECKIN = "GUESTS_CHECKIN",
   AUDIT_READ = "AUDIT_READ",
   /** Answer and close the app's support requests (platform). */
   SUPPORT_MANAGE = "SUPPORT_MANAGE",

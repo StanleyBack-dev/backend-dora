@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { BookingsMaintenanceService } from "@/modules/bookings/application/bookings-maintenance.service";
 import { IdentityMaintenanceService } from "@/modules/identity/application/identity-maintenance.service";
 import { NotificationsUseCase } from "@/modules/notifications/application/use-cases/notifications.use-case";
 import { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
@@ -16,13 +17,14 @@ export type CleanupReport = {
   readNotifications: number;
   rateLimitWindows: number;
   systemLogs: number;
+  waitlistEntries: number;
 };
 
 const DELIVERED_RETENTION_DAYS = 30;
 
 // Daily housekeeping: drops data the app no longer needs (ended sessions with
 // IP/browser, used recovery codes, delivered outbox messages, notifications
-// read a year ago, old rate-limit windows). Each module purges its own data.
+// read a year ago, old rate-limit windows, waiting lists of past slots). Each module purges its own data.
 @Injectable()
 export class CleanupUseCase {
   private readonly logger = new Logger(CleanupUseCase.name);
@@ -34,6 +36,7 @@ export class CleanupUseCase {
     private readonly notifications: NotificationsUseCase,
     private readonly outbox: OutboxDispatcher,
     private readonly systemLogs: SystemLogsService,
+    private readonly bookings: BookingsMaintenanceService,
   ) {}
 
   async run(): Promise<CleanupReport> {
@@ -44,6 +47,7 @@ export class CleanupUseCase {
       readNotifications,
       rateLimitWindows,
       systemLogs,
+      waitlistEntries,
     ] = await Promise.all([
       this.identity.purge(now),
       this.outbox.purgeDelivered(
@@ -52,6 +56,7 @@ export class CleanupUseCase {
       this.notifications.purgeOldRead(now),
       this.rateLimits.purgeEndedBefore(now),
       this.systemLogs.purgeOld(now),
+      this.bookings.purge(now),
     ]);
     const report = {
       sessions: identity.sessions,
@@ -60,6 +65,7 @@ export class CleanupUseCase {
       readNotifications,
       rateLimitWindows,
       systemLogs,
+      waitlistEntries,
     };
     this.logger.log(`Limpeza diária: ${JSON.stringify(report)}`);
     return report;

@@ -29,6 +29,13 @@ const toSpace = (row: SpaceOrmEntity): Space => ({
         : null,
     requiresApproval: row.requiresApproval,
     cancelUntilHours: row.cancelUntilHours,
+    feeCents: row.feeCents,
+    guests: {
+      allowed: row.guestsAllowed,
+      max: row.maxGuests,
+      documentRequired: row.guestDocumentRequired,
+    },
+    recurringAllowed: row.recurringAllowed,
   },
   photos: row.photos ?? [],
   createdAt: row.createdAt,
@@ -51,6 +58,11 @@ function toColumns(data: SpacePatch): Partial<SpaceOrmEntity> {
       unitLimitPeriod: rules.unitLimit?.period ?? null,
       requiresApproval: rules.requiresApproval,
       cancelUntilHours: rules.cancelUntilHours,
+      feeCents: rules.feeCents,
+      guestsAllowed: rules.guests.allowed,
+      maxGuests: rules.guests.max,
+      guestDocumentRequired: rules.guests.documentRequired,
+      recurringAllowed: rules.recurringAllowed,
     });
   }
   return columns;

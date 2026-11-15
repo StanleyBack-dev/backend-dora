@@ -8,6 +8,10 @@ import {
   type BookingRepositoryPort,
 } from "@/modules/bookings/application/ports/booking-repository.port";
 import {
+  WAITLIST_REPOSITORY,
+  type WaitlistRepositoryPort,
+} from "@/modules/bookings/application/ports/waitlist-repository.port";
+import {
   SPACE_BLOCK_REPOSITORY,
   type SpaceBlockRepositoryPort,
 } from "@/modules/bookings/application/ports/space-block-repository.port";
@@ -43,6 +47,8 @@ export type SlotView = {
   bookingStatus: BookingStatus | null;
   /** Who holds it (managers) or why it is blocked (everyone). */
   label: string | null;
+  /** The caller is on this slot's waiting list. */
+  waitlisted: boolean;
 };
 
 export type Availability = {
@@ -63,6 +69,8 @@ export class GetSpaceAvailabilityUseCase {
     private readonly bookings: BookingRepositoryPort,
     @Inject(SPACE_BLOCK_REPOSITORY)
     private readonly blocks: SpaceBlockRepositoryPort,
+    @Inject(WAITLIST_REPOSITORY)
+    private readonly waitlist: WaitlistRepositoryPort,
     @Inject(CLOCK) private readonly clock: ClockPort,
     private readonly spaces: SpaceForBooking,
     private readonly access: BookingAccessService,
@@ -90,10 +98,12 @@ export class GetSpaceAvailabilityUseCase {
 
     const from = slots[0]!.startsAt;
     const to = slots[slots.length - 1]!.endsAt;
-    const [bookings, blocks] = await Promise.all([
+    const [bookings, blocks, waiting] = await Promise.all([
       this.bookings.activeInRange(space.id, from, to),
       this.blocks.overlapping(space.id, from, to),
+      this.waitlist.startsFor(space.id, actor.id, from, to),
     ]);
+    const waitingFor = new Set(waiting.map((date) => date.getTime()));
 
     return {
       spaceId,
@@ -113,6 +123,7 @@ export class GetSpaceAvailabilityUseCase {
             bookingId: mine || manager ? booking.id : null,
             bookingStatus: mine || manager ? booking.status : null,
             label: manager ? holder : null,
+            waitlisted: !mine && waitingFor.has(slot.startsAt.getTime()),
           };
         }
         const block = blocks.find((item) => overlaps(item, slot));
@@ -123,6 +134,7 @@ export class GetSpaceAvailabilityUseCase {
             bookingId: null,
             bookingStatus: null,
             label: block.reason,
+            waitlisted: false,
           };
         }
         const denial = checkSlot(slot.startsAt, space.rules, now, timeZone);
@@ -132,6 +144,7 @@ export class GetSpaceAvailabilityUseCase {
           bookingId: null,
           bookingStatus: null,
           label: null,
+          waitlisted: false,
         };
       }),
     };
