@@ -14,6 +14,10 @@ export class UnitOrmEntity {
   @Column({ name: "idtb_condominiums", type: "uuid" })
   condominiumId!: string;
 
+  /** Houses only ("" in apartments). */
+  @Column({ type: "varchar", length: 80, default: "" })
+  street!: string;
+
   @Column({ type: "varchar", length: 30 })
   block!: string;
 

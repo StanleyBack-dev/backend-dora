@@ -5,7 +5,10 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
-import type { CondominiumStatus } from "@/modules/condominiums/domain/condominium";
+import type {
+  AddressFormat,
+  CondominiumStatus,
+} from "@/modules/condominiums/domain/condominium";
 
 @Entity("tb_condominiums")
 export class CondominiumOrmEntity {
@@ -26,6 +29,14 @@ export class CondominiumOrmEntity {
 
   @Column({ type: "varchar", length: 10, default: "ACTIVE" })
   status!: CondominiumStatus;
+
+  @Column({
+    name: "address_format",
+    type: "varchar",
+    length: 10,
+    default: "APARTMENT",
+  })
+  addressFormat!: AddressFormat;
 
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;

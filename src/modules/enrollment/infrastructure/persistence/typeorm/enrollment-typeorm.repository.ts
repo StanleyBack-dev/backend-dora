@@ -53,6 +53,7 @@ const toRequest = (row: EnrollmentRequestOrmEntity): EnrollmentRequest => ({
   phone: row.phone,
   unitId: row.unitId,
   unitComplement: row.unitComplement,
+  typedUnitStreet: row.typedUnitStreet,
   typedUnitBlock: row.typedUnitBlock,
   typedUnitNumber: row.typedUnitNumber,
   consentAt: row.consentAt,
@@ -64,7 +65,11 @@ const toRequest = (row: EnrollmentRequestOrmEntity): EnrollmentRequest => ({
   photoKey: row.photoKey,
 });
 
-type UnitRaw = { unit_block: string | null; unit_number: string | null };
+type UnitRaw = {
+  unit_street: string | null;
+  unit_block: string | null;
+  unit_number: string | null;
+};
 
 @Injectable()
 export class EnrollmentTypeormRepository implements EnrollmentRepositoryPort {
@@ -141,6 +146,7 @@ export class EnrollmentTypeormRepository implements EnrollmentRepositoryPort {
     return this.requests
       .createQueryBuilder("request")
       .leftJoin("tb_units", "unit", "unit.idtb_units = request.idtb_units")
+      .addSelect("unit.street", "unit_street")
       .addSelect("unit.block", "unit_block")
       .addSelect("unit.number", "unit_number");
   }
@@ -151,6 +157,7 @@ export class EnrollmentTypeormRepository implements EnrollmentRepositoryPort {
   ): EnrollmentRequestView {
     return {
       ...toRequest(row),
+      unitStreet: raw?.unit_street ?? null,
       unitBlock: raw?.unit_block ?? null,
       unitNumber: raw?.unit_number ?? null,
     };

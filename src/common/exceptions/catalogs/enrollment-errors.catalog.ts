@@ -81,6 +81,11 @@ export const enrollmentErrors = {
     message:
       "Funcionários entram na equipe: aprove como Portaria ou Administrador.",
   },
+  invalidTypedHouse: {
+    code: "ENROLLMENT_INVALID_TYPED_HOUSE",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: "Informe a rua, a quadra e o lote da sua casa.",
+  },
   invalidTypedUnit: {
     code: "ENROLLMENT_INVALID_TYPED_UNIT",
     status: HttpStatus.UNPROCESSABLE_ENTITY,

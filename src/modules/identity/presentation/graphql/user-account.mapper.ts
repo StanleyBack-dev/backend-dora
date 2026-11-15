@@ -22,6 +22,7 @@ export function toAccountType(member: MemberAccount): UserAccountType {
     unitLabel:
       member.unitNumber !== null
         ? unitLabel({
+            street: member.unitStreet,
             block: member.unitBlock ?? "",
             number: member.unitNumber,
           })

@@ -34,6 +34,7 @@ type Setup = {
   managers?: string[];
   units?: { id: string; block: string; number: string }[];
   status?: "ACTIVE" | "SUSPENDED";
+  addressFormat?: "APARTMENT" | "HOUSE";
 };
 
 function setup(options: Setup = {}) {
@@ -88,6 +89,7 @@ function setup(options: Setup = {}) {
             id,
             name: "Residencial Aurora",
             status: options.status ?? "ACTIVE",
+            addressFormat: options.addressFormat ?? "APARTMENT",
           }
         : null,
     unitsOf: async () => units,
@@ -196,6 +198,7 @@ describe("PublicEnrollmentUseCase", () => {
     const token = await useCase.verify("123456", null);
     await expect(useCase.form(token)).resolves.toEqual({
       condominiumName: "Residencial Aurora",
+      addressFormat: "APARTMENT",
       units: [
         { id: "unit-1", label: "Bloco A · 101" },
         { id: "unit-2", label: "Casa 3" },
@@ -274,6 +277,57 @@ describe("PublicEnrollmentUseCase", () => {
       EnrollmentApplicant.EMPLOYEE,
     );
     expect(created).toHaveLength(1);
+  });
+
+  describe("houses (street, quadra and lote)", () => {
+    const house = {
+      fullName: "Maria Souza",
+      email: "maria@example.com",
+      phone: "(62) 99999-1234",
+      unitStreet: "  Rua das   Flores ",
+      unitBlock: " 3 ",
+      unitNumber: "12",
+      unitComplement: "fundos",
+    };
+
+    it("shows no unit list, even with units registered", async () => {
+      const { useCase } = setup({
+        addressFormat: "HOUSE",
+        units: [{ id: "unit-1", block: "3", number: "12" }],
+      });
+      const token = await useCase.verify("123456", null);
+      expect(await useCase.form(token)).toEqual(
+        expect.objectContaining({ addressFormat: "HOUSE", units: [] }),
+      );
+    });
+
+    it("keeps the typed street, quadra and lote, never a picked unit", async () => {
+      const { useCase, created } = setup({
+        addressFormat: "HOUSE",
+        units: [{ id: "unit-1", block: "3", number: "12" }],
+      });
+      const token = await useCase.verify("123456", null);
+      await useCase.submit(token, { ...house, unitId: "unit-1" }, true, null);
+      expect(created).toEqual([
+        expect.objectContaining({
+          unitId: null,
+          typedUnitStreet: "Rua das Flores",
+          typedUnitBlock: "3",
+          typedUnitNumber: "12",
+          unitComplement: "fundos",
+        }),
+      ]);
+    });
+
+    it("requires the street, the quadra and the lote", async () => {
+      const { useCase } = setup({ addressFormat: "HOUSE" });
+      const token = await useCase.verify("123456", null);
+      for (const missing of ["unitStreet", "unitBlock", "unitNumber"]) {
+        await expect(
+          useCase.submit(token, { ...house, [missing]: "" }, true, null),
+        ).rejects.toThrow("Informe a rua, a quadra e o lote");
+      }
+    });
   });
 
   it("takes no sign-up for a suspended condominium", async () => {

@@ -21,7 +21,11 @@ export type CondominiumFilter = {
   status?: CondominiumStatus;
 };
 
-export type CondominiumData = Required<CondominiumDraft>;
+/** The format is optional: a new condominium defaults to apartments. */
+export type CondominiumData = Required<
+  Omit<CondominiumDraft, "addressFormat">
+> &
+  Pick<CondominiumDraft, "addressFormat">;
 
 export interface CondominiumRepositoryPort {
   list(filter: CondominiumFilter): Promise<CondominiumSummary[]>;

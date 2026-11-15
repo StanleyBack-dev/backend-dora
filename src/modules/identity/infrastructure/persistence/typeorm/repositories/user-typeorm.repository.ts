@@ -53,6 +53,7 @@ type MemberRaw = {
   membership_active: boolean;
   membership_unit_id: string | null;
   membership_unit_complement: string | null;
+  unit_street: string | null;
   unit_block: string | null;
   unit_number: string | null;
   other_memberships: string | number;
@@ -204,6 +205,7 @@ export class UserTypeormRepository implements UserRepositoryPort {
       .addSelect("membership.active", "membership_active")
       .addSelect("membership.idtb_units", "membership_unit_id")
       .addSelect("membership.unit_complement", "membership_unit_complement")
+      .addSelect("unit.street", "unit_street")
       .addSelect("unit.block", "unit_block")
       .addSelect("unit.number", "unit_number")
       .addSelect(
@@ -267,6 +269,7 @@ export class UserTypeormRepository implements UserRepositoryPort {
         role: extra.membership_role,
         membershipActive: extra.membership_active,
         unitId: extra.membership_unit_id,
+        unitStreet: extra.unit_street,
         unitBlock: extra.unit_block,
         unitNumber: extra.unit_number,
         unitComplement: extra.membership_unit_complement,

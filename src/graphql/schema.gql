@@ -326,6 +326,9 @@ type Condominium {
   state: String!
   status: CondominiumStatus!
 
+  """Apartamentos (bloco e número) ou casas (rua, quadra e lote)."""
+  addressFormat: AddressFormat!
+
   """Membros ativos."""
   activeMembers: Int!
 
@@ -347,15 +350,28 @@ enum CondominiumStatus {
   SUSPENDED
 }
 
+"""
+Como as moradias são identificadas: apartamentos (bloco e número) ou casas (rua, quadra e lote).
+"""
+enum AddressFormat {
+  APARTMENT
+  HOUSE
+}
+
 """Unidade (apartamento, casa)."""
 type Unit {
   id: ID!
 
-  """Bloco ou torre ("" quando não há)."""
+  """Rua (casas; "" em apartamentos)."""
+  street: String!
+
+  """Bloco ou torre; em casas, a quadra ("" quando não há)."""
   block: String!
+
+  """Número; em casas, o lote."""
   number: String!
 
-  """Como exibir: "Bloco A · 101"."""
+  """Como exibir: "Bloco A · 101" ou "Rua das Flores, Qd 3, Lt 12"."""
   label: String!
 
   """Membros ativos vinculados."""
@@ -474,6 +490,9 @@ type EnrollmentRequest {
 
   """Número digitado (null: unidade escolhida na lista)."""
   typedUnitNumber: String
+
+  """Rua digitada (condomínio de casas)."""
+  typedUnitStreet: String
   createdAt: DateTime!
   reviewedAt: DateTime
   rejectionReason: String
@@ -528,6 +547,9 @@ type EnrollmentUnitOption {
 """O que o formulário público mostra depois do código."""
 type EnrollmentForm {
   condominiumName: String!
+
+  """Casas: a pessoa digita rua, quadra e lote (sem lista de unidades)."""
+  addressFormat: AddressFormat!
 
   """Unidades para escolher (vazio: o condomínio não tem)."""
   units: [EnrollmentUnitOption!]!
@@ -609,6 +631,9 @@ type CurrentCondominium {
   city: String!
   state: String!
   status: CondominiumStatus!
+
+  """Apartamentos (bloco e número) ou casas (rua, quadra e lote)."""
+  addressFormat: AddressFormat!
 }
 
 """Condomínio que a pessoa pode abrir (é membro ativo)."""
@@ -1552,9 +1577,15 @@ input CondominiumInput {
 
   """UF."""
   state: String!
+
+  """Apartamentos (bloco e número, padrão) ou casas (rua, quadra e lote)."""
+  addressFormat: AddressFormat
 }
 
 input CreateUnitsInput {
+  """Rua (só em condomínios de casas)."""
+  street: String
+
   """Bloco ou torre."""
   block: String
 
@@ -1563,6 +1594,8 @@ input CreateUnitsInput {
 }
 
 input UpdateUnitInput {
+  """Rua (só em condomínios de casas)."""
+  street: String
   block: String
   number: String!
 }
@@ -1588,7 +1621,14 @@ input EnrollmentDataInput {
   """Complemento do endereço no condomínio ("casa dos fundos")."""
   unitComplement: String
 
-  """Bloco ou torre digitado (quando o condomínio ainda não tem unidades)."""
+  """
+  Rua digitada (condomínio de casas; com a quadra em unitBlock e o lote em unitNumber).
+  """
+  unitStreet: String
+
+  """
+  Bloco ou torre digitado (quando o condomínio ainda não tem unidades); em casas, a quadra.
+  """
   unitBlock: String
 
   """

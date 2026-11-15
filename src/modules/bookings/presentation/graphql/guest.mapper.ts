@@ -34,7 +34,11 @@ export const toGateGuestType = (guest: GateEntry): GateGuestType => ({
   hostName: guest.hostName,
   unitLabel:
     guest.unitNumber !== null
-      ? unitLabel({ block: guest.unitBlock ?? "", number: guest.unitNumber })
+      ? unitLabel({
+          street: guest.unitStreet,
+          block: guest.unitBlock ?? "",
+          number: guest.unitNumber,
+        })
       : null,
   checkInWindow: checkInWindowOf(guest.checkInDenial),
 });

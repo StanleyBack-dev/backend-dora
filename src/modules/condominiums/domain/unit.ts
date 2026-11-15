@@ -1,10 +1,13 @@
 // A unit (apartment, house) of a condominium. Residents are linked to one;
-// limits like "bookings per unit" count by it. An empty block means the
-// condominium has no blocks.
+// limits like "bookings per unit" count by it. In apartments it is a block
+// (empty: no blocks) and a number; in houses (AddressFormat.HOUSE) a street,
+// a quadra (kept as the block) and a lote (kept as the number).
 
 export type Unit = {
   id: string;
   condominiumId: string;
+  /** The street of a house ("" in apartments). */
+  street: string;
   block: string;
   number: string;
 };
@@ -20,6 +23,14 @@ export function normalizeBlock(
 ): string | null {
   const block = collapse(value ?? "");
   return block.length <= 30 ? block : null;
+}
+
+/** The street of a house: 2 to 80 characters (null otherwise). */
+export function normalizeStreet(
+  value: string | null | undefined,
+): string | null {
+  const street = collapse(value ?? "");
+  return street.length >= 2 && street.length <= 80 ? street : null;
 }
 
 export function normalizeUnitNumber(value: string): string | null {
@@ -39,8 +50,16 @@ export function normalizeUnitComplement(
   return complement.length <= 80 ? complement : "too-long";
 }
 
-/** How a unit is shown: "Bloco A · 101", or just "101". */
-export function unitLabel(unit: Pick<Unit, "block" | "number">): string {
+/**
+ * How a unit is shown: "Bloco A · 101" or just "101" (apartments), "Rua das
+ * Flores, Qd 3, Lt 12" (houses).
+ */
+export function unitLabel(
+  unit: Pick<Unit, "block" | "number"> & { street?: string | null },
+): string {
+  if (unit.street) {
+    return `${unit.street}, Qd ${unit.block}, Lt ${unit.number}`;
+  }
   return unit.block ? `${unit.block} · ${unit.number}` : unit.number;
 }
 

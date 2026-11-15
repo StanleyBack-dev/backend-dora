@@ -8,6 +8,7 @@ import {
 } from "@/modules/condominiums/application/ports/unit-repository.port";
 import {
   normalizeBlock,
+  normalizeStreet,
   normalizeUnitNumber,
   unitKey,
   type Unit,
@@ -26,17 +27,22 @@ export class UnitRegistryService {
 
   async ensure(
     condominiumId: string,
-    place: { block: string | null; number: string },
+    place: { street?: string | null; block: string | null; number: string },
     actorId: string,
   ): Promise<Unit> {
+    const house = Boolean(place.street?.trim());
+    const street = house ? normalizeStreet(place.street) : "";
     const block = normalizeBlock(place.block);
     const number = normalizeUnitNumber(place.number);
-    if (block === null || !number) {
+    if (street === null || block === null || !number || (house && !block)) {
       throw AppException.from(APP_ERRORS.condominiums.unitInvalid, {
-        reason: "Informe o bloco (até 30 caracteres) e o número da unidade.",
+        reason: house
+          ? "Informe a rua, a quadra e o lote."
+          : "Informe o bloco (até 30 caracteres) e o número da unidade.",
       });
     }
-    const wanted = { block, number };
+    // Quadra and lote identify a house; the street only describes it.
+    const wanted = { street, block, number };
     const existing = (await this.units.list(condominiumId)).find(
       (unit) => unitKey(unit) === unitKey(wanted),
     );

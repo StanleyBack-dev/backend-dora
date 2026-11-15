@@ -8,6 +8,7 @@ import {
 } from "@/modules/enrollment/domain/enrollment";
 import {
   normalizeBlock,
+  normalizeStreet,
   normalizeUnitComplement,
   normalizeUnitNumber,
 } from "@/modules/condominiums/domain/unit";
@@ -24,23 +25,28 @@ export type EnrollmentInput = {
   /** Typed when the condominium has no units registered yet. */
   unitBlock?: string | null;
   unitNumber?: string | null;
+  /** Houses: the street (with the quadra as block and the lote as number). */
+  unitStreet?: string | null;
 };
 
 /** Where the person lives in the condominium, as typed on a form. */
 export type EnrollmentPlace = {
   unitComplement: string | null;
+  typedUnitStreet: string | null;
   typedUnitBlock: string | null;
   typedUnitNumber: string | null;
 };
 
 /**
- * Checks the address fields. The typed block/number are kept only when
- * `typed` (the condominium has no units to choose from); otherwise the
- * unit comes from the list.
+ * Checks the address fields. The typed place is kept only when `typed`
+ * (the condominium has no units to choose from); otherwise the unit comes
+ * from the list. Houses (`house`) need the street, the quadra and the
+ * lote; apartments the number (and the block, if any).
  */
 export function validatePlace(
   input: EnrollmentInput,
   typed: boolean,
+  house = false,
 ): EnrollmentPlace {
   const error = (key: keyof typeof APP_ERRORS.enrollment) =>
     AppException.from(APP_ERRORS.enrollment[key], undefined);
@@ -48,7 +54,24 @@ export function validatePlace(
   const unitComplement = normalizeUnitComplement(input.unitComplement);
   if (unitComplement === "too-long") throw error("invalidComplement");
   if (!typed) {
-    return { unitComplement, typedUnitBlock: null, typedUnitNumber: null };
+    return {
+      unitComplement,
+      typedUnitStreet: null,
+      typedUnitBlock: null,
+      typedUnitNumber: null,
+    };
+  }
+  if (house) {
+    const street = normalizeStreet(input.unitStreet);
+    const quadra = normalizeBlock(input.unitBlock);
+    const lote = normalizeUnitNumber(input.unitNumber ?? "");
+    if (!street || !quadra || !lote) throw error("invalidTypedHouse");
+    return {
+      unitComplement,
+      typedUnitStreet: street,
+      typedUnitBlock: quadra,
+      typedUnitNumber: lote,
+    };
   }
   const typedUnitBlock = normalizeBlock(input.unitBlock);
   if (typedUnitBlock === null) throw error("invalidTypedUnit");
@@ -56,6 +79,7 @@ export function validatePlace(
   if (!typedUnitNumber) throw error("invalidTypedUnit");
   return {
     unitComplement,
+    typedUnitStreet: null,
     typedUnitBlock: typedUnitBlock || null,
     typedUnitNumber,
   };

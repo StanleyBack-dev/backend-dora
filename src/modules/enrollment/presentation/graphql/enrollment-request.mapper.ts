@@ -10,6 +10,7 @@ export const toRequestType = (
   unitLabel:
     request.unitNumber !== null
       ? unitLabel({
+          street: request.unitStreet,
           block: request.unitBlock ?? "",
           number: request.unitNumber,
         })
@@ -17,6 +18,7 @@ export const toRequestType = (
   typedUnitLabel:
     request.typedUnitNumber !== null
       ? unitLabel({
+          street: request.typedUnitStreet,
           block: request.typedUnitBlock ?? "",
           number: request.typedUnitNumber,
         })
