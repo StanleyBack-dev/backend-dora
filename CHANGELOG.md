@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/StanleyBack-dev/backend-dora/compare/v0.5.0...v0.5.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* only production e-mails and pushes real people ([b0d0e0e](https://github.com/StanleyBack-dev/backend-dora/commit/b0d0e0ecd79e35e8a2033d3be310a6364d1769bf))
+
 ## [0.5.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.4.0...v0.5.0) (2026-11-15)
 
 
