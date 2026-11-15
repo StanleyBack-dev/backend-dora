@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.2.0...v0.3.0) (2026-11-15)
+
+
+### Features
+
+* deploy date in appInfo ([db5b757](https://github.com/StanleyBack-dev/backend-dora/commit/db5b757b0fdb2649baaaef08cc7993e846280ec9))
+* deploy date in appInfo ([edb79b7](https://github.com/StanleyBack-dev/backend-dora/commit/edb79b7f27c78f0ac7113ac09c5f808b9184508e))
+
 ## [0.2.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.1.0...v0.2.0) (2026-11-15)
 
 
