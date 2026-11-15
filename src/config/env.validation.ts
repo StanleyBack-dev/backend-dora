@@ -10,9 +10,10 @@ export const envValidationSchema = Joi.object({
   PORT: Joi.number().default(4000),
   APP_TIMEZONE: Joi.string().default("America/Sao_Paulo"),
   FRONTEND_URL: Joi.string().uri().required(),
-  // Set by the deploy workflow: release version and git commit (AppInfo).
+  // Set by the deploy workflow: release version, git commit and deploy time (AppInfo).
   APP_VERSION: Joi.string().allow("").optional(),
   APP_COMMIT_SHA: Joi.string().allow("").optional(),
+  APP_DEPLOYED_AT: Joi.string().allow("").optional(),
 
   // === DATABASE (Neon) ===
   DATABASE_URL: Joi.string()

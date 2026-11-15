@@ -4,6 +4,8 @@ export type BuildInfo = {
   version: string;
   /** Full git commit SHA of the deploy; null outside a deploy. */
   commit: string | null;
+  /** When this build was deployed; null outside a deploy. */
+  deployedAt: Date | null;
 };
 
 export interface BuildInfoPort {

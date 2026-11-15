@@ -10,4 +10,10 @@ export class AppInfoType {
     description: "Commit do deploy; nulo fora de um deploy.",
   })
   commit!: string | null;
+
+  @Field(() => Date, {
+    nullable: true,
+    description: "Quando esta versão foi publicada; nulo fora de um deploy.",
+  })
+  deployedAt!: Date | null;
 }
