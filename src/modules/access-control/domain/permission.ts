@@ -24,6 +24,8 @@ export enum Permission {
   AUDIT_READ = "AUDIT_READ",
   /** Answer and close the app's support requests (platform). */
   SUPPORT_MANAGE = "SUPPORT_MANAGE",
+  /** Record contributions to the project and edit its supporters (platform). */
+  SUPPORTERS_MANAGE = "SUPPORTERS_MANAGE",
   /** Create, edit and suspend condominiums (platform). */
   CONDOMINIUMS_MANAGE = "CONDOMINIUMS_MANAGE",
 }

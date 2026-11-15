@@ -51,6 +51,10 @@
         "do_not_enforce_on_create": false,
         "required_status_checks": [
           {
+            "context": "commits",
+            "integration_id": 15368
+          },
+          {
             "context": "format",
             "integration_id": 15368
           },

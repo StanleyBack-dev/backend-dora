@@ -20,6 +20,8 @@ import { SystemLogsModule } from "@/modules/system-logs/system-logs.module";
 import { CondominiumsModule } from "@/modules/condominiums/condominiums.module";
 import { DashboardModule } from "@/modules/dashboard/dashboard.module";
 import { PlatformMetricsModule } from "@/modules/platform-metrics/platform-metrics.module";
+import { SupportersModule } from "@/modules/supporters/supporters.module";
+import { AppInfoModule } from "@/modules/app-info/app-info.module";
 import { IdentityModule } from "@/modules/identity/identity.module";
 import { FirstAccessGuard } from "@/modules/identity/presentation/guards/first-access.guard";
 import { UserSessionGuard } from "@/modules/identity/presentation/guards/user-session.guard";
@@ -54,6 +56,8 @@ import { SharedModule } from "@/shared/shared.module";
     SystemLogsModule,
     DashboardModule,
     PlatformMetricsModule,
+    SupportersModule,
+    AppInfoModule,
     MaintenanceModule,
   ],
   providers: [

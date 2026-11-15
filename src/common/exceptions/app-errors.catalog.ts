@@ -13,6 +13,7 @@ import { notificationsErrors } from "@/common/exceptions/catalogs/notifications-
 import { spacesErrors } from "@/common/exceptions/catalogs/spaces-errors.catalog";
 import { storageErrors } from "@/common/exceptions/catalogs/storage-errors.catalog";
 import { supportErrors } from "@/common/exceptions/catalogs/support-errors.catalog";
+import { supportersErrors } from "@/common/exceptions/catalogs/supporters-errors.catalog";
 import { tenancyErrors } from "@/common/exceptions/catalogs/tenancy-errors.catalog";
 
 export const APP_ERRORS = {
@@ -30,5 +31,6 @@ export const APP_ERRORS = {
   spaces: spacesErrors,
   storage: storageErrors,
   support: supportErrors,
+  supporters: supportersErrors,
   tenancy: tenancyErrors,
 } as const satisfies Record<string, Record<string, AppErrorDefinition<never>>>;
