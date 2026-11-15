@@ -64,6 +64,9 @@ export const envValidationSchema = Joi.object({
     otherwise: Joi.string().email().allow("").optional(),
   }),
   MAIL_FROM_NAME: Joi.string().min(2).default("Dora"),
+  // Outside production nobody real is e-mailed: with brevo, every e-mail
+  // goes only to this address ("[DEV]" in the subject); without it, the log.
+  MAIL_DEV_REDIRECT_TO: Joi.string().email().allow("").optional(),
 
   // === STORAGE (Neon Object Storage, S3-compatible, per Neon branch) ===
   // Without these the API still boots; only photo uploads fail.
@@ -81,6 +84,8 @@ export const envValidationSchema = Joi.object({
   // Without the keys the API still boots; devices just can't subscribe.
   VAPID_PUBLIC_KEY: Joi.string().allow("").optional(),
   VAPID_PRIVATE_KEY: Joi.string().allow("").optional(),
+  // Outside production push is off unless this is true (testing on a device).
+  PUSH_IN_DEVELOPMENT: bool().default(false),
   VAPID_SUBJECT: Joi.string()
     .pattern(/^(mailto:|https:\/\/)/)
     .allow("")
