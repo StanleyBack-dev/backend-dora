@@ -20,6 +20,7 @@ const toCondominium = (row: CondominiumOrmEntity): Condominium => ({
   city: row.city,
   state: row.state,
   status: row.status,
+  addressFormat: row.addressFormat,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 });
@@ -30,7 +31,8 @@ const escapeLike = (value: string) => value.replace(/[\\%_]/g, "\\$&");
 // enrollment) read-only, in one statement: the console lists every tenant.
 const SUMMARY_SQL = `
   SELECT c.idtb_condominiums AS id, c.name, c.document, c.city, c.state,
-         c.status, c.created_at AS "createdAt", c.updated_at AS "updatedAt",
+         c.status, c.address_format AS "addressFormat",
+         c.created_at AS "createdAt", c.updated_at AS "updatedAt",
          (SELECT count(*)::int FROM tb_memberships m
             JOIN tb_users u ON u.idtb_users = m.idtb_users
            WHERE m.idtb_condominiums = c.idtb_condominiums

@@ -57,7 +57,8 @@ const VIEW_SQL = `
          b.series_id AS "seriesId", b.created_at AS "createdAt",
          s.name AS "spaceName", s.kind AS "spaceKind",
          s.guests_allowed AS "guestsAllowed", u.name AS "userName",
-         un.block AS "unitBlock", un.number AS "unitNumber"
+         un.street AS "unitStreet", un.block AS "unitBlock",
+         un.number AS "unitNumber"
     FROM tb_bookings b
     JOIN tb_spaces s ON s.idtb_spaces = b.idtb_spaces
     JOIN tb_users u ON u.idtb_users = b.idtb_users

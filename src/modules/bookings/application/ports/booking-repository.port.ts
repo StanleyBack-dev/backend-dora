@@ -9,6 +9,7 @@ export type BookingView = Booking & {
   /** The space takes a guest list. */
   guestsAllowed: boolean;
   userName: string;
+  unitStreet: string | null;
   unitBlock: string | null;
   unitNumber: string | null;
 };

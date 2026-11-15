@@ -4,7 +4,10 @@ import { APP_ERRORS } from "@/common/exceptions/app-errors.catalog";
 import { AppException } from "@/common/exceptions/app-exception";
 import { UserGroup } from "@/modules/access-control/domain/user-group";
 import { CondominiumLookupService } from "@/modules/condominiums/application/condominium-lookup.service";
-import { CondominiumStatus } from "@/modules/condominiums/domain/condominium";
+import {
+  AddressFormat,
+  CondominiumStatus,
+} from "@/modules/condominiums/domain/condominium";
 import { unitLabel } from "@/modules/condominiums/domain/unit";
 import {
   ENROLLMENT_REPOSITORY,
@@ -60,7 +63,9 @@ export const LIMITS: Record<"verify" | "submit", RateRule> = {
 /** What the public form shows once the code is accepted. */
 export type EnrollmentForm = {
   condominiumName: string;
-  /** Empty when the condominium has no units registered. */
+  /** Houses: the person types street, quadra and lote. */
+  addressFormat: AddressFormat;
+  /** Empty when there is nothing to choose (no units, or houses). */
   units: { id: string; label: string }[];
 };
 
@@ -145,9 +150,14 @@ export class PublicEnrollmentUseCase {
     if (!condominium) {
       throw AppException.from(APP_ERRORS.enrollment.formExpired, undefined);
     }
-    const units = await this.condominiums.unitsOf(invite.condominiumId);
+    // Houses are typed, never picked: residents don't see the others'.
+    const house = condominium.addressFormat === AddressFormat.HOUSE;
+    const units = house
+      ? []
+      : await this.condominiums.unitsOf(invite.condominiumId);
     return {
       condominiumName: condominium.name,
+      addressFormat: condominium.addressFormat,
       units: units.map((unit) => ({ id: unit.id, label: unitLabel(unit) })),
     };
   }
@@ -180,15 +190,26 @@ export class PublicEnrollmentUseCase {
 
     // Employees don't live there: no unit nor address, whatever was sent.
     const employee = applicant === EnrollmentApplicant.EMPLOYEE;
-    const unitId = employee
-      ? null
-      : await this.formUnit(invite.condominiumId, input.unitId);
+    // Houses: street, quadra and lote are always typed (no list).
+    const house = condominium.addressFormat === AddressFormat.HOUSE;
+    const unitId =
+      employee || house
+        ? null
+        : await this.formUnit(invite.condominiumId, input.unitId);
     // No units registered yet: the block/number are typed instead.
     const place = employee
-      ? { unitComplement: null, typedUnitBlock: null, typedUnitNumber: null }
+      ? {
+          unitComplement: null,
+          typedUnitStreet: null,
+          typedUnitBlock: null,
+          typedUnitNumber: null,
+        }
       : validatePlace(
           input,
-          (await this.condominiums.unitsOf(invite.condominiumId)).length === 0,
+          house ||
+            (await this.condominiums.unitsOf(invite.condominiumId)).length ===
+              0,
+          house,
         );
 
     // Someone with a Dora account elsewhere may join this condominium too.

@@ -39,7 +39,17 @@ export class EnrollmentDataInput {
   @Field(() => String, {
     nullable: true,
     description:
-      "Bloco ou torre digitado (quando o condomínio ainda não tem unidades).",
+      "Rua digitada (condomínio de casas; com a quadra em unitBlock e o lote em unitNumber).",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  unitStreet?: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "Bloco ou torre digitado (quando o condomínio ainda não tem unidades); em casas, a quadra.",
   })
   @IsOptional()
   @IsString()

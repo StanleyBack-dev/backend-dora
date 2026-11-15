@@ -53,6 +53,9 @@ describe("units", () => {
       "Bloco A · 101",
     );
     expect(unitLabel({ block: "", number: "Casa 3" })).toBe("Casa 3");
+    expect(
+      unitLabel({ street: "Rua das Flores", block: "3", number: "12" }),
+    ).toBe("Rua das Flores, Qd 3, Lt 12");
   });
 
   it("treats block and number case-insensitively", () => {

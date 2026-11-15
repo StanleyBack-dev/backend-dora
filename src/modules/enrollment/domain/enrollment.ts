@@ -43,9 +43,12 @@ export type EnrollmentData = {
   /** Address detail inside the condominium ("casa dos fundos"). */
   unitComplement: string | null;
   /**
-   * Block and number typed when the condominium has no units registered
-   * yet; the manager links (or creates) the unit on approval.
+   * Typed when the condominium has no units to choose from (apartments
+   * without units registered yet, or houses: street, quadra as the block
+   * and lote as the number); the manager links (or creates) the unit on
+   * approval.
    */
+  typedUnitStreet: string | null;
   typedUnitBlock: string | null;
   typedUnitNumber: string | null;
 };

@@ -62,6 +62,12 @@ export class EnrollmentRequestType {
   })
   typedUnitNumber!: string | null;
 
+  @Field(() => String, {
+    nullable: true,
+    description: "Rua digitada (condomínio de casas).",
+  })
+  typedUnitStreet!: string | null;
+
   @Field()
   createdAt!: Date;
 

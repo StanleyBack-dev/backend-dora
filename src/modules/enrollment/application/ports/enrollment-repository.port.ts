@@ -8,6 +8,7 @@ import type { OutboxDraft } from "@/modules/outbox/domain/outbox";
 
 /** A request with its unit's label ("Bloco A · 101"), for the review. */
 export type EnrollmentRequestView = EnrollmentRequest & {
+  unitStreet: string | null;
   unitBlock: string | null;
   unitNumber: string | null;
 };

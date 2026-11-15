@@ -5,6 +5,7 @@ import { AppException } from "@/common/exceptions/app-exception";
 import { AuditTrailService } from "@/modules/audit/application/audit-trail.service";
 import {
   CONDOMINIUM_REPOSITORY,
+  type CondominiumData,
   type CondominiumFilter,
   type CondominiumRepositoryPort,
   type CondominiumSummary,
@@ -93,7 +94,7 @@ export class CondominiumsUseCase {
     return this.get(id);
   }
 
-  private validate(draft: CondominiumDraft): Required<CondominiumDraft> {
+  private validate(draft: CondominiumDraft): CondominiumData {
     const data = normalizeCondominium(draft);
     if (typeof data === "string") {
       throw AppException.from(APP_ERRORS.condominiums.invalid, {

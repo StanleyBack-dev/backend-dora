@@ -3,7 +3,8 @@ import type { Unit } from "@/modules/condominiums/domain/unit";
 /** A unit with how many active members are linked to it. */
 export type UnitView = Unit & { residents: number };
 
-export type UnitPlace = Pick<Unit, "block" | "number">;
+/** Where a unit is: street (houses, "" otherwise), block and number. */
+export type UnitPlace = Pick<Unit, "street" | "block" | "number">;
 
 export interface UnitRepositoryPort {
   /** Ordered by block, then number (numbers in numeric order). */

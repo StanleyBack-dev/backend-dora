@@ -12,12 +12,14 @@ import { UnitOrmEntity } from "@/modules/condominiums/infrastructure/persistence
 const toUnit = (row: UnitOrmEntity): Unit => ({
   id: row.id,
   condominiumId: row.condominiumId,
+  street: row.street,
   block: row.block,
   number: row.number,
 });
 
-// "2" before "10": by block, then by the number's digits, then as text.
-const UNIT_ORDER = String.raw`lower(un.block),
+// "2" before "10": by street (houses), block, then by the number's digits,
+// then as text.
+const UNIT_ORDER = String.raw`lower(un.street), lower(un.block),
   NULLIF(regexp_replace(un.number, '\D', '', 'g'), '')::numeric NULLS LAST,
   lower(un.number)`;
 
@@ -74,7 +76,7 @@ export class UnitTypeormRepository implements UnitRepositoryPort {
   private query(where: string, params: unknown[]): Promise<UnitView[]> {
     return this.dataSource.query<UnitView[]>(
       `SELECT un.idtb_units AS id, un.idtb_condominiums AS "condominiumId",
-              un.block, un.number,
+              un.street, un.block, un.number,
               (SELECT count(*)::int FROM tb_memberships m
                 WHERE m.idtb_units = un.idtb_units AND m.active) AS residents
          FROM tb_units un
