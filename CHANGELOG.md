@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.3.0...v0.4.0) (2026-11-15)
+
+
+### Features
+
+* employee sign-ups and listing residents apart from the team ([4dc343b](https://github.com/StanleyBack-dev/backend-dora/commit/4dc343bb01d1f891dc235e87feb99f16d2d7f0bc))
+* employee sign-ups and listing residents apart from the team ([47e608d](https://github.com/StanleyBack-dev/backend-dora/commit/47e608d39bb64193c2d37d45ae666aade99cdda1))
+
 ## [0.3.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.2.0...v0.3.0) (2026-11-15)
 
 
