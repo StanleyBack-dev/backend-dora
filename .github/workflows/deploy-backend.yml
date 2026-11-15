@@ -58,11 +58,13 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
-        # Version (package.json) and commit at runtime: the appInfo query.
+        # Version (package.json), commit and deploy time at runtime: appInfo.
         run: |
           VERSION=$(node -p "require('./package.json').version")
+          DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           npx vercel deploy --prod --token "$VERCEL_TOKEN" --yes \
-            --env APP_VERSION="$VERSION" --env APP_COMMIT_SHA="$COMMIT_SHA"
+            --env APP_VERSION="$VERSION" --env APP_COMMIT_SHA="$COMMIT_SHA" \
+            --env APP_DEPLOYED_AT="$DEPLOYED_AT"
 
       # Tells the ADMIN_MASTER (app and e-mail) through the API; skipped
       # when API_URL/CRON_SECRET are not set in this repository.
