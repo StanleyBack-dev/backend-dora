@@ -46,5 +46,12 @@ export const toSpaceData = (input: SpaceInput): SpaceData => ({
       : null,
     requiresApproval: input.rules.requiresApproval,
     cancelUntilHours: input.rules.cancelUntilHours,
+    feeCents: input.rules.feeCents ?? null,
+    guests: {
+      allowed: input.rules.guests.allowed,
+      max: input.rules.guests.max ?? null,
+      documentRequired: input.rules.guests.documentRequired,
+    },
+    recurringAllowed: input.rules.recurringAllowed,
   },
 });

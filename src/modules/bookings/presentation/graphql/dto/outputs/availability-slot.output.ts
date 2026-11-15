@@ -28,4 +28,7 @@ export class AvailabilitySlotType {
     description: "Quem reservou (gestores) ou o motivo do bloqueio.",
   })
   label!: string | null;
+
+  @Field({ description: "Você está na lista de espera deste horário." })
+  waitlisted!: boolean;
 }

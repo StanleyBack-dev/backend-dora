@@ -8,6 +8,7 @@ import {
   IsOptional,
   ValidateNested,
 } from "class-validator";
+import { GuestRulesInput } from "@/modules/spaces/presentation/graphql/dto/inputs/guest-rules.input";
 import { OpeningHoursInput } from "@/modules/spaces/presentation/graphql/dto/inputs/opening-hours.input";
 import { UnitLimitInput } from "@/modules/spaces/presentation/graphql/dto/inputs/unit-limit.input";
 
@@ -47,4 +48,23 @@ export class SpaceRulesInput {
   @Field(() => Int)
   @IsInt()
   cancelUntilHours!: number;
+
+  @Field(() => Int, {
+    nullable: true,
+    description: "Taxa de uso por reserva, em centavos (vazio: gratuito).",
+  })
+  @IsOptional()
+  @IsInt()
+  feeCents?: number | null;
+
+  @Field(() => GuestRulesInput)
+  @ValidateNested()
+  @Type(() => GuestRulesInput)
+  guests!: GuestRulesInput;
+
+  @Field({
+    description: "Moradores podem reservar toda semana no mesmo horário.",
+  })
+  @IsBoolean()
+  recurringAllowed!: boolean;
 }

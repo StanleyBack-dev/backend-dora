@@ -73,6 +73,21 @@ export class SpaceOrmEntity {
   @Column({ name: "cancel_until_hours", type: "int" })
   cancelUntilHours!: number;
 
+  @Column({ name: "fee_cents", type: "int", nullable: true })
+  feeCents!: number | null;
+
+  @Column({ name: "guests_allowed", type: "boolean", default: false })
+  guestsAllowed!: boolean;
+
+  @Column({ name: "max_guests", type: "int", nullable: true })
+  maxGuests!: number | null;
+
+  @Column({ name: "guest_document_required", type: "boolean", default: false })
+  guestDocumentRequired!: boolean;
+
+  @Column({ name: "recurring_allowed", type: "boolean", default: false })
+  recurringAllowed!: boolean;
+
   @Column({ type: "jsonb", default: () => "'[]'" })
   photos!: SpacePhoto[];
 

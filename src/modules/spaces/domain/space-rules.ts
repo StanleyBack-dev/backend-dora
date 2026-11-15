@@ -22,6 +22,20 @@ export enum LimitPeriod {
 /** At most `count` bookings per unit in each `period`. */
 export type UnitLimit = { count: number; period: LimitPeriod };
 
+/** Who may come with the person who booked. */
+export type GuestRules = {
+  /** The booker may list guests (they get an invite for the gate). */
+  allowed: boolean;
+  /** Most guests per booking (null: up to the capacity, if any). */
+  max: number | null;
+  /** The gate needs each guest's document. */
+  documentRequired: boolean;
+};
+
+/** Highest fee a space can charge per booking (R$ 100.000,00). */
+export const MAX_FEE_CENTS = 10_000_000;
+export const MAX_GUESTS = 500;
+
 export type SpaceRules = {
   openingHours: OpeningHours[];
   /** Length of each booking slot, in minutes. */
@@ -36,6 +50,11 @@ export type SpaceRules = {
   requiresApproval: boolean;
   /** Cancelling is allowed until this many hours before the start. */
   cancelUntilHours: number;
+  /** Usage fee per booking, in cents (null: free). */
+  feeCents: number | null;
+  guests: GuestRules;
+  /** Residents may book the same slot weekly (managers always can). */
+  recurringAllowed: boolean;
 };
 
 export type SpaceRulesViolation =
@@ -45,7 +64,9 @@ export type SpaceRulesViolation =
   | "min-advance"
   | "max-advance"
   | "unit-limit"
-  | "cancel";
+  | "cancel"
+  | "fee"
+  | "guests";
 
 export const SLOT_STEP_MINUTES = 15;
 
@@ -62,6 +83,9 @@ export const DEFAULT_RULES: SpaceRules = {
   unitLimit: null,
   requiresApproval: false,
   cancelUntilHours: 0,
+  feeCents: null,
+  guests: { allowed: false, max: null, documentRequired: false },
+  recurringAllowed: false,
 };
 
 const TIME = /^([01]\d|2[0-3]):([0-5]\d)$|^24:00$/;
@@ -124,6 +148,15 @@ export function normalizeSpaceRules(
 
   if (!isInt(rules.cancelUntilHours, 0, 24 * 30)) return "cancel";
 
+  if (rules.feeCents !== null && !isInt(rules.feeCents, 1, MAX_FEE_CENTS)) {
+    return "fee";
+  }
+
+  const guests = rules.guests;
+  if (guests.max !== null && !isInt(guests.max, 1, MAX_GUESTS)) {
+    return "guests";
+  }
+
   return {
     openingHours,
     slotMinutes: rules.slotMinutes,
@@ -132,5 +165,15 @@ export function normalizeSpaceRules(
     unitLimit: rules.unitLimit ? { ...rules.unitLimit } : null,
     requiresApproval: rules.requiresApproval,
     cancelUntilHours: rules.cancelUntilHours,
+    feeCents: rules.feeCents,
+    // Without guests, their settings don't apply.
+    guests: guests.allowed
+      ? {
+          allowed: true,
+          max: guests.max,
+          documentRequired: guests.documentRequired,
+        }
+      : { allowed: false, max: null, documentRequired: false },
+    recurringAllowed: rules.recurringAllowed,
   };
 }

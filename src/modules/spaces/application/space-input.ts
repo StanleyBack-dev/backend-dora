@@ -25,6 +25,8 @@ const MESSAGES: Record<SpaceDetailsViolation | SpaceRulesViolation, string> = {
     "A agenda abre de 1 a 365 dias à frente, e depois da antecedência mínima.",
   "unit-limit": "O limite por unidade vai de 1 a 100 reservas por período.",
   cancel: "O prazo para cancelar vai de 0 a 720 horas antes do início.",
+  fee: "A taxa de uso vai de R$ 0,01 a R$ 100.000,00 por reserva.",
+  guests: "O limite de convidados vai de 1 a 500 por reserva.",
 };
 
 /** Validates and normalizes a space's form (details and booking rules). */

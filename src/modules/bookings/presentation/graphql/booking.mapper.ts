@@ -11,6 +11,7 @@ export const toBookingType = (booking: BookingView): BookingType => ({
   spaceId: booking.spaceId,
   spaceName: booking.spaceName,
   spaceKind: booking.spaceKind as SpaceKind,
+  guestsAllowed: booking.guestsAllowed,
   userId: booking.userId,
   userName: booking.userName,
   unitLabel:
@@ -30,6 +31,9 @@ export const toBookingType = (booking: BookingView): BookingType => ({
   cancelledAt: booking.cancelledAt,
   cancelledByManager:
     booking.cancelledBy !== null && booking.cancelledBy !== booking.userId,
+  feeCents: booking.feeCents,
+  feeBilledAt: booking.feeBilledAt,
+  seriesId: booking.seriesId,
   createdAt: booking.createdAt,
 });
 

@@ -1,4 +1,4 @@
-import { Field, ID, ObjectType } from "@nestjs/graphql";
+import { Field, ID, Int, ObjectType } from "@nestjs/graphql";
 import { BookingStatus } from "@/modules/bookings/domain/booking";
 import { SpaceKind } from "@/modules/spaces/domain/space";
 import "@/modules/bookings/presentation/graphql/bookings.graphql-enums";
@@ -59,6 +59,28 @@ export class BookingType {
 
   @Field({ description: "Cancelada por outra pessoa (a administração)." })
   cancelledByManager!: boolean;
+
+  @Field({ description: "O espaço aceita lista de convidados." })
+  guestsAllowed!: boolean;
+
+  @Field(() => Int, {
+    nullable: true,
+    description:
+      "Taxa de uso em centavos, como era ao reservar (null: gratuita).",
+  })
+  feeCents!: number | null;
+
+  @Field(() => Date, {
+    nullable: true,
+    description: "Quando a taxa foi lançada na cobrança do condomínio.",
+  })
+  feeBilledAt!: Date | null;
+
+  @Field(() => ID, {
+    nullable: true,
+    description: "Reserva recorrente a que pertence (null: avulsa).",
+  })
+  seriesId!: string | null;
 
   @Field()
   createdAt!: Date;

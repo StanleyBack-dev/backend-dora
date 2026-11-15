@@ -6,6 +6,8 @@ import type { PageRequest, Paginated } from "@/shared/application/pagination";
 export type BookingView = Booking & {
   spaceName: string;
   spaceKind: string;
+  /** The space takes a guest list. */
+  guestsAllowed: boolean;
   userName: string;
   unitBlock: string | null;
   unitNumber: string | null;
@@ -22,6 +24,8 @@ export type NewBooking = Pick<
   | "status"
   | "notes"
   | "cancelUntil"
+  | "feeCents"
+  | "seriesId"
 >;
 
 export type BookingPatch = Partial<
@@ -85,6 +89,32 @@ export interface BookingRepositoryPort {
     filter: BookingFilter,
     page: PageRequest,
   ): Promise<Paginated<BookingView>>;
+  /**
+   * Confirmed bookings with a fee starting in [from, to), by unit and then
+   * start (the condominium's billing for the period).
+   */
+  feesInRange(
+    condominiumId: string,
+    from: Date,
+    to: Date,
+  ): Promise<BookingView[]>;
+  /**
+   * Marks (at) or unmarks (null) the fees of these bookings as sent to the
+   * billing; only confirmed bookings with a fee of the condominium change.
+   * Returns how many changed.
+   */
+  setFeesBilled(
+    condominiumId: string,
+    ids: readonly string[],
+    at: Date | null,
+    actorId: string,
+  ): Promise<number>;
+  /** Active bookings of a weekly series not ended yet, soonest first. */
+  activeInSeries(
+    condominiumId: string,
+    seriesId: string,
+    now: Date,
+  ): Promise<BookingView[]>;
 }
 
 export const BOOKING_REPOSITORY = Symbol("BOOKING_REPOSITORY");

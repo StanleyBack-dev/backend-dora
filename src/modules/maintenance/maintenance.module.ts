@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { BookingsModule } from "@/modules/bookings/bookings.module";
 import { IdentityModule } from "@/modules/identity/identity.module";
 import { CleanupUseCase } from "@/modules/maintenance/application/cleanup.use-case";
 import { InternalMaintenanceController } from "@/modules/maintenance/presentation/rest/internal-maintenance.controller";
@@ -9,6 +10,7 @@ import { SystemLogsModule } from "@/modules/system-logs/system-logs.module";
 // Scheduled housekeeping (internal routes only, no GraphQL).
 @Module({
   imports: [
+    BookingsModule,
     IdentityModule,
     NotificationsModule,
     OutboxModule,

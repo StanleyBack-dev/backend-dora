@@ -19,6 +19,8 @@ export enum NotificationType {
   BOOKING_REJECTED = "BOOKING_REJECTED",
   /** A booking was cancelled (yours by a manager, or one you manage). */
   BOOKING_CANCELLED = "BOOKING_CANCELLED",
+  /** A slot you were waiting for is free again (waiting list). */
+  BOOKING_SLOT_FREED = "BOOKING_SLOT_FREED",
 }
 
 export const ALL_NOTIFICATION_TYPES: readonly NotificationType[] =

@@ -40,6 +40,12 @@ export type Booking = {
   reason: string | null;
   cancelledBy: string | null;
   cancelledAt: Date | null;
+  /** Usage fee kept when booking, in cents (null: free). */
+  feeCents: number | null;
+  /** When a manager sent the fee to the condominium's billing. */
+  feeBilledAt: Date | null;
+  /** The weekly series it belongs to (null: a single booking). */
+  seriesId: string | null;
   createdAt: Date;
 };
 
