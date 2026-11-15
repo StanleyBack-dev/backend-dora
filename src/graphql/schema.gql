@@ -364,7 +364,7 @@ type Unit {
 
 """Painel do gestor do condomínio."""
 type Dashboard {
-  """Membros com acesso ativo."""
+  """Moradores com acesso ativo (sem a equipe)."""
   activeUsers: Int!
 
   """Cadastros aguardando aprovação."""
@@ -450,6 +450,9 @@ type TemporaryAccess {
 type EnrollmentRequest {
   id: ID!
   status: EnrollmentStatus!
+
+  """Morador ou funcionário (funcionário não tem unidade)."""
+  applicant: EnrollmentApplicant!
   fullName: String!
   email: String!
   phone: String!
@@ -483,6 +486,12 @@ enum EnrollmentStatus {
   PENDENTE
   APROVADA
   RECUSADA
+}
+
+"""Quem se cadastra: morador ou funcionário do condomínio."""
+enum EnrollmentApplicant {
+  RESIDENT
+  EMPLOYEE
 }
 
 type EnrollmentApproval {
@@ -1234,6 +1243,9 @@ input EnrollmentRequestFilterInput {
 input UserFilterInput {
   search: String
   group: UserGroup
+
+  """Qualquer um destes papéis (ex.: a equipe, ADMIN e CONCIERGE)."""
+  groups: [UserGroup!]
   active: Boolean
   unitId: ID
 }
@@ -1588,6 +1600,11 @@ input EnrollmentDataInput {
 input SubmitEnrollmentInput {
   formToken: String!
   data: EnrollmentDataInput!
+
+  """
+  Morador (padrão) ou funcionário. Funcionário não informa unidade nem endereço.
+  """
+  applicant: EnrollmentApplicant
 
   """Aceite do uso dos dados (LGPD)."""
   consent: Boolean!

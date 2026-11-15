@@ -221,6 +221,11 @@ export class UserTypeormRepository implements UserRepositoryPort {
     if (filter.group) {
       query.andWhere("membership.role = :role", { role: filter.group });
     }
+    if (filter.groups?.length) {
+      query.andWhere("membership.role IN (:...roles)", {
+        roles: filter.groups,
+      });
+    }
     if (filter.active === true) {
       query.andWhere("membership.active AND account.active");
     } else if (filter.active === false) {

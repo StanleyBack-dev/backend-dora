@@ -3,7 +3,9 @@ import { type Dashboard } from "@/modules/dashboard/application/ports/dashboard-
 
 @ObjectType("Dashboard", { description: "Painel do gestor do condomínio." })
 export class DashboardType implements Dashboard {
-  @Field(() => Int, { description: "Membros com acesso ativo." })
+  @Field(() => Int, {
+    description: "Moradores com acesso ativo (sem a equipe).",
+  })
   activeUsers!: number;
 
   @Field(() => Int, { description: "Cadastros aguardando aprovação." })

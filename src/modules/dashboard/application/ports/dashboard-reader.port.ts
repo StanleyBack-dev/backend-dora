@@ -1,6 +1,6 @@
 /** What a condominium's managers need to act on, at a glance. */
 export type Dashboard = {
-  /** Members with access (active membership and account). */
+  /** Residents with access (active membership and account; not the team). */
   activeUsers: number;
   /** Sign-ups from the public link waiting for review. */
   pendingEnrollments: number;

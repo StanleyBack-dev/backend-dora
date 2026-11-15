@@ -3,7 +3,10 @@ import { AppException } from "@/common/exceptions/app-exception";
 import type { CondominiumLookupService } from "@/modules/condominiums/application/condominium-lookup.service";
 import { PublicEnrollmentUseCase } from "@/modules/enrollment/application/use-cases/public-enrollment.use-case";
 import type { EnrollmentRepositoryPort } from "@/modules/enrollment/application/ports/enrollment-repository.port";
-import type { EnrollmentInvite } from "@/modules/enrollment/domain/enrollment";
+import {
+  EnrollmentApplicant,
+  type EnrollmentInvite,
+} from "@/modules/enrollment/domain/enrollment";
 import type { SecretsPort } from "@/modules/identity/application/ports/secrets.port";
 import type { UserLookupService } from "@/modules/identity/application/user-lookup.service";
 import type { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
@@ -213,6 +216,64 @@ describe("PublicEnrollmentUseCase", () => {
     ).rejects.toThrow("Escolha a sua unidade");
     await useCase.submit(token, { ...form, unitId: "unit-1" }, true, null);
     expect(created).toEqual([expect.objectContaining({ unitId: "unit-1" })]);
+  });
+
+  it("keeps residents as the default applicant", async () => {
+    const { useCase, created } = setup();
+    const token = await useCase.verify("123456", null);
+    await useCase.submit(token, form, true, null);
+    expect(created).toEqual([
+      expect.objectContaining({ applicant: EnrollmentApplicant.RESIDENT }),
+    ]);
+  });
+
+  it("takes employees without a unit nor address", async () => {
+    const { useCase, created, notices } = setup({
+      units: [{ id: "unit-1", block: "A", number: "101" }],
+    });
+    const token = await useCase.verify("123456", null);
+    // No unit chosen (required for residents) and stray address fields:
+    // an employee sends neither, and whatever came is dropped.
+    await useCase.submit(
+      token,
+      { ...form, unitId: "unit-1" },
+      true,
+      null,
+      null,
+      EnrollmentApplicant.EMPLOYEE,
+    );
+    expect(created).toEqual([
+      expect.objectContaining({
+        applicant: EnrollmentApplicant.EMPLOYEE,
+        unitId: null,
+        unitComplement: null,
+        typedUnitBlock: null,
+        typedUnitNumber: null,
+      }),
+    ]);
+    expect(notices[0]).toEqual(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          body: expect.stringContaining("(funcionário)"),
+        }),
+      }),
+    );
+  });
+
+  it("doesn't ask employees for a unit", async () => {
+    const { useCase, created } = setup({
+      units: [{ id: "unit-1", block: "A", number: "101" }],
+    });
+    const token = await useCase.verify("123456", null);
+    await useCase.submit(
+      token,
+      { fullName: form.fullName, email: form.email, phone: form.phone },
+      true,
+      null,
+      null,
+      EnrollmentApplicant.EMPLOYEE,
+    );
+    expect(created).toHaveLength(1);
   });
 
   it("takes no sign-up for a suspended condominium", async () => {

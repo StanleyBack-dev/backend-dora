@@ -53,6 +53,7 @@ export class PublicEnrollmentResolver {
       input.consent,
       meta.ipAddress,
       input.photo,
+      input.applicant ?? undefined,
     );
     return true;
   }
