@@ -5,9 +5,11 @@ name: Release
 # version in package.json and the CHANGELOG. Merging that PR creates the tag
 # and the GitHub Release; its deploy then reports the new version (AppInfo).
 #
-# PRs opened with the default GITHUB_TOKEN don't trigger CI. Set the
-# RELEASE_PLEASE_TOKEN secret (fine-grained PAT: contents and pull requests,
-# read and write) to have CI run on the release PR too.
+# With the RELEASE_PLEASE_TOKEN secret (fine-grained PAT: contents and pull
+# requests, read and write), CI starts on the release PR and skips every job
+# there (it only touches the version and the CHANGELOG), which counts as
+# passing. With the default GITHUB_TOKEN, CI doesn't start on it at all and
+# merging it needs the admin bypass.
 on:
   push:
     branches: [master]
