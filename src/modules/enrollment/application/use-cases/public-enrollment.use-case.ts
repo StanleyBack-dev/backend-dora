@@ -12,6 +12,7 @@ import {
 } from "@/modules/enrollment/application/ports/enrollment-repository.port";
 import {
   capitalizeFullName,
+  EnrollmentApplicant,
   enrollmentPhotoKey,
   type EnrollmentData,
   type EnrollmentInvite,
@@ -66,14 +67,19 @@ export type EnrollmentForm = {
 /** Tells a reviewer that a sign-up awaits approval. */
 export function submittedNotice(
   userId: string,
-  data: Pick<EnrollmentData, "fullName" | "email">,
+  data: Pick<EnrollmentData, "fullName" | "email"> &
+    Partial<Pick<EnrollmentData, "applicant">>,
   condominiumName: string,
 ): NotificationDelivery {
+  const who =
+    data.applicant === EnrollmentApplicant.EMPLOYEE
+      ? `${data.fullName} (funcionário)`
+      : data.fullName;
   return {
     userId,
     type: NotificationType.ENROLLMENT_SUBMITTED,
     title: "Novo cadastro aguardando aprovação",
-    body: `${data.fullName} enviou o cadastro pelo link público (${condominiumName}).`,
+    body: `${who} enviou o cadastro pelo link público (${condominiumName}).`,
     link: "/admin/cadastros",
     email: {
       subject: `Cadastro aguardando aprovação: ${data.fullName}`,
@@ -82,6 +88,13 @@ export function submittedNotice(
       details: [
         { label: "Condomínio", value: condominiumName },
         { label: "Nome", value: data.fullName },
+        {
+          label: "Tipo",
+          value:
+            data.applicant === EnrollmentApplicant.EMPLOYEE
+              ? "Funcionário"
+              : "Morador",
+        },
         { label: "E-mail", value: data.email },
       ],
       ctaLabel: "Analisar cadastro",
@@ -146,6 +159,8 @@ export class PublicEnrollmentUseCase {
     ip: string | null,
     /** Optional profile photo, base64 (the browser already resized it). */
     photo?: string | null,
+    /** Resident (default) or employee: employees send no unit nor address. */
+    applicant: EnrollmentApplicant = EnrollmentApplicant.RESIDENT,
   ): Promise<void> {
     const invite = await this.openInvite(formToken);
     const condominium = await this.activeCondominium(invite);
@@ -163,12 +178,18 @@ export class PublicEnrollmentUseCase {
       fullName: capitalizeFullName(input.fullName),
     });
 
-    const unitId = await this.formUnit(invite.condominiumId, input.unitId);
+    // Employees don't live there: no unit nor address, whatever was sent.
+    const employee = applicant === EnrollmentApplicant.EMPLOYEE;
+    const unitId = employee
+      ? null
+      : await this.formUnit(invite.condominiumId, input.unitId);
     // No units registered yet: the block/number are typed instead.
-    const place = validatePlace(
-      input,
-      (await this.condominiums.unitsOf(invite.condominiumId)).length === 0,
-    );
+    const place = employee
+      ? { unitComplement: null, typedUnitBlock: null, typedUnitNumber: null }
+      : validatePlace(
+          input,
+          (await this.condominiums.unitsOf(invite.condominiumId)).length === 0,
+        );
 
     // Someone with a Dora account elsewhere may join this condominium too.
     if (await this.users.isMemberEmail(data.email, invite.condominiumId)) {
@@ -208,6 +229,7 @@ export class PublicEnrollmentUseCase {
         {
           ...data,
           ...place,
+          applicant,
           unitId,
           condominiumId: invite.condominiumId,
           inviteId: invite.id,
@@ -217,7 +239,7 @@ export class PublicEnrollmentUseCase {
         (requestId) =>
           reviewers.map((userId) =>
             deliveryDraft(
-              submittedNotice(userId, data, condominium.name),
+              submittedNotice(userId, { ...data, applicant }, condominium.name),
               `enrollment:${requestId}:${userId}`,
             ),
           ),

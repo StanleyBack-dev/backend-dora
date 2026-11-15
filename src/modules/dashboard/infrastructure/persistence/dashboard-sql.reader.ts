@@ -22,7 +22,8 @@ export class DashboardSqlReader implements DashboardReaderPort {
       `SELECT
          (SELECT count(*)::int FROM tb_memberships m
             JOIN tb_users u ON u.idtb_users = m.idtb_users
-           WHERE m.idtb_condominiums = $1 AND m.active AND u.active)
+           WHERE m.idtb_condominiums = $1 AND m.active AND u.active
+             AND m.role = 'USER')
            AS "activeUsers",
          (SELECT count(*)::int FROM tb_enrollment_requests
            WHERE idtb_condominiums = $1 AND status = 'PENDENTE')

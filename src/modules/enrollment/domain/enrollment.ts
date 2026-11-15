@@ -24,8 +24,16 @@ export type EnrollmentInvite = {
   requestCount: number;
 };
 
-/** What the resident fills in on the public form. */
+/** Who is signing up: someone who lives there or works there. */
+export enum EnrollmentApplicant {
+  RESIDENT = "RESIDENT",
+  EMPLOYEE = "EMPLOYEE",
+}
+
+/** What the person fills in on the public form. */
 export type EnrollmentData = {
+  /** Employees have no unit nor address in the condominium. */
+  applicant: EnrollmentApplicant;
   fullName: string;
   email: string;
   /** Digits only (DDD + number). */

@@ -4,7 +4,10 @@ import {
   Entity,
   PrimaryGeneratedColumn,
 } from "typeorm";
-import type { EnrollmentStatus } from "@/modules/enrollment/domain/enrollment";
+import type {
+  EnrollmentApplicant,
+  EnrollmentStatus,
+} from "@/modules/enrollment/domain/enrollment";
 
 @Entity("tb_enrollment_requests")
 export class EnrollmentRequestOrmEntity {
@@ -46,6 +49,9 @@ export class EnrollmentRequestOrmEntity {
 
   @Column({ type: "varchar", length: 10 })
   status!: EnrollmentStatus;
+
+  @Column({ type: "varchar", length: 10, default: "RESIDENT" })
+  applicant!: EnrollmentApplicant;
 
   @Column({ name: "full_name", type: "varchar", length: 160 })
   fullName!: string;

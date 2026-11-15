@@ -31,6 +31,11 @@ export type UserFilter = {
   search?: string;
   /** Role in the condominium. */
   group?: UserGroup;
+  /**
+   * Any of these roles (e.g. the team: ADMIN and CONCIERGE); combined with
+   * `group`, both must match.
+   */
+  groups?: UserGroup[];
   /** Membership active (and account active). */
   active?: boolean;
   unitId?: string;

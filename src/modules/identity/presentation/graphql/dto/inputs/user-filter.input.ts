@@ -1,5 +1,7 @@
 import { Field, ID, InputType } from "@nestjs/graphql";
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsEnum,
   IsOptional,
@@ -22,6 +24,17 @@ export class UserFilterInput {
   @IsOptional()
   @IsEnum(UserGroup)
   group?: UserGroup;
+
+  @Field(() => [UserGroup], {
+    nullable: true,
+    description:
+      "Qualquer um destes papéis (ex.: a equipe, ADMIN e CONCIERGE).",
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(4)
+  @IsEnum(UserGroup, { each: true })
+  groups?: UserGroup[];
 
   @Field({ nullable: true })
   @IsOptional()

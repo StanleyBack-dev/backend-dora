@@ -75,6 +75,12 @@ export const enrollmentErrors = {
     status: HttpStatus.UNPROCESSABLE_ENTITY,
     message: "Informe o motivo da recusa (de 3 a 500 caracteres).",
   },
+  employeeAsResident: {
+    code: "ENROLLMENT_EMPLOYEE_AS_RESIDENT",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message:
+      "Funcionários entram na equipe: aprove como Portaria ou Administrador.",
+  },
   invalidTypedUnit: {
     code: "ENROLLMENT_INVALID_TYPED_UNIT",
     status: HttpStatus.UNPROCESSABLE_ENTITY,

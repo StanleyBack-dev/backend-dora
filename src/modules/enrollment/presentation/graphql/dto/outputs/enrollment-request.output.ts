@@ -1,5 +1,8 @@
 import { Field, ID, ObjectType } from "@nestjs/graphql";
-import { EnrollmentStatus } from "@/modules/enrollment/domain/enrollment";
+import {
+  EnrollmentApplicant,
+  EnrollmentStatus,
+} from "@/modules/enrollment/domain/enrollment";
 import "@/modules/enrollment/presentation/graphql/enrollment.graphql-enums";
 
 @ObjectType("EnrollmentRequest")
@@ -9,6 +12,11 @@ export class EnrollmentRequestType {
 
   @Field(() => EnrollmentStatus)
   status!: EnrollmentStatus;
+
+  @Field(() => EnrollmentApplicant, {
+    description: "Morador ou funcionário (funcionário não tem unidade).",
+  })
+  applicant!: EnrollmentApplicant;
 
   @Field()
   fullName!: string;
