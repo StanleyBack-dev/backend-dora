@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.6.0...v0.7.0) (2026-11-16)
+
+
+### Features
+
+* event tickets, PIX orders, birth dates and dependents (events stage 2) ([d78acc5](https://github.com/StanleyBack-dev/backend-dora/commit/d78acc5e371145328fca241b93f702c509970550))
+* event tickets, PIX orders, birth dates and dependents (events stage 2) ([630ca97](https://github.com/StanleyBack-dev/backend-dora/commit/630ca97abad83d05c1f9fd57a92d084300c66181))
+
 ## [0.6.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.5.1...v0.6.0) (2026-11-16)
 
 
