@@ -21,6 +21,8 @@ export enum Permission {
   BOOKINGS_MANAGE = "BOOKINGS_MANAGE",
   /** The day's guests at the gate: list and check in (Portaria). */
   GUESTS_CHECKIN = "GUESTS_CHECKIN",
+  /** Create, publish and cancel events (module contracted apart). */
+  EVENTS_MANAGE = "EVENTS_MANAGE",
   AUDIT_READ = "AUDIT_READ",
   /** Answer and close the app's support requests (platform). */
   SUPPORT_MANAGE = "SUPPORT_MANAGE",

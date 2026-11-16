@@ -1,4 +1,5 @@
 import { Field, ID, Int, ObjectType } from "@nestjs/graphql";
+import { AppModule } from "@/modules/condominiums/domain/app-module";
 import {
   AddressFormat,
   CondominiumStatus,
@@ -40,6 +41,11 @@ export class CondominiumType {
 
   @Field(() => Int)
   units!: number;
+
+  @Field(() => [AppModule], {
+    description: "Módulos contratados à parte que estão ligados.",
+  })
+  modules!: AppModule[];
 
   @Field(() => Int, { description: "Cadastros aguardando aprovação." })
   pendingEnrollments!: number;

@@ -21,6 +21,10 @@ export enum NotificationType {
   BOOKING_CANCELLED = "BOOKING_CANCELLED",
   /** A slot you were waiting for is free again (waiting list). */
   BOOKING_SLOT_FREED = "BOOKING_SLOT_FREED",
+  /** A new event of the condominium was published. */
+  EVENT_PUBLISHED = "EVENT_PUBLISHED",
+  /** A published event was cancelled. */
+  EVENT_CANCELLED = "EVENT_CANCELLED",
 }
 
 export const ALL_NOTIFICATION_TYPES: readonly NotificationType[] =

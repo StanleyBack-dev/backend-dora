@@ -32,6 +32,7 @@ describe("group defaults", () => {
       Permission.SPACES_MANAGE,
       Permission.BOOKINGS_MANAGE,
       Permission.GUESTS_CHECKIN,
+      Permission.EVENTS_MANAGE,
     ]);
   });
 

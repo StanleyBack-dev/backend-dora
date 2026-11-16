@@ -20,6 +20,7 @@ export const STAMP_SCOPE: Record<StampedEntity, StampScope> = {
   broadcast: "condominium",
   enrollment_invite: "condominium",
   enrollment_request: "condominium",
+  event: "condominium",
   support_request: "owner",
 };
 
@@ -40,5 +41,6 @@ export const STAMP_READ_PERMISSION: Partial<Record<StampedEntity, Permission>> =
     space: Permission.SPACES_MANAGE,
     booking: Permission.BOOKINGS_MANAGE,
     space_block: Permission.BOOKINGS_MANAGE,
+    event: Permission.EVENTS_MANAGE,
     condominium: Permission.CONDOMINIUMS_MANAGE,
   };
