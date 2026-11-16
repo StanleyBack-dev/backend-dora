@@ -4,8 +4,15 @@ import type {
 } from "@/modules/events/domain/event";
 import type { OutboxDraft } from "@/modules/outbox/domain/outbox";
 
-/** An event with its space's name (read from the spaces table). */
-export type EventView = CondominiumEvent & { spaceName: string | null };
+/**
+ * An event with its space's name (read from the spaces table) and the
+ * places already held by orders (in total, and from outside).
+ */
+export type EventView = CondominiumEvent & {
+  spaceName: string | null;
+  heldPlaces: number;
+  heldOutside: number;
+};
 
 export type EventListFilter = {
   /** Upcoming (not over yet) or past. */

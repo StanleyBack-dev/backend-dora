@@ -74,4 +74,13 @@ export class UpdateUserInput {
   @IsString()
   @MaxLength(30)
   phone?: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description: "Data de nascimento AAAA-MM-DD.",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  birthDate?: string | null;
 }

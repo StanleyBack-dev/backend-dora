@@ -38,6 +38,7 @@ export function toAccountType(member: MemberAccount): UserAccountType {
         }
       : null,
     phone: member.phone,
+    birthDate: member.birthDate,
     avatarKey: member.avatarKey,
     sharedAccount: member.sharedAccount,
     mustChangePassword: member.mustChangePassword,

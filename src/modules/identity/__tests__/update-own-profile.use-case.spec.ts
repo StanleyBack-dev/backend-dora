@@ -1,5 +1,6 @@
 import { AppException } from "@/common/exceptions/app-exception";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
+import type { ClockPort } from "@/shared/application/ports/clock.port";
 import type { AuditTrailService } from "@/modules/audit/application/audit-trail.service";
 import type {
   UserPatch,
@@ -35,7 +36,10 @@ function setup() {
     stamp: async () => undefined,
   } as unknown as AuditTrailService;
   return {
-    useCase: new UpdateOwnProfileUseCase(users, audit),
+    useCase: new UpdateOwnProfileUseCase(users, audit, {
+      now: () => new Date("2026-11-16T12:00:00Z"),
+      timeZone: "America/Sao_Paulo",
+    } as ClockPort),
     patches,
     current: () => user,
   };

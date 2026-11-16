@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { BookingsMaintenanceService } from "@/modules/bookings/application/bookings-maintenance.service";
+import { EventsMaintenanceService } from "@/modules/events/application/events-maintenance.service";
 import { IdentityMaintenanceService } from "@/modules/identity/application/identity-maintenance.service";
 import { NotificationsUseCase } from "@/modules/notifications/application/use-cases/notifications.use-case";
 import { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
@@ -18,13 +19,15 @@ export type CleanupReport = {
   rateLimitWindows: number;
   systemLogs: number;
   waitlistEntries: number;
+  expiredEventOrders: number;
 };
 
 const DELIVERED_RETENTION_DAYS = 30;
 
 // Daily housekeeping: drops data the app no longer needs (ended sessions with
 // IP/browser, used recovery codes, delivered outbox messages, notifications
-// read a year ago, old rate-limit windows, waiting lists of past slots). Each module purges its own data.
+// read a year ago, old rate-limit windows, waiting lists of past slots) and
+// expires unpaid event orders past their 48 h. Each module purges its own data.
 @Injectable()
 export class CleanupUseCase {
   private readonly logger = new Logger(CleanupUseCase.name);
@@ -37,6 +40,7 @@ export class CleanupUseCase {
     private readonly outbox: OutboxDispatcher,
     private readonly systemLogs: SystemLogsService,
     private readonly bookings: BookingsMaintenanceService,
+    private readonly events: EventsMaintenanceService,
   ) {}
 
   async run(): Promise<CleanupReport> {
@@ -48,6 +52,7 @@ export class CleanupUseCase {
       rateLimitWindows,
       systemLogs,
       waitlistEntries,
+      expiredEventOrders,
     ] = await Promise.all([
       this.identity.purge(now),
       this.outbox.purgeDelivered(
@@ -57,6 +62,7 @@ export class CleanupUseCase {
       this.rateLimits.purgeEndedBefore(now),
       this.systemLogs.purgeOld(now),
       this.bookings.purge(now),
+      this.events.expireOrders(now),
     ]);
     const report = {
       sessions: identity.sessions,
@@ -66,6 +72,7 @@ export class CleanupUseCase {
       rateLimitWindows,
       systemLogs,
       waitlistEntries,
+      expiredEventOrders,
     };
     this.logger.log(`Limpeza diária: ${JSON.stringify(report)}`);
     return report;

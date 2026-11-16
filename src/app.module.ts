@@ -22,6 +22,7 @@ import { DashboardModule } from "@/modules/dashboard/dashboard.module";
 import { PlatformMetricsModule } from "@/modules/platform-metrics/platform-metrics.module";
 import { SupportersModule } from "@/modules/supporters/supporters.module";
 import { EventsModule } from "@/modules/events/events.module";
+import { DependentsModule } from "@/modules/dependents/dependents.module";
 import { AppInfoModule } from "@/modules/app-info/app-info.module";
 import { IdentityModule } from "@/modules/identity/identity.module";
 import { FirstAccessGuard } from "@/modules/identity/presentation/guards/first-access.guard";
@@ -59,6 +60,7 @@ import { SharedModule } from "@/shared/shared.module";
     PlatformMetricsModule,
     SupportersModule,
     EventsModule,
+    DependentsModule,
     AppInfoModule,
     MaintenanceModule,
   ],

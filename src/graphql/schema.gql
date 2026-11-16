@@ -366,6 +366,23 @@ enum AppModule {
   EVENTS
 }
 
+"""Quem recebe um PIX: chave, nome e cidade (como no banco)."""
+type PixReceiver {
+  keyType: PixKeyType!
+  key: String!
+  name: String!
+  city: String!
+}
+
+"""Tipo da chave PIX: CPF, CNPJ, celular, e-mail ou aleatória."""
+enum PixKeyType {
+  CPF
+  CNPJ
+  PHONE
+  EMAIL
+  RANDOM
+}
+
 """Unidade (apartamento, casa)."""
 type Unit {
   id: ID!
@@ -413,6 +430,47 @@ type Dashboard {
   failedNotifications: Int
 }
 
+"""Dependente de um morador (aprovado pela administração)."""
+type Dependent {
+  id: ID!
+  name: String!
+
+  """Data de nascimento (AAAA-MM-DD)."""
+  birthDate: String!
+  relationship: DependentRelationship!
+  status: DependentStatus!
+
+  """Morador responsável."""
+  holderName: String
+  unitLabel: String
+  rejectReason: String
+  reviewedAt: DateTime
+  createdAt: DateTime!
+
+  """Tipo do documento (imagem ou PDF)."""
+  documentContentType: String!
+
+  """Link temporário do documento enviado."""
+  documentUrl: String!
+}
+
+"""Parentesco com o morador."""
+enum DependentRelationship {
+  CHILD
+  SPOUSE
+  PARENT
+  SIBLING
+  GRANDCHILD
+  OTHER
+}
+
+"""Aguardando aprovação, aprovado ou recusado."""
+enum DependentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 """Ficha do funcionário."""
 type EmployeeProfile {
   jobTitle: String
@@ -451,6 +509,9 @@ type UserAccount {
 
   """Telefone de contato (só dígitos: DDD + número)."""
   phone: String
+
+  """Data de nascimento (AAAA-MM-DD)."""
+  birthDate: String
 
   """
   A conta também é usada fora deste condomínio: os dados de login só mudam pela própria pessoa ou pela plataforma.
@@ -502,6 +563,9 @@ type EnrollmentRequest {
   fullName: String!
   email: String!
   phone: String!
+
+  """Data de nascimento (AAAA-MM-DD)."""
+  birthDate: String
   unitId: ID
 
   """Unidade escolhida: "Bloco A · 101"."""
@@ -585,6 +649,46 @@ type EnrollmentForm {
   units: [EnrollmentUnitOption!]!
 }
 
+"""Uma pessoa de um pedido."""
+type EventAttendee {
+  id: ID!
+  source: AttendeeSource!
+
+  """O dependente, quando a pessoa é um (DEPENDENT)."""
+  dependentId: ID
+  name: String!
+
+  """Idade no dia do evento."""
+  age: Int!
+
+  """Convidado de fora do condomínio."""
+  outside: Boolean!
+
+  """Ingresso (como era no pedido)."""
+  ticketName: String
+
+  """Preço em centavos (como era no pedido)."""
+  priceCents: Int!
+
+  """
+  O ingresso pede documento (desconto sem idade comprovada, ou estudante, PcD, professor).
+  """
+  needsProof: Boolean!
+
+  """Tipo do documento enviado (imagem ou PDF)."""
+  proofContentType: String
+
+  """Link temporário do documento enviado."""
+  proofUrl: String
+}
+
+"""Quem é a pessoa do pedido: eu, um dependente ou outra pessoa."""
+enum AttendeeSource {
+  SELF
+  DEPENDENT
+  GUEST
+}
+
 """Endereço do local fora do condomínio."""
 type EventAddress {
   """CEP (8 números)."""
@@ -599,6 +703,53 @@ type EventAddress {
 
   """UF."""
   state: String!
+}
+
+"""Quem recebe o PIX (chave, nome, cidade)."""
+type EventPix {
+  keyType: PixKeyType!
+  key: String!
+  name: String!
+  city: String!
+}
+
+"""Público aceito num evento, com o que paga."""
+type TicketType {
+  id: ID!
+  kind: TicketKind!
+
+  """O nome do público ("Criança")."""
+  name: String!
+  priceMode: TicketPriceMode!
+
+  """Com Outro valor."""
+  customPriceCents: Int
+
+  """Preço em centavos (0: grátis)."""
+  priceCents: Int!
+  minAge: Int
+  maxAge: Int
+}
+
+"""
+Público do ingresso: adulto, criança, infantil, idoso, estudante, PcD ou professor.
+"""
+enum TicketKind {
+  ADULT
+  CHILD
+  INFANT
+  SENIOR
+  STUDENT
+  PCD
+  TEACHER
+}
+
+"""Quanto o público paga: inteira, meia, grátis ou outro valor."""
+enum TicketPriceMode {
+  FULL
+  HALF
+  FREE
+  CUSTOM
 }
 
 """Evento do condomínio."""
@@ -625,6 +776,25 @@ type Event {
 
   """Entrada com ingresso pago (Pix)."""
   ticketed: Boolean!
+
+  """Valor da inteira, em centavos (nulo sem ingresso)."""
+  fullPriceCents: Int
+
+  """Tipos de ingresso, na ordem (vazio sem ingresso)."""
+  ticketTypes: [TicketType!]!
+
+  """Máximo de ingressos por unidade (nulo: sem limite)."""
+  unitTicketLimit: Int
+  pixSource: EventPixSource
+
+  """Com pixSource CUSTOM: o PIX do evento."""
+  customPix: EventPix
+
+  """Vagas ainda livres (lotação total)."""
+  placesLeft: Int!
+
+  """Vagas ainda livres para convidados de fora."""
+  outsidePlacesLeft: Int!
   status: EventStatus!
   cancelReason: String
   publishedAt: DateTime
@@ -632,10 +802,69 @@ type Event {
   createdAt: DateTime!
 }
 
+"""Quem recebe os ingressos: o PIX do condomínio ou outro."""
+enum EventPixSource {
+  CONDOMINIUM
+  CUSTOM
+}
+
 """Rascunho (só gestores), publicado ou cancelado."""
 enum EventStatus {
   DRAFT
   PUBLISHED
+  CANCELLED
+}
+
+"""Pedido de ingressos de um evento."""
+type EventOrder {
+  id: ID!
+  eventId: ID!
+  eventTitle: String!
+
+  """Código do pedido (também a referência do PIX)."""
+  code: String!
+  status: EventOrderStatus!
+
+  """Total em centavos."""
+  totalCents: Int!
+
+  """Quem fez o pedido."""
+  buyerName: String
+  unitLabel: String
+  attendees: [EventAttendee!]!
+
+  """O PIX que recebe (nulo: pedido grátis)."""
+  pix: EventPix
+
+  """
+  PIX copia e cola com o valor e o código (só enquanto aguarda pagamento).
+  """
+  pixCode: String
+
+  """Aguardando pagamento: até quando as vagas ficam reservadas."""
+  expiresAt: DateTime
+  receiptSentAt: DateTime
+
+  """Tipo do comprovante (imagem ou PDF)."""
+  receiptContentType: String
+  reviewedAt: DateTime
+  rejectReason: String
+  cancelledAt: DateTime
+  createdAt: DateTime!
+
+  """Link temporário do comprovante enviado."""
+  receiptUrl: String
+}
+
+"""
+Aguardando pagamento, em conferência, confirmado, recusado, expirado ou cancelado.
+"""
+enum EventOrderStatus {
+  PENDING_PAYMENT
+  AWAITING_REVIEW
+  CONFIRMED
+  REJECTED
+  EXPIRED
   CANCELLED
 }
 
@@ -679,6 +908,9 @@ type SessionUser {
   """Telefone de contato (só dígitos: DDD + número)."""
   phone: String
 
+  """Data de nascimento (AAAA-MM-DD)."""
+  birthDate: String
+
   """Link temporário da foto de perfil (null: sem foto)."""
   photoUrl: String
 }
@@ -695,6 +927,7 @@ enum Permission {
   BOOKINGS_MANAGE
   GUESTS_CHECKIN
   EVENTS_MANAGE
+  PAYMENTS_MANAGE
   AUDIT_READ
   SUPPORT_MANAGE
   SUPPORTERS_MANAGE
@@ -785,6 +1018,12 @@ enum NotificationType {
   BOOKING_SLOT_FREED
   EVENT_PUBLISHED
   EVENT_CANCELLED
+  EVENT_ORDER_RECEIPT
+  EVENT_ORDER_CONFIRMED
+  EVENT_ORDER_REJECTED
+  DEPENDENT_SUBMITTED
+  DEPENDENT_APPROVED
+  DEPENDENT_REJECTED
 }
 
 type NotificationPage {
@@ -1263,12 +1502,21 @@ type Query {
 
   """Últimos 50 comunicados."""
   broadcasts: [Broadcast!]!
+
+  """O PIX do condomínio (nulo: ainda não cadastrado)."""
+  condominiumPix: PixReceiver
   condominiums(filter: CondominiumFilterInput): [Condominium!]!
   condominium(id: ID!): Condominium!
 
   """Unidades do condomínio atual."""
   units: [Unit!]!
   dashboard: Dashboard!
+
+  """Dependentes do condomínio (opcionalmente de uma situação)."""
+  dependents(status: DependentStatus): [Dependent!]!
+
+  """Os meus dependentes."""
+  myDependents: [Dependent!]!
   enrollmentInvites: [EnrollmentInvite!]!
   enrollmentRequests(filter: EnrollmentRequestFilterInput, page: PageInput): EnrollmentRequestPage!
 
@@ -1280,6 +1528,15 @@ type Query {
   Confere se o token do formulário ainda vale e diz o condomínio e as unidades.
   """
   enrollmentForm(formToken: String!): EnrollmentForm!
+
+  """Os meus pedidos para um evento (mais recentes primeiro)."""
+  myEventOrders(eventId: ID!): [EventOrder!]!
+
+  """Um pedido: de quem o fez ou de quem confere os pagamentos."""
+  eventOrder(id: ID!): EventOrder!
+
+  """Pedidos de um evento (opcionalmente de uma situação)."""
+  eventOrders(eventId: ID!, status: EventOrderStatus): [EventOrder!]!
 
   """
   Eventos do condomínio: próximos ou passados (gestores também veem os rascunhos).
@@ -1453,6 +1710,12 @@ type Mutation {
   Liga ou desliga um módulo contratado à parte (ex.: Eventos) no condomínio.
   """
   setCondominiumModule(id: ID!, module: AppModule!, enabled: Boolean!): Condominium!
+
+  """Cadastra ou troca o PIX do condomínio."""
+  setCondominiumPix(input: PixReceiverInput!): PixReceiver!
+
+  """Remove o PIX do condomínio."""
+  removeCondominiumPix: Boolean!
   createCondominium(input: CondominiumInput!): Condominium!
   updateCondominium(id: ID!, input: CondominiumInput!): Condominium!
 
@@ -1465,6 +1728,20 @@ type Mutation {
 
   """Exclui a unidade (só sem moradores vinculados)."""
   deleteUnit(id: ID!): Boolean!
+
+  """Aprova o dependente (o documento confere)."""
+  approveDependent(id: ID!): Dependent!
+
+  """Recusa o dependente, com o motivo."""
+  rejectDependent(id: ID!, reason: String!): Dependent!
+
+  """
+  Cadastra um dependente com o documento: fica aguardando a aprovação da administração.
+  """
+  addDependent(input: DependentInput!): Dependent!
+
+  """Remove um dos meus dependentes."""
+  removeDependent(id: ID!): Boolean!
   createEnrollmentInvite(input: CreateEnrollmentInviteInput!): EnrollmentInvite!
   revokeEnrollmentInvite(id: ID!): EnrollmentInvite!
 
@@ -1495,6 +1772,28 @@ type Mutation {
   Cancela o evento com o motivo; se estava publicado, os moradores são avisados.
   """
   cancelEvent(id: ID!, reason: String!): Event!
+
+  """
+  Envia o documento de uma pessoa do pedido (imagem ou PDF em base64, até 1,2 MB).
+  """
+  submitEventAttendeeProof(orderId: ID!, attendeeId: ID!, file: String!): EventOrder!
+
+  """
+  Pede ingressos (ou a inscrição, se grátis) para si e convidados. Pago: as vagas ficam reservadas por 48 h aguardando o comprovante.
+  """
+  createEventOrder(eventId: ID!, attendees: [AttendeeInput!]!): EventOrder!
+
+  """Envia o comprovante do PIX (imagem ou PDF em base64, até 1,2 MB)."""
+  submitEventOrderReceipt(id: ID!, file: String!): EventOrder!
+
+  """Desiste de um pedido ainda não pago: as vagas voltam."""
+  cancelEventOrder(id: ID!): EventOrder!
+
+  """Aprova o comprovante: o pedido fica confirmado."""
+  approveEventOrder(id: ID!): EventOrder!
+
+  """Recusa o comprovante, com o motivo: as vagas voltam."""
+  rejectEventOrder(id: ID!, reason: String!): EventOrder!
 
   """Entra com usuário (ou e-mail) e senha."""
   login(input: LoginInput!): LoginResult!
@@ -1692,6 +1991,20 @@ input BroadcastInput {
   sendEmail: Boolean!
 }
 
+input PixReceiverInput {
+  """Tipo da chave: define como ela é conferida."""
+  keyType: PixKeyType!
+
+  """Chave PIX: e-mail, CPF/CNPJ, celular com DDD ou aleatória."""
+  key: String!
+
+  """Nome de quem recebe, como aparece no banco."""
+  name: String!
+
+  """Cidade de quem recebe."""
+  city: String!
+}
+
 input CondominiumInput {
   name: String!
 
@@ -1724,6 +2037,20 @@ input UpdateUnitInput {
   number: String!
 }
 
+input DependentInput {
+  """Nome completo."""
+  name: String!
+
+  """Data de nascimento AAAA-MM-DD."""
+  birthDate: String!
+  relationship: DependentRelationship!
+
+  """
+  Documento com a data de nascimento (imagem ou PDF em base64, até 1,2 MB).
+  """
+  document: String!
+}
+
 input CreateEnrollmentInviteInput {
   label: String!
 
@@ -1736,6 +2063,9 @@ input EnrollmentDataInput {
   fullName: String!
   email: String!
   phone: String!
+
+  """Data de nascimento AAAA-MM-DD (obrigatória no formulário público)."""
+  birthDate: String
 
   """
   Unidade (obrigatória quando o condomínio tem unidades). Na aprovação, ausente mantém a escolhida.
@@ -1802,6 +2132,21 @@ input EventInput {
 
   """Entrada com ingresso pago (Pix)."""
   ticketed: Boolean!
+
+  """Com ingresso: o valor da inteira, em centavos."""
+  fullPriceCents: Int
+
+  """Com ingresso: os públicos aceitos, na ordem."""
+  ticketTypes: [TicketTypeInput!]
+
+  """Máximo de ingressos por unidade (vazio: sem limite)."""
+  unitTicketLimit: Int
+
+  """Com ingresso: o PIX do condomínio ou outro."""
+  pixSource: EventPixSource
+
+  """Com pixSource CUSTOM: o PIX do evento."""
+  customPix: EventPixInput
 }
 
 """Endereço do local fora do condomínio."""
@@ -1818,6 +2163,60 @@ input EventAddressInput {
 
   """UF."""
   state: String!
+}
+
+input TicketTypeInput {
+  """Público já existente (vazio: novo)."""
+  id: ID
+
+  """Público (uma vez por evento)."""
+  kind: TicketKind!
+
+  """Quanto paga."""
+  priceMode: TicketPriceMode!
+
+  """Com Outro valor: o valor em centavos."""
+  customPriceCents: Int
+
+  """Idade mínima."""
+  minAge: Int
+
+  """Idade máxima."""
+  maxAge: Int
+}
+
+input EventPixInput {
+  """Tipo da chave: define como ela é conferida."""
+  keyType: PixKeyType!
+
+  """Chave PIX."""
+  key: String!
+
+  """Nome de quem recebe, como aparece no banco."""
+  name: String!
+
+  """Cidade de quem recebe."""
+  city: String!
+}
+
+input AttendeeInput {
+  """Eu, um dependente aprovado ou outra pessoa."""
+  source: AttendeeSource!
+
+  """Com DEPENDENT: qual."""
+  dependentId: ID
+
+  """Com GUEST: nome completo."""
+  name: String
+
+  """Com GUEST: idade."""
+  age: Int
+
+  """Com GUEST: convidado de fora do condomínio."""
+  outside: Boolean!
+
+  """Ingresso (público) da pessoa, em evento com ingresso."""
+  ticketTypeId: ID
 }
 
 input LoginInput {
@@ -1837,6 +2236,9 @@ input UpdateMyProfileInput {
 
   """Telefone de contato (ausente: mantém; vazio: remove)."""
   phone: String
+
+  """Data de nascimento AAAA-MM-DD (ausente: mantém; vazio: remove)."""
+  birthDate: String
 }
 
 input VerifyRecoveryCodeInput {
@@ -1870,6 +2272,9 @@ input CreateUserInput {
 
   """Telefone de contato."""
   phone: String
+
+  """Data de nascimento AAAA-MM-DD."""
+  birthDate: String
 }
 
 """Ficha do funcionário (todos os campos opcionais)."""
@@ -1906,6 +2311,9 @@ input UpdateUserInput {
 
   """Telefone de contato."""
   phone: String
+
+  """Data de nascimento AAAA-MM-DD."""
+  birthDate: String
 }
 
 input SetUserPermissionsInput {

@@ -111,6 +111,11 @@ export const identityErrors = {
     status: HttpStatus.UNPROCESSABLE_ENTITY,
     message: "O complemento deve ter até 80 caracteres.",
   },
+  invalidBirthDate: {
+    code: "USER_INVALID_BIRTH_DATE",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: "Data de nascimento inválida (de 1900 até hoje).",
+  },
   employeeUnit: {
     code: "USER_EMPLOYEE_UNIT",
     status: HttpStatus.UNPROCESSABLE_ENTITY,

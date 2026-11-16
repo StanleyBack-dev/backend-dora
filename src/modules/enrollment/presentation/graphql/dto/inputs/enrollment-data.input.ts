@@ -18,6 +18,16 @@ export class EnrollmentDataInput {
   @MaxLength(20)
   phone!: string;
 
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "Data de nascimento AAAA-MM-DD (obrigatória no formulário público).",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  birthDate?: string | null;
+
   @Field(() => ID, {
     nullable: true,
     description:

@@ -13,6 +13,7 @@ export type NewUser = {
   username: string;
   group: UserGroup;
   phone?: string | null;
+  birthDate?: string | null;
 };
 
 export type UserPatch = Partial<
@@ -24,6 +25,7 @@ export type UserPatch = Partial<
     | "group"
     | "active"
     | "phone"
+    | "birthDate"
     | "avatarKey"
     | "onboardingCompletedAt"
     | "lastCondominiumId"

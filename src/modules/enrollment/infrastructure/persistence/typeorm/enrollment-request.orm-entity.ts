@@ -70,6 +70,10 @@ export class EnrollmentRequestOrmEntity {
   @Column({ type: "varchar", length: 11 })
   phone!: string;
 
+  /** YYYY-MM-DD (a date column comes back as a string). */
+  @Column({ name: "birth_date", type: "date", nullable: true })
+  birthDate!: string | null;
+
   @Column({ name: "consent_at", type: "timestamptz" })
   consentAt!: Date;
 

@@ -5,13 +5,23 @@ import {
   type BrazilianAddress,
   type BrazilianAddressInput,
 } from "@/shared/domain/brazilian-address";
+import {
+  normalizeTicketing,
+  TICKETING_VIOLATION_MESSAGES,
+  type EventPixSource,
+  type EventTicketing,
+  type EventTicketingInput,
+  type TicketingViolation,
+  type TicketType,
+} from "@/modules/events/domain/event-tickets";
+import type { PixReceiver } from "@/shared/domain/pix";
 
 // A condominium event (festa junina, assembly party, show…): when, where,
 // how many people fit (and how many of them may come from outside) and
-// whether entry needs a paid ticket. It happens in a space of the
-// condominium or outside it, at a full street address. Managers create it as
-// a draft, publish it (residents are told) and may cancel it. Tickets and the
-// gate come in later stages.
+// whether entry needs a paid ticket (its types, prices and PIX: see
+// event-tickets.ts). It happens in a space of the condominium or outside it,
+// at a full street address. Managers create it as a draft, publish it
+// (residents are told) and may cancel it.
 
 export enum EventStatus {
   /** Only managers see it. */
@@ -44,6 +54,16 @@ export type CondominiumEvent = {
   externalGuestLimit: number;
   /** Entry needs a paid ticket (PIX); otherwise a free ticket. */
   ticketed: boolean;
+  /** Ticketed: the full price (inteira); null on a free event. */
+  fullPriceCents: number | null;
+  /** Ticketed: the audiences accepted, in order (none on a free event). */
+  ticketTypes: TicketType[];
+  /** Most tickets per unit (null: only the capacity limits). */
+  unitTicketLimit: number | null;
+  /** Ticketed: which PIX receives. */
+  pixSource: EventPixSource | null;
+  /** With CUSTOM: the event's own PIX. */
+  customPix: PixReceiver | null;
   status: EventStatus;
   cancelReason: string | null;
   publishedAt: Date | null;
@@ -65,9 +85,9 @@ export type EventInput = {
   capacity: number;
   externalGuestLimit: number;
   ticketed: boolean;
-};
+} & EventTicketingInput;
 
-export type EventData = {
+export type EventData = EventTicketing & {
   title: string;
   description: string | null;
   spaceId: string | null;
@@ -90,7 +110,8 @@ export type EventViolation =
   | "past"
   | "capacity"
   | "guests"
-  | AddressViolation;
+  | AddressViolation
+  | TicketingViolation;
 
 export const TITLE_MIN = 3;
 export const TITLE_MAX = 120;
@@ -148,7 +169,11 @@ export function normalizeEvent(
     return "guests";
   }
 
+  const ticketing = normalizeTicketing(input.ticketed, input);
+  if (typeof ticketing === "string") return ticketing;
+
   return {
+    ...ticketing,
     title,
     description: description || null,
     spaceId,
@@ -175,6 +200,7 @@ export const EVENT_VIOLATION_MESSAGES: Record<EventViolation, string> = {
   guests:
     "O número de convidados de fora deve ser um inteiro entre 0 e a lotação total.",
   ...ADDRESS_VIOLATION_MESSAGES,
+  ...TICKETING_VIOLATION_MESSAGES,
 };
 
 /** Still changeable: not cancelled and not over. */
