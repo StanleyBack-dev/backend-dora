@@ -236,16 +236,16 @@ export const orderTotal = (
 ) => attendees.reduce((sum, person) => sum + person.priceCents, 0);
 
 /** Until when a pending order holds its places: 48 h, never past the start. */
-export const paymentDeadline = (now: Date, eventStartsAt: Date): Date =>
+export const paymentDeadline = (now: Date, salesCloseAt: Date): Date =>
   new Date(
     Math.min(
       now.getTime() + PAYMENT_HOLD_HOURS * 3_600_000,
-      eventStartsAt.getTime(),
+      salesCloseAt.getTime(),
     ),
   );
 
 // No 0/O, 1/I/L: easy to read on a bank statement and to type.
-const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+export const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
 /** A short order code (also the PIX reference): "EV" + 6 characters. */
 export function orderCode(random: (max: number) => number): string {

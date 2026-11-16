@@ -41,7 +41,7 @@ export const eventsErrors = {
     code: "EVENT_NOT_ON_SALE",
     status: HttpStatus.CONFLICT,
     message:
-      "Este evento não está aceitando pedidos (já começou ou foi cancelado).",
+      "Este evento não está aceitando pedidos: as vendas fecharam ou ele foi cancelado.",
   },
   orderInvalid: {
     code: "EVENT_ORDER_INVALID",
@@ -57,6 +57,21 @@ export const eventsErrors = {
     code: "EVENT_OUTSIDE_FULL",
     status: HttpStatus.CONFLICT,
     message: "Não há mais vagas para convidados de fora do condomínio.",
+  },
+  ticketNotFound: {
+    code: "EVENT_TICKET_NOT_FOUND",
+    status: HttpStatus.NOT_FOUND,
+    message: "Ingresso não encontrado.",
+  },
+  entryDenied: {
+    code: "EVENT_ENTRY_DENIED",
+    status: HttpStatus.CONFLICT,
+    message: (params: { reason: string }) => params.reason,
+  },
+  invalidGateDate: {
+    code: "EVENT_INVALID_GATE_DATE",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: "Data inválida.",
   },
   alreadyHeld: {
     code: "EVENT_ALREADY_HELD",

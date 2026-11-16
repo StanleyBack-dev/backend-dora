@@ -15,7 +15,11 @@ import {
   EVENT_REPOSITORY,
   type EventRepositoryPort,
 } from "@/modules/events/application/ports/event-repository.port";
-import { EventStatus } from "@/modules/events/domain/event";
+import {
+  EventStatus,
+  isOnSale,
+  salesClosesAt,
+} from "@/modules/events/domain/event";
 import {
   EventOrderStatus,
   normalizeAttendees,
@@ -25,6 +29,7 @@ import {
   paymentDeadline,
   type AttendeeInput,
 } from "@/modules/events/domain/event-order";
+import { ticketCode } from "@/modules/events/domain/event-ticket-entry";
 import { UserLookupService } from "@/modules/identity/application/user-lookup.service";
 import { DependentLookupService } from "@/modules/dependents/application/dependent-lookup.service";
 import { localDay } from "@/shared/domain/birth-date";
@@ -66,7 +71,9 @@ export class CreateEventOrderUseCase {
       throw AppException.from(APP_ERRORS.events.notFound, undefined);
     }
     const now = this.clock.now();
-    if (event.status !== EventStatus.PUBLISHED || event.startsAt <= now) {
+    // Orders until the event's sales close (some hours before the start,
+    // or its end); the payment hold never passes it.
+    if (!isOnSale(event, now)) {
       throw AppException.from(APP_ERRORS.events.notOnSale, undefined);
     }
 
@@ -109,12 +116,16 @@ export class CreateEventOrderUseCase {
         unitId,
         code: orderCode(randomInt),
         totalCents,
-        attendees,
+        // Each person gets a ticket code (drawn again with the order code).
+        attendees: attendees.map((person) => ({
+          ...person,
+          ticketCode: ticketCode(randomInt),
+        })),
         pix,
         status: pending
           ? EventOrderStatus.PENDING_PAYMENT
           : EventOrderStatus.CONFIRMED,
-        expiresAt: pending ? paymentDeadline(now, event.startsAt) : null,
+        expiresAt: pending ? paymentDeadline(now, salesClosesAt(event)) : null,
       };
       try {
         // Nothing to pay nor prove: confirmed now, the person is told.
@@ -122,7 +133,11 @@ export class CreateEventOrderUseCase {
           ? []
           : confirmedNotice({
               ...base,
-              attendees: attendees.map((person) => ({ ...person, id: "" })),
+              attendees: base.attendees.map((person) => ({
+                ...person,
+                id: "",
+                checkedInAt: null,
+              })),
               eventTitle: event.title,
               rejectReason: null,
             });

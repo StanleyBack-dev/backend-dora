@@ -5,6 +5,7 @@ import { EventAddressType } from "@/modules/events/presentation/graphql/dto/outp
 import { EventPixType } from "@/modules/events/presentation/graphql/dto/outputs/event-pix.output";
 import { TicketTypeType } from "@/modules/events/presentation/graphql/dto/outputs/ticket-type.output";
 import "@/modules/events/presentation/graphql/events.graphql-enums";
+import { EventSalesClose } from "@/modules/events/domain/event";
 
 @ObjectType("Event", { description: "Evento do condomínio." })
 export class EventType {
@@ -66,6 +67,17 @@ export class EventType {
     description: "Máximo de ingressos por unidade (nulo: sem limite).",
   })
   unitTicketLimit!: number | null;
+
+  @Field(() => EventSalesClose)
+  salesClose!: EventSalesClose;
+
+  @Field(() => Int, {
+    description: "Com BEFORE_START: quantas horas antes do início.",
+  })
+  salesCloseHours!: number;
+
+  @Field(() => Date, { description: "Quando as vendas fecham." })
+  salesClosesAt!: Date;
 
   @Field(() => EventPixSource, { nullable: true })
   pixSource!: EventPixSource | null;
