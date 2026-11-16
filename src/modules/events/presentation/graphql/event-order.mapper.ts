@@ -14,7 +14,12 @@ export function toOrderType(order: EventOrder): EventOrderType {
     totalCents: order.totalCents,
     buyerName: order.buyerName,
     unitLabel: order.unitLabel,
-    attendees: order.attendees,
+    // The ticket codes only once the order is confirmed (the QR is valid).
+    attendees: order.attendees.map((person) => ({
+      ...person,
+      ticketCode:
+        order.status === EventOrderStatus.CONFIRMED ? person.ticketCode : null,
+    })),
     pix: order.pix,
     pixCode:
       order.status === EventOrderStatus.PENDING_PAYMENT && order.pix

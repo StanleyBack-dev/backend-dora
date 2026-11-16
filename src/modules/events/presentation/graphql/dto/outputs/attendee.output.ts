@@ -40,6 +40,19 @@ export class AttendeeType {
   })
   needsProof!: boolean;
 
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "Código do ingresso (QR), só com o pedido confirmado (null: ainda não vale).",
+  })
+  ticketCode!: string | null;
+
+  @Field(() => Date, {
+    nullable: true,
+    description: "Quando entrou pela portaria.",
+  })
+  checkedInAt!: Date | null;
+
   /** Resolved into a signed link by the `proofUrl` field. */
   proofKey!: string | null;
 

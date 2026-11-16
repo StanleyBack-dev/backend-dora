@@ -76,8 +76,8 @@ export function confirmedNotice(order: OrderSummary): OutboxDraft[] {
           subject: `Ingressos confirmados: ${order.eventTitle}`,
           intro:
             order.totalCents > 0
-              ? "O pagamento dos seus ingressos foi conferido e o pedido está confirmado."
-              : "Sua inscrição no evento está confirmada.",
+              ? "O pagamento dos seus ingressos foi conferido e o pedido está confirmado. Os ingressos com QR code de cada pessoa estão no app, na página do evento: mostre na portaria ou envie o link a quem vai com você."
+              : "Sua inscrição no evento está confirmada. Os ingressos com QR code de cada pessoa estão no app, na página do evento: mostre na portaria ou envie o link a quem vai com você.",
           details: [
             { label: "Evento", value: order.eventTitle },
             { label: "Pedido", value: order.code },
@@ -86,7 +86,7 @@ export function confirmedNotice(order: OrderSummary): OutboxDraft[] {
               value: order.attendees.map((person) => person.name).join(", "),
             },
           ],
-          ctaLabel: "Ver o evento",
+          ctaLabel: "Ver os ingressos",
         },
         calendar: null,
       },

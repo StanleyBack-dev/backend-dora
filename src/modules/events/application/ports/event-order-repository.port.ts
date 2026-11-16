@@ -5,6 +5,14 @@ import type {
 import type { OutboxDraft } from "@/modules/outbox/domain/outbox";
 import type { PixReceiver } from "@/shared/domain/pix";
 
+/** A person of a stored order: their ticket code and the gate entry. */
+export type StoredAttendee = Attendee & {
+  id: string;
+  /** In the QR; valid at the gate once the order is confirmed. */
+  ticketCode: string;
+  checkedInAt: Date | null;
+};
+
 /** An order as stored, with its people and who made it. */
 export type EventOrder = {
   id: string;
@@ -33,7 +41,7 @@ export type EventOrder = {
   rejectReason: string | null;
   cancelledAt: Date | null;
   createdAt: Date;
-  attendees: (Attendee & { id: string })[];
+  attendees: StoredAttendee[];
 };
 
 export type NewEventOrder = {
@@ -46,7 +54,7 @@ export type NewEventOrder = {
   totalCents: number;
   pix: PixReceiver | null;
   expiresAt: Date | null;
-  attendees: Attendee[];
+  attendees: (Attendee & { ticketCode: string })[];
 };
 
 /** The event's limits, checked against the held places under a lock. */

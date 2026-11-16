@@ -13,6 +13,7 @@ import {
   ValidateNested,
 } from "class-validator";
 import { Type } from "class-transformer";
+import { EventSalesClose } from "@/modules/events/domain/event";
 import { EventPixSource } from "@/modules/events/domain/event-tickets";
 import { EventAddressInput } from "@/modules/events/presentation/graphql/dto/inputs/event-address.input";
 import { EventPixInput } from "@/modules/events/presentation/graphql/dto/inputs/event-pix.input";
@@ -110,6 +111,22 @@ export class EventInput {
   @IsOptional()
   @IsInt()
   unitTicketLimit?: number | null;
+
+  @Field(() => EventSalesClose, {
+    nullable: true,
+    description: "Quando as vendas fecham (padrão: no início do evento).",
+  })
+  @IsOptional()
+  @IsEnum(EventSalesClose)
+  salesClose?: EventSalesClose | null;
+
+  @Field(() => Int, {
+    nullable: true,
+    description: "BEFORE_START: quantas horas antes do início (0 a 720).",
+  })
+  @IsOptional()
+  @IsInt()
+  salesCloseHours?: number | null;
 
   @Field(() => EventPixSource, {
     nullable: true,

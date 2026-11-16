@@ -7,11 +7,11 @@ import type {
   NewEventOrder,
   OrderLimits,
   OrderRefusal,
+  StoredAttendee,
 } from "@/modules/events/application/ports/event-order-repository.port";
 import {
   AttendeeSource,
   EventOrderStatus,
-  type Attendee,
 } from "@/modules/events/domain/event-order";
 import { HOLDING_ORDER } from "@/modules/events/infrastructure/persistence/event-sql.repository";
 import { unitLabel } from "@/modules/condominiums/domain/unit";
@@ -29,7 +29,7 @@ type OrderRow = Omit<EventOrder, "pix" | "attendees" | "unitLabel"> & {
   unitNumber: string | null;
 };
 
-type AttendeeRow = Attendee & { id: string; orderId: string };
+type AttendeeRow = StoredAttendee & { orderId: string };
 
 // The buyer's name and unit come from tb_users and tb_units (identity and
 // condominiums), read-only.
@@ -188,8 +188,8 @@ export class EventOrderSqlRepository implements EventOrderRepositoryPort {
           `INSERT INTO tb_event_attendees
              (idtb_event_orders, idtb_event_ticket_types, ticket_name, name,
               age, outside, price_cents, position, source, idtb_dependents,
-              needs_proof)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+              needs_proof, ticket_code)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
           [
             row.id,
             person.ticketTypeId,
@@ -202,6 +202,7 @@ export class EventOrderSqlRepository implements EventOrderRepositoryPort {
             person.source,
             person.dependentId,
             person.needsProof,
+            person.ticketCode,
           ],
         );
       }
@@ -388,7 +389,8 @@ export class EventOrderSqlRepository implements EventOrderRepositoryPort {
               price_cents AS "priceCents", source,
               idtb_dependents AS "dependentId", needs_proof AS "needsProof",
               proof_key AS "proofKey",
-              proof_content_type AS "proofContentType"
+              proof_content_type AS "proofContentType",
+              ticket_code AS "ticketCode", checked_in_at AS "checkedInAt"
          FROM tb_event_attendees
         WHERE idtb_event_orders = ANY($1::uuid[])
         ORDER BY position`,

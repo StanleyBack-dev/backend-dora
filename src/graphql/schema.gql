@@ -675,6 +675,14 @@ type EventAttendee {
   """
   needsProof: Boolean!
 
+  """
+  Código do ingresso (QR), só com o pedido confirmado (null: ainda não vale).
+  """
+  ticketCode: String
+
+  """Quando entrou pela portaria."""
+  checkedInAt: DateTime
+
   """Tipo do documento enviado (imagem ou PDF)."""
   proofContentType: String
 
@@ -687,6 +695,60 @@ enum AttendeeSource {
   SELF
   DEPENDENT
   GUEST
+}
+
+"""Ingresso de evento na lista da portaria."""
+type GateEventTicket {
+  """A pessoa do pedido."""
+  id: ID!
+  name: String!
+
+  """Idade no dia do evento."""
+  age: Int!
+
+  """Convidado de fora do condomínio."""
+  outside: Boolean!
+  source: AttendeeSource!
+
+  """Tipo do ingresso (null: evento gratuito)."""
+  ticketName: String
+
+  """Código do ingresso (QR)."""
+  ticketCode: String!
+  checkedInAt: DateTime
+  entryWindow: TicketEntryWindow!
+  eventId: ID!
+  eventTitle: String!
+  eventStatus: EventStatus!
+  startsAt: DateTime!
+  endsAt: DateTime!
+
+  """O espaço ou o local do evento."""
+  placeName: String!
+
+  """Código do pedido."""
+  orderCode: String!
+
+  """Quem pediu."""
+  buyerName: String
+  unitLabel: String
+}
+
+"""
+Se a portaria pode liberar o ingresso agora: aberta, cedo demais, encerrado ou cancelado.
+"""
+enum TicketEntryWindow {
+  OPEN
+  TOO_EARLY
+  FINISHED
+  CANCELLED
+}
+
+"""Rascunho (só gestores), publicado ou cancelado."""
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
 }
 
 """Endereço do local fora do condomínio."""
@@ -785,6 +847,13 @@ type Event {
 
   """Máximo de ingressos por unidade (nulo: sem limite)."""
   unitTicketLimit: Int
+  salesClose: EventSalesClose!
+
+  """Com BEFORE_START: quantas horas antes do início."""
+  salesCloseHours: Int!
+
+  """Quando as vendas fecham."""
+  salesClosesAt: DateTime!
   pixSource: EventPixSource
 
   """Com pixSource CUSTOM: o PIX do evento."""
@@ -802,17 +871,18 @@ type Event {
   createdAt: DateTime!
 }
 
+"""
+Quando as vendas fecham: algumas horas antes do início, ou só no fim do evento.
+"""
+enum EventSalesClose {
+  BEFORE_START
+  AT_END
+}
+
 """Quem recebe os ingressos: o PIX do condomínio ou outro."""
 enum EventPixSource {
   CONDOMINIUM
   CUSTOM
-}
-
-"""Rascunho (só gestores), publicado ou cancelado."""
-enum EventStatus {
-  DRAFT
-  PUBLISHED
-  CANCELLED
 }
 
 """Pedido de ingressos de um evento."""
@@ -866,6 +936,36 @@ enum EventOrderStatus {
   REJECTED
   EXPIRED
   CANCELLED
+}
+
+"""Ingresso de uma pessoa (página pública)."""
+type EventTicketPass {
+  code: String!
+  name: String!
+
+  """Tipo do ingresso (null: evento gratuito)."""
+  ticketName: String
+  eventTitle: String!
+
+  """O espaço ou o local do evento."""
+  placeName: String!
+  condominiumName: String!
+  startsAt: DateTime!
+  endsAt: DateTime!
+
+  """Primeiro nome de quem pediu."""
+  buyerFirstName: String
+  status: TicketPassStatus!
+
+  """Já entrou pela portaria."""
+  checkedIn: Boolean!
+}
+
+"""Ingresso válido, de evento cancelado ou já encerrado."""
+enum TicketPassStatus {
+  VALID
+  CANCELLED
+  ENDED
 }
 
 type AuthTokens {
@@ -1529,6 +1629,12 @@ type Query {
   """
   enrollmentForm(formToken: String!): EnrollmentForm!
 
+  """Ingressos dos eventos de um dia (padrão: hoje)."""
+  gateEventTickets(
+    """YYYY-MM-DD."""
+    date: String
+  ): [GateEventTicket!]!
+
   """Os meus pedidos para um evento (mais recentes primeiro)."""
   myEventOrders(eventId: ID!): [EventOrder!]!
 
@@ -1537,6 +1643,11 @@ type Query {
 
   """Pedidos de um evento (opcionalmente de uma situação)."""
   eventOrders(eventId: ID!, status: EventOrderStatus): [EventOrder!]!
+
+  """
+  Ingresso pelo código (null: não existe ou o pedido não está confirmado).
+  """
+  eventTicket(code: String!): EventTicketPass
 
   """
   Eventos do condomínio: próximos ou passados (gestores também veem os rascunhos).
@@ -1758,6 +1869,12 @@ type Mutation {
 
   """Envia o cadastro, que aguarda a aprovação da administração."""
   submitEnrollment(input: SubmitEnrollmentInput!): Boolean!
+
+  """Libera a entrada de um ingresso (pelo código ou da lista)."""
+  checkInEventTicket(input: CheckInEventTicketInput!): GateEventTicket!
+
+  """Desfaz a entrada de um ingresso marcada por engano."""
+  undoEventTicketCheckIn(attendeeId: ID!): GateEventTicket!
 
   """Cria o evento como rascunho."""
   createEvent(input: EventInput!): Event!
@@ -2107,6 +2224,14 @@ input SubmitEnrollmentInput {
   photo: String
 }
 
+input CheckInEventTicketInput {
+  """A pessoa do pedido."""
+  attendeeId: ID
+
+  """Código do ingresso."""
+  code: String
+}
+
 input EventInput {
   title: String!
   description: String
@@ -2141,6 +2266,12 @@ input EventInput {
 
   """Máximo de ingressos por unidade (vazio: sem limite)."""
   unitTicketLimit: Int
+
+  """Quando as vendas fecham (padrão: no início do evento)."""
+  salesClose: EventSalesClose
+
+  """BEFORE_START: quantas horas antes do início (0 a 720)."""
+  salesCloseHours: Int
 
   """Com ingresso: o PIX do condomínio ou outro."""
   pixSource: EventPixSource

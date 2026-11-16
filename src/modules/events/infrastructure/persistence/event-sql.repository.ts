@@ -67,6 +67,7 @@ const COLUMNS = `
   e.pix_key AS "pixKey",
   e.pix_receiver_name AS "pixReceiverName",
   e.pix_receiver_city AS "pixReceiverCity",
+  e.sales_close AS "salesClose", e.sales_close_hours AS "salesCloseHours",
   e.status, e.cancel_reason AS "cancelReason",
   e.published_at AS "publishedAt", e.cancelled_at AS "cancelledAt",
   e.created_by AS "createdBy", e.created_at AS "createdAt",
@@ -157,6 +158,8 @@ const dataParams = (data: EventData) => [
   data.customPix?.key ?? null,
   data.customPix?.name ?? null,
   data.customPix?.city ?? null,
+  data.salesClose,
+  data.salesCloseHours,
 ];
 
 // Events are plain records: raw SQL. The event and its ticket types are
@@ -210,10 +213,11 @@ export class EventSqlRepository implements EventRepositoryPort {
             address_district, address_city, address_state,
             starts_at, ends_at, capacity, external_guest_limit, ticketed,
             full_price_cents, unit_ticket_limit, pix_source, pix_key_type,
-            pix_key, pix_receiver_name, pix_receiver_city, created_by,
-            updated_by)
+            pix_key, pix_receiver_name, pix_receiver_city, sales_close,
+            sales_close_hours, created_by, updated_by)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-                 $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $25)
+                 $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26,
+                 $27, $27)
          RETURNING idtb_events AS id`,
         [condominiumId, ...dataParams(data), createdBy],
       );
@@ -235,6 +239,7 @@ export class EventSqlRepository implements EventRepositoryPort {
                 full_price_cents = $18, unit_ticket_limit = $19,
                 pix_source = $20, pix_key_type = $21, pix_key = $22,
                 pix_receiver_name = $23, pix_receiver_city = $24,
+                sales_close = $25, sales_close_hours = $26,
                 updated_at = now()
           WHERE idtb_events = $1`,
         [id, ...dataParams(data)],

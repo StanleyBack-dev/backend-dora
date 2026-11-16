@@ -7,8 +7,11 @@ import {
 } from "@/modules/events/domain/event-tickets";
 import {
   EVENT_MAX_DAYS,
+  EventSalesClose,
   EventStatus,
+  isOnSale,
   isOpen,
+  salesClosesAt,
   normalizeCancelReason,
   normalizeEvent,
   type EventInput,
@@ -81,7 +84,64 @@ describe("normalizeEvent", () => {
       unitTicketLimit: null,
       pixSource: EventPixSource.CONDOMINIUM,
       customPix: null,
+      salesClose: EventSalesClose.BEFORE_START,
+      salesCloseHours: 0,
     });
+  });
+
+  it("closes sales some hours before the start, or at the end", () => {
+    const before = normalizeEvent(
+      {
+        ...inSpace,
+        salesClose: EventSalesClose.BEFORE_START,
+        salesCloseHours: 24,
+      },
+      NOW,
+    );
+    if (typeof before === "string") throw new Error(before);
+    expect(before.salesCloseHours).toBe(24);
+    const at = (data: typeof before) => salesClosesAt(data).toISOString();
+    expect(at(before)).toBe("2026-11-16T12:00:00.000Z");
+    // At the end: the hours don't count.
+    const end = normalizeEvent(
+      { ...inSpace, salesClose: EventSalesClose.AT_END, salesCloseHours: 5 },
+      NOW,
+    );
+    if (typeof end === "string") throw new Error(end);
+    expect(end.salesCloseHours).toBe(0);
+    expect(at(end)).toBe(inSpace.endsAt.toISOString());
+    for (const salesCloseHours of [-1, 1.5, 721]) {
+      expect(normalizeEvent({ ...inSpace, salesCloseHours }, NOW)).toBe(
+        "sales-close",
+      );
+    }
+  });
+
+  it("takes orders while published and before the sales close", () => {
+    const event = {
+      status: EventStatus.PUBLISHED,
+      startsAt: hours(10),
+      endsAt: hours(14),
+      salesClose: EventSalesClose.BEFORE_START,
+      salesCloseHours: 0,
+    };
+    expect(isOnSale(event, NOW)).toBe(true);
+    expect(isOnSale({ ...event, salesCloseHours: 10 }, NOW)).toBe(false);
+    expect(isOnSale({ ...event, salesCloseHours: 9 }, NOW)).toBe(true);
+    expect(isOnSale({ ...event, status: EventStatus.CANCELLED }, NOW)).toBe(
+      false,
+    );
+    // At the end: also during the event, until it ends.
+    const during = {
+      ...event,
+      startsAt: hours(-1),
+      salesClose: EventSalesClose.AT_END,
+    };
+    expect(isOnSale(during, NOW)).toBe(true);
+    expect(
+      isOnSale({ ...during, salesClose: EventSalesClose.BEFORE_START }, NOW),
+    ).toBe(false);
+    expect(isOnSale({ ...during, endsAt: hours(0) }, NOW)).toBe(false);
   });
 
   it("ignores an address sent with a space", () => {

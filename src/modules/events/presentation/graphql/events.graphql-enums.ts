@@ -1,5 +1,5 @@
 import { registerEnumType } from "@nestjs/graphql";
-import { EventStatus } from "@/modules/events/domain/event";
+import { EventSalesClose, EventStatus } from "@/modules/events/domain/event";
 import { EventOrderStatus } from "@/modules/events/domain/event-order";
 import {
   EventPixSource,
@@ -7,10 +7,18 @@ import {
   TicketPriceMode,
 } from "@/modules/events/domain/event-tickets";
 import { AttendeeSource } from "@/modules/events/domain/event-order";
+import { TicketPassStatus } from "@/modules/events/domain/event-ticket-entry";
+import { TicketEntryWindow } from "@/modules/events/presentation/graphql/ticket-entry-window";
 
 registerEnumType(EventStatus, {
   name: "EventStatus",
   description: "Rascunho (só gestores), publicado ou cancelado.",
+});
+
+registerEnumType(EventSalesClose, {
+  name: "EventSalesClose",
+  description:
+    "Quando as vendas fecham: algumas horas antes do início, ou só no fim do evento.",
 });
 
 registerEnumType(EventPixSource, {
@@ -49,4 +57,15 @@ export enum EventWhen {
 registerEnumType(EventWhen, {
   name: "EventWhen",
   description: "Próximos (ainda não terminaram) ou passados.",
+});
+
+registerEnumType(TicketEntryWindow, {
+  name: "TicketEntryWindow",
+  description:
+    "Se a portaria pode liberar o ingresso agora: aberta, cedo demais, encerrado ou cancelado.",
+});
+
+registerEnumType(TicketPassStatus, {
+  name: "TicketPassStatus",
+  description: "Ingresso válido, de evento cancelado ou já encerrado.",
 });

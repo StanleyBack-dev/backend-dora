@@ -32,6 +32,13 @@ import { EventOrderReviewQueue } from "@/modules/events/application/event-order-
 import { SubmitAttendeeProofUseCase } from "@/modules/events/application/use-cases/submit-attendee-proof.use-case";
 import { AttendeeFieldsResolver } from "@/modules/events/presentation/graphql/attendee-fields.resolver";
 import { DependentsModule } from "@/modules/dependents/dependents.module";
+import { EVENT_TICKET_REPOSITORY } from "@/modules/events/application/ports/event-ticket-repository.port";
+import { CheckInEventTicketUseCase } from "@/modules/events/application/use-cases/check-in-event-ticket.use-case";
+import { GetEventTicketPassUseCase } from "@/modules/events/application/use-cases/get-event-ticket-pass.use-case";
+import { ListGateEventTicketsUseCase } from "@/modules/events/application/use-cases/list-gate-event-tickets.use-case";
+import { EventTicketSqlRepository } from "@/modules/events/infrastructure/persistence/event-ticket-sql.repository";
+import { EventGateResolver } from "@/modules/events/presentation/graphql/event-gate.resolver";
+import { EventTicketPassResolver } from "@/modules/events/presentation/graphql/event-ticket-pass.resolver";
 import { IdentityModule } from "@/modules/identity/identity.module";
 import { OutboxModule } from "@/modules/outbox/outbox.module";
 import { SpacesModule } from "@/modules/spaces/spaces.module";
@@ -40,6 +47,7 @@ import { SpacesModule } from "@/modules/spaces/spaces.module";
 // spaces (where), members (who is told), the module switch and the
 // condominium's PIX; writes its notices to the outbox. Members order
 // tickets and send the PIX receipt; whoever manages payments reviews it.
+// Confirmed tickets carry a QR the gate (Portaria) reads to let people in.
 @Module({
   imports: [
     AccessControlModule,
@@ -76,6 +84,12 @@ import { SpacesModule } from "@/modules/spaces/spaces.module";
     EventOrderReviewQueue,
     SubmitAttendeeProofUseCase,
     AttendeeFieldsResolver,
+    ListGateEventTicketsUseCase,
+    CheckInEventTicketUseCase,
+    GetEventTicketPassUseCase,
+    EventGateResolver,
+    EventTicketPassResolver,
+    { provide: EVENT_TICKET_REPOSITORY, useClass: EventTicketSqlRepository },
     { provide: EVENT_REPOSITORY, useClass: EventSqlRepository },
     { provide: EVENT_ORDER_REPOSITORY, useClass: EventOrderSqlRepository },
   ],

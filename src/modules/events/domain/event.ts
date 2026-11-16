@@ -32,6 +32,17 @@ export enum EventStatus {
   CANCELLED = "CANCELLED",
 }
 
+/** When the event stops taking orders. */
+export enum EventSalesClose {
+  /** Some hours before it starts (0: at the start). */
+  BEFORE_START = "BEFORE_START",
+  /** Only when it ends (orders during the event too). */
+  AT_END = "AT_END",
+}
+
+/** Earliest closing: 30 days before the start. */
+export const SALES_CLOSE_HOURS_MAX = 720;
+
 export type CondominiumEvent = {
   id: string;
   condominiumId: string;
@@ -64,6 +75,9 @@ export type CondominiumEvent = {
   pixSource: EventPixSource | null;
   /** With CUSTOM: the event's own PIX. */
   customPix: PixReceiver | null;
+  salesClose: EventSalesClose;
+  /** BEFORE_START: how many hours before (0 with AT_END). */
+  salesCloseHours: number;
   status: EventStatus;
   cancelReason: string | null;
   publishedAt: Date | null;
@@ -85,6 +99,9 @@ export type EventInput = {
   capacity: number;
   externalGuestLimit: number;
   ticketed: boolean;
+  /** Default: at the start (BEFORE_START, 0 hours). */
+  salesClose?: EventSalesClose | null;
+  salesCloseHours?: number | null;
 } & EventTicketingInput;
 
 export type EventData = EventTicketing & {
@@ -98,6 +115,8 @@ export type EventData = EventTicketing & {
   capacity: number;
   externalGuestLimit: number;
   ticketed: boolean;
+  salesClose: EventSalesClose;
+  salesCloseHours: number;
 };
 
 export type EventViolation =
@@ -110,6 +129,7 @@ export type EventViolation =
   | "past"
   | "capacity"
   | "guests"
+  | "sales-close"
   | AddressViolation
   | TicketingViolation;
 
@@ -169,6 +189,18 @@ export function normalizeEvent(
     return "guests";
   }
 
+  const salesClose = input.salesClose ?? EventSalesClose.BEFORE_START;
+  const salesCloseHours =
+    salesClose === EventSalesClose.AT_END ? 0 : (input.salesCloseHours ?? 0);
+  if (
+    !Object.values(EventSalesClose).includes(salesClose) ||
+    !Number.isInteger(salesCloseHours) ||
+    salesCloseHours < 0 ||
+    salesCloseHours > SALES_CLOSE_HOURS_MAX
+  ) {
+    return "sales-close";
+  }
+
   const ticketing = normalizeTicketing(input.ticketed, input);
   if (typeof ticketing === "string") return ticketing;
 
@@ -184,6 +216,8 @@ export function normalizeEvent(
     capacity,
     externalGuestLimit,
     ticketed: input.ticketed,
+    salesClose,
+    salesCloseHours,
   };
 }
 
@@ -199,6 +233,7 @@ export const EVENT_VIOLATION_MESSAGES: Record<EventViolation, string> = {
   capacity: "Informe a lotação total: um número inteiro a partir de 1.",
   guests:
     "O número de convidados de fora deve ser um inteiro entre 0 e a lotação total.",
+  "sales-close": `As vendas fecham no fim do evento ou de 0 a ${SALES_CLOSE_HOURS_MAX} horas antes do início.`,
   ...ADDRESS_VIOLATION_MESSAGES,
   ...TICKETING_VIOLATION_MESSAGES,
 };
@@ -208,6 +243,28 @@ export const isOpen = (
   event: Pick<CondominiumEvent, "status" | "endsAt">,
   now: Date,
 ) => event.status !== EventStatus.CANCELLED && event.endsAt > now;
+
+/** When the event stops taking orders. */
+export const salesClosesAt = (
+  event: Pick<
+    CondominiumEvent,
+    "startsAt" | "endsAt" | "salesClose" | "salesCloseHours"
+  >,
+): Date =>
+  event.salesClose === EventSalesClose.AT_END
+    ? event.endsAt
+    : new Date(event.startsAt.getTime() - event.salesCloseHours * 3_600_000);
+
+/** Published and before its sales close. */
+export const isOnSale = (
+  event: Pick<
+    CondominiumEvent,
+    "status" | "startsAt" | "endsAt" | "salesClose" | "salesCloseHours"
+  >,
+  now: Date,
+) =>
+  event.status === EventStatus.PUBLISHED &&
+  now.getTime() < salesClosesAt(event).getTime();
 
 /** Trimmed reason; null when too short or too long. */
 export function normalizeCancelReason(value: string): string | null {
