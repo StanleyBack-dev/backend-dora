@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.7.0...v0.8.0) (2026-11-16)
+
+
+### Features
+
+* event tickets with QR codes, gate check-in and sales close (events stage 3) ([2b16650](https://github.com/StanleyBack-dev/backend-dora/commit/2b16650c6b3c14a81c2068423f340ee2cf475b7d))
+* event tickets with QR codes, gate check-in and sales close (events stage 3) ([6ff4cc7](https://github.com/StanleyBack-dev/backend-dora/commit/6ff4cc7427348b5bae57a6465c58c4d5d73407b9))
+
 ## [0.7.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.6.0...v0.7.0) (2026-11-16)
 
 
