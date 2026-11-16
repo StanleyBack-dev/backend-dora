@@ -18,6 +18,7 @@ const MANAGER_DEFAULTS: Permission[] = [
   Permission.SPACES_MANAGE,
   Permission.BOOKINGS_MANAGE,
   Permission.GUESTS_CHECKIN,
+  Permission.EVENTS_MANAGE,
 ];
 
 // Portaria (gate staff): only the day's guests; they don't book.

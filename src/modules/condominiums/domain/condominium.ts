@@ -1,3 +1,5 @@
+import { BRAZILIAN_STATES } from "@/shared/domain/brazilian-address";
+
 // A condominium is a tenant of the platform: its members, units, sign-ups and
 // announcements (and later its spaces and bookings) belong to it. Only the
 // platform administrator creates, edits or suspends one.
@@ -42,35 +44,8 @@ export type CondominiumDraft = {
 
 export type CondominiumViolation = "name" | "document" | "city" | "state";
 
-export const BRAZILIAN_STATES: readonly string[] = [
-  "AC",
-  "AL",
-  "AP",
-  "AM",
-  "BA",
-  "CE",
-  "DF",
-  "ES",
-  "GO",
-  "MA",
-  "MT",
-  "MS",
-  "MG",
-  "PA",
-  "PB",
-  "PR",
-  "PE",
-  "PI",
-  "RJ",
-  "RN",
-  "RS",
-  "RO",
-  "RR",
-  "SC",
-  "SP",
-  "SE",
-  "TO",
-];
+// The UF list is shared with other addresses (events outside the condominium).
+export { BRAZILIAN_STATES } from "@/shared/domain/brazilian-address";
 
 const collapse = (value: string) => value.trim().replace(/\s+/g, " ");
 

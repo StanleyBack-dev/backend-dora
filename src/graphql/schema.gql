@@ -336,6 +336,9 @@ type Condominium {
   managers: Int!
   units: Int!
 
+  """Módulos contratados à parte que estão ligados."""
+  modules: [AppModule!]!
+
   """Cadastros aguardando aprovação."""
   pendingEnrollments: Int!
 
@@ -356,6 +359,11 @@ Como as moradias são identificadas: apartamentos (bloco e número) ou casas (ru
 enum AddressFormat {
   APARTMENT
   HOUSE
+}
+
+"""Módulos contratados à parte pelo condomínio."""
+enum AppModule {
+  EVENTS
 }
 
 """Unidade (apartamento, casa)."""
@@ -555,6 +563,60 @@ type EnrollmentForm {
   units: [EnrollmentUnitOption!]!
 }
 
+"""Endereço do local fora do condomínio."""
+type EventAddress {
+  """CEP (8 números)."""
+  zip: String!
+  street: String!
+
+  """Número ou "S/N"."""
+  number: String!
+  complement: String
+  district: String!
+  city: String!
+
+  """UF."""
+  state: String!
+}
+
+"""Evento do condomínio."""
+type Event {
+  id: ID!
+  title: String!
+  description: String
+  spaceId: ID
+  spaceName: String
+
+  """Com espaço, um detalhe; fora do condomínio, o nome do local."""
+  location: String
+
+  """Endereço do local fora do condomínio (nulo com espaço)."""
+  address: EventAddress
+  startsAt: DateTime!
+  endsAt: DateTime!
+
+  """Lotação total."""
+  capacity: Int!
+
+  """Convidados de fora (0: só moradores)."""
+  externalGuestLimit: Int!
+
+  """Entrada com ingresso pago (Pix)."""
+  ticketed: Boolean!
+  status: EventStatus!
+  cancelReason: String
+  publishedAt: DateTime
+  cancelledAt: DateTime
+  createdAt: DateTime!
+}
+
+"""Rascunho (só gestores), publicado ou cancelado."""
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+}
+
 type AuthTokens {
   accessToken: String!
   accessTokenExpiresAt: DateTime!
@@ -610,6 +672,7 @@ enum Permission {
   BOOKINGS_CREATE
   BOOKINGS_MANAGE
   GUESTS_CHECKIN
+  EVENTS_MANAGE
   AUDIT_READ
   SUPPORT_MANAGE
   SUPPORTERS_MANAGE
@@ -634,6 +697,9 @@ type CurrentCondominium {
 
   """Apartamentos (bloco e número) ou casas (rua, quadra e lote)."""
   addressFormat: AddressFormat!
+
+  """Módulos contratados à parte que estão ligados."""
+  modules: [AppModule!]!
 }
 
 """Condomínio que a pessoa pode abrir (é membro ativo)."""
@@ -695,6 +761,8 @@ enum NotificationType {
   BOOKING_REJECTED
   BOOKING_CANCELLED
   BOOKING_SLOT_FREED
+  EVENT_PUBLISHED
+  EVENT_CANCELLED
 }
 
 type NotificationPage {
@@ -1190,6 +1258,12 @@ type Query {
   Confere se o token do formulário ainda vale e diz o condomínio e as unidades.
   """
   enrollmentForm(formToken: String!): EnrollmentForm!
+
+  """
+  Eventos do condomínio: próximos ou passados (gestores também veem os rascunhos).
+  """
+  events(when: EventWhen): [Event!]!
+  event(id: ID!): Event!
   me: SessionUser!
 
   """Membros do condomínio."""
@@ -1263,6 +1337,12 @@ input CondominiumFilterInput {
 input EnrollmentRequestFilterInput {
   status: EnrollmentStatus
   search: String
+}
+
+"""Próximos (ainda não terminaram) ou passados."""
+enum EventWhen {
+  UPCOMING
+  PAST
 }
 
 input UserFilterInput {
@@ -1343,6 +1423,11 @@ type Mutation {
   createSpaceBlock(input: CreateSpaceBlockInput!): SpaceBlock!
   deleteSpaceBlock(id: ID!): Boolean!
   sendBroadcast(input: BroadcastInput!): Broadcast!
+
+  """
+  Liga ou desliga um módulo contratado à parte (ex.: Eventos) no condomínio.
+  """
+  setCondominiumModule(id: ID!, module: AppModule!, enabled: Boolean!): Condominium!
   createCondominium(input: CondominiumInput!): Condominium!
   updateCondominium(id: ID!, input: CondominiumInput!): Condominium!
 
@@ -1371,6 +1456,20 @@ type Mutation {
 
   """Envia o cadastro, que aguarda a aprovação da administração."""
   submitEnrollment(input: SubmitEnrollmentInput!): Boolean!
+
+  """Cria o evento como rascunho."""
+  createEvent(input: EventInput!): Event!
+
+  """Edita um evento que ainda não terminou nem foi cancelado."""
+  updateEvent(id: ID!, input: EventInput!): Event!
+
+  """Publica o rascunho: os moradores são avisados."""
+  publishEvent(id: ID!): Event!
+
+  """
+  Cancela o evento com o motivo; se estava publicado, os moradores são avisados.
+  """
+  cancelEvent(id: ID!, reason: String!): Event!
 
   """Entra com usuário (ou e-mail) e senha."""
   login(input: LoginInput!): LoginResult!
@@ -1651,6 +1750,49 @@ input SubmitEnrollmentInput {
 
   """Foto de perfil em base64 (JPEG, PNG ou WebP, até 2 MB)."""
   photo: String
+}
+
+input EventInput {
+  title: String!
+  description: String
+
+  """Espaço do condomínio (sem espaço: informe o endereço)."""
+  spaceId: ID
+
+  """
+  Com espaço, um detalhe ("área coberta"); fora, o nome do local ("Chácara Bela Vista").
+  """
+  location: String
+
+  """Obrigatório sem espaço: o evento é fora do condomínio."""
+  address: EventAddressInput
+  startsAt: DateTime!
+  endsAt: DateTime!
+
+  """Lotação total."""
+  capacity: Int!
+
+  """Convidados de fora do condomínio (0: só moradores)."""
+  externalGuestLimit: Int!
+
+  """Entrada com ingresso pago (Pix)."""
+  ticketed: Boolean!
+}
+
+"""Endereço do local fora do condomínio."""
+input EventAddressInput {
+  """CEP (8 números)."""
+  zip: String!
+  street: String!
+
+  """Número ou "S/N"."""
+  number: String!
+  complement: String
+  district: String!
+  city: String!
+
+  """UF."""
+  state: String!
 }
 
 input LoginInput {

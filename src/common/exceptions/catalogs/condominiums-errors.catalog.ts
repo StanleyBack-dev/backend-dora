@@ -6,6 +6,12 @@ export const condominiumsErrors = {
     status: HttpStatus.NOT_FOUND,
     message: "Condomínio não encontrado.",
   },
+  moduleDisabled: {
+    code: "CONDOMINIUM_MODULE_DISABLED",
+    status: HttpStatus.FORBIDDEN,
+    message:
+      "Este módulo não está contratado pelo condomínio. Fale com a administração do Dora.",
+  },
   invalid: {
     code: "CONDOMINIUM_INVALID",
     status: HttpStatus.UNPROCESSABLE_ENTITY,

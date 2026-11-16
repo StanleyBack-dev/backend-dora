@@ -46,6 +46,9 @@ const SUMMARY_SQL = `
          (SELECT count(*)::int FROM tb_enrollment_requests r
            WHERE r.idtb_condominiums = c.idtb_condominiums
              AND r.status = 'PENDENTE') AS "pendingEnrollments",
+         ARRAY(SELECT cm.module FROM tb_condominium_modules cm
+                WHERE cm.idtb_condominiums = c.idtb_condominiums
+                ORDER BY cm.module) AS "modules",
          (SELECT max(u.last_login_at) FROM tb_memberships m
             JOIN tb_users u ON u.idtb_users = m.idtb_users
            WHERE m.idtb_condominiums = c.idtb_condominiums) AS "lastActivityAt"

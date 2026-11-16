@@ -3,6 +3,8 @@ import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { APP_ERRORS } from "@/common/exceptions/app-errors.catalog";
 import { AppException } from "@/common/exceptions/app-exception";
 import { CondominiumLookupService } from "@/modules/condominiums/application/condominium-lookup.service";
+import { ModuleAccessService } from "@/modules/condominiums/application/module-access.service";
+import type { AppModule } from "@/modules/condominiums/domain/app-module";
 import {
   AddressFormat,
   CondominiumStatus,
@@ -33,6 +35,8 @@ export type CurrentCondominium = {
   status: CondominiumStatus;
   /** Apartments or houses: how its homes are identified. */
   addressFormat: AddressFormat;
+  /** Optional modules contracted apart that are on (e.g. events). */
+  modules: AppModule[];
 };
 
 // Which condominium a session works in. Permissions are resolved on every
@@ -48,6 +52,7 @@ export class CondominiumContextUseCase {
     @Inject(USER_REPOSITORY) private readonly users: UserRepositoryPort,
     @Inject(CLOCK) private readonly clock: ClockPort,
     private readonly condominiums: CondominiumLookupService,
+    private readonly modules: ModuleAccessService,
   ) {}
 
   /**
@@ -103,6 +108,7 @@ export class CondominiumContextUseCase {
           state: found.state,
           status: found.status,
           addressFormat: found.addressFormat,
+          modules: await this.modules.enabled(found.id),
         }
       : null;
   }

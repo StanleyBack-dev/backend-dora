@@ -13,6 +13,11 @@ import { CondominiumTypeormRepository } from "@/modules/condominiums/infrastruct
 import { UnitTypeormRepository } from "@/modules/condominiums/infrastructure/persistence/typeorm/unit-typeorm.repository";
 import { CondominiumsResolver } from "@/modules/condominiums/presentation/graphql/condominiums.resolver";
 import { UnitsResolver } from "@/modules/condominiums/presentation/graphql/units.resolver";
+import { CondominiumModulesResolver } from "@/modules/condominiums/presentation/graphql/condominium-modules.resolver";
+import { SetCondominiumModuleUseCase } from "@/modules/condominiums/application/use-cases/set-condominium-module.use-case";
+import { ModuleAccessService } from "@/modules/condominiums/application/module-access.service";
+import { CONDOMINIUM_MODULE_REPOSITORY } from "@/modules/condominiums/application/ports/condominium-module-repository.port";
+import { CondominiumModuleTypeormRepository } from "@/modules/condominiums/infrastructure/persistence/typeorm/condominium-module-typeorm.repository";
 
 // The tenants (condominiums, managed by the platform) and their units
 // (managed by each condominium's managers). Who belongs to a condominium is
@@ -30,9 +35,16 @@ import { UnitsResolver } from "@/modules/condominiums/presentation/graphql/units
     UnitRegistryService,
     CondominiumsResolver,
     UnitsResolver,
+    CondominiumModulesResolver,
+    SetCondominiumModuleUseCase,
+    ModuleAccessService,
+    {
+      provide: CONDOMINIUM_MODULE_REPOSITORY,
+      useClass: CondominiumModuleTypeormRepository,
+    },
     { provide: CONDOMINIUM_REPOSITORY, useClass: CondominiumTypeormRepository },
     { provide: UNIT_REPOSITORY, useClass: UnitTypeormRepository },
   ],
-  exports: [CondominiumLookupService, UnitRegistryService],
+  exports: [CondominiumLookupService, UnitRegistryService, ModuleAccessService],
 })
 export class CondominiumsModule {}
