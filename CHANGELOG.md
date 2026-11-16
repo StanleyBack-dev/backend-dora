@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.6.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.5.1...v0.6.0) (2026-11-16)
+
+
+### Features
+
+* events module (stage 1) with per-condominium modules ([e9a941e](https://github.com/StanleyBack-dev/backend-dora/commit/e9a941e164afcc9c6f4143234b71bce0893d56c3))
+* events module (stage 1) with per-condominium modules ([5f8604a](https://github.com/StanleyBack-dev/backend-dora/commit/5f8604ae16e114dd53e48bae919f5146632d84f8))
+* resident and employee records apart from the role ([2f9291b](https://github.com/StanleyBack-dev/backend-dora/commit/2f9291ba9200c9c40ef0fc9d9d2f24ef123d826f))
+* resident and employee records apart from the role ([728a9c4](https://github.com/StanleyBack-dev/backend-dora/commit/728a9c40503415a9468a2c6fd3a73ce60a0bab36))
+
 ## [0.5.1](https://github.com/StanleyBack-dev/backend-dora/compare/v0.5.0...v0.5.1) (2026-11-15)
 
 
