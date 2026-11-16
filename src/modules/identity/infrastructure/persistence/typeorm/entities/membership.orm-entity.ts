@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 import type { UserGroup } from "@/modules/access-control/domain/user-group";
+import type { MemberKind } from "@/modules/identity/domain/member-profile";
 
 @Entity("tb_memberships")
 export class MembershipOrmEntity {
@@ -15,7 +16,7 @@ export class MembershipOrmEntity {
   @Column({ name: "idtb_users", type: "uuid" })
   userId!: string;
 
-  // FKs to tb_condominiums and tb_units live in the migration: identity
+  // The FK to tb_condominiums lives in the migration: identity
   // does not map the condominiums module's entities.
   @Column({ name: "idtb_condominiums", type: "uuid" })
   condominiumId!: string;
@@ -23,16 +24,9 @@ export class MembershipOrmEntity {
   @Column({ type: "varchar", length: 10 })
   role!: UserGroup;
 
-  @Column({ name: "idtb_units", type: "uuid", nullable: true })
-  unitId!: string | null;
-
-  @Column({
-    name: "unit_complement",
-    type: "varchar",
-    length: 80,
-    nullable: true,
-  })
-  unitComplement!: string | null;
+  /** Resident or employee: its record is in tb_residents / tb_employees. */
+  @Column({ type: "varchar", length: 10 })
+  kind!: MemberKind;
 
   @Column({ type: "boolean", default: true })
   active!: boolean;

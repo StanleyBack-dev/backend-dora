@@ -30,24 +30,35 @@ import {
 } from "@/modules/identity/application/ports/user-repository.port";
 import { UNLOCKED } from "@/modules/identity/domain/lockout-policy";
 import {
-  normalizeEmail,
-  normalizeUsername,
-} from "@/modules/identity/domain/username";
+  EMPLOYEE_VIOLATION_MESSAGES,
+  EMPTY_EMPLOYEE,
+  MemberKind,
+  normalizeEmployee,
+  residentProfile,
+  type EmployeeProfileInput,
+  type MemberProfile,
+} from "@/modules/identity/domain/member-profile";
+import { normalizeEmail } from "@/modules/identity/domain/username";
 import { normalizeUnitComplement } from "@/modules/condominiums/domain/unit";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
 import { normalizePhone } from "@/shared/domain/phone";
 import { UserManagementPolicy } from "@/modules/identity/application/user-management.policy";
 
+// The login is never typed: it comes from the name ("ana.souza",
+// "ana.souza2"…) and the e-mail also signs in.
 export type CreateMemberInput = {
   name: string;
   email: string;
-  /** Derived from the name when left out ("ana.souza", "ana.souza2"…). */
-  username?: string | null;
-  /** Role in the condominium: USER (resident) or ADMIN (manager). */
+  /** Permissions in the condominium: USER, CONCIERGE or ADMIN. */
   group: UserGroup;
+  /** Resident (default) or employee. */
+  kind?: MemberKind;
+  /** Residents only. */
   unitId?: string | null;
   /** Address detail inside the condominium ("casa dos fundos"). */
   unitComplement?: string | null;
+  /** Employees only: the staff record. */
+  employee?: EmployeeProfileInput | null;
   /** Contact phone (any format; stored as digits). */
   phone?: string | null;
 };
@@ -55,12 +66,15 @@ export type CreateMemberInput = {
 export type UpdateMemberInput = {
   name?: string;
   email?: string;
-  username?: string;
   group?: UserGroup;
-  /** undefined: unchanged; null: no unit. */
+  /** undefined: unchanged. */
+  kind?: MemberKind;
+  /** undefined: unchanged; null: no unit (residents). */
   unitId?: string | null;
-  /** undefined: unchanged; null or "": none. */
+  /** undefined: unchanged; null or "": none (residents). */
   unitComplement?: string | null;
+  /** undefined: unchanged (employees). */
+  employee?: EmployeeProfileInput | null;
   /** undefined: unchanged; null or "": none. */
   phone?: string | null;
 };
@@ -106,8 +120,7 @@ export class ManageUsersUseCase {
   ): Promise<TemporaryAccess> {
     const condominiumId = tenantOf(actor);
     this.policy.assertCanAssign(actor, input.group);
-    const unitId = await this.policy.unitOf(condominiumId, input.unitId);
-    const unitComplement = this.complement(input.unitComplement) ?? null;
+    const profile = await this.profile(condominiumId, input, null);
     const phone = this.phone(input.phone) ?? null;
     const email = normalizeEmail(input.email);
 
@@ -120,8 +133,7 @@ export class ManageUsersUseCase {
         userId: existing.id,
         condominiumId,
         role: input.group,
-        unitId,
-        unitComplement,
+        profile,
       });
       // The account's own data stays the person's: only a missing phone is
       // filled in.
@@ -143,16 +155,14 @@ export class ManageUsersUseCase {
     }
 
     const name = input.name.trim().replace(/\s+/g, " ");
-    const username = input.username
-      ? normalizeUsername(input.username)
-      : await this.policy.freeUsername(name);
+    const username = await this.policy.freeUsername(name);
     await this.policy.assertUniqueIdentity({ username, email });
 
     const { temporary, hash } = await this.passwords.hashTemporary();
     const created = await this.users.createWithCredential(
       { name, email, username, group: UserGroup.USER, phone },
       { passwordHash: hash, mustChangePassword: true },
-      { condominiumId, role: input.group, unitId, unitComplement },
+      { condominiumId, role: input.group, profile },
     );
     const emailSent = await this.notifier.accessCreated(created, temporary);
 
@@ -182,19 +192,11 @@ export class ManageUsersUseCase {
     const name = input.name?.trim().replace(/\s+/g, " ");
     const email =
       input.email !== undefined ? normalizeEmail(input.email) : undefined;
-    const username =
-      input.username !== undefined
-        ? normalizeUsername(input.username)
-        : undefined;
     const phone = this.phone(input.phone);
     const accountPatch = {
       name: name !== undefined && name !== target.name ? name : undefined,
       phone: phone !== undefined && phone !== target.phone ? phone : undefined,
       email: email !== undefined && email !== target.email ? email : undefined,
-      username:
-        username !== undefined && username !== target.username
-          ? username
-          : undefined,
     };
     const accountChanged = Object.values(accountPatch).some(
       (value) => value !== undefined,
@@ -202,7 +204,7 @@ export class ManageUsersUseCase {
     if (accountChanged) {
       this.policy.assertOwnsAccount(actor, target);
       await this.policy.assertUniqueIdentity(
-        { username: accountPatch.username, email: accountPatch.email },
+        { email: accountPatch.email },
         userId,
       );
       await this.users.update(userId, accountPatch);
@@ -213,27 +215,25 @@ export class ManageUsersUseCase {
       });
     }
 
-    // === membership (role and unit here) ===
+    // === membership (role, and the resident / employee record) ===
     const roleChanged =
       input.group !== undefined && input.group !== target.role;
     if (roleChanged)
       this.policy.assertCanAssign(actor, input.group as UserGroup);
-    const unitId =
-      input.unitId === undefined
-        ? undefined
-        : await this.policy.unitOf(condominiumId, input.unitId);
-    const complement = this.complement(input.unitComplement);
-    const complementChanged =
-      complement !== undefined && complement !== target.unitComplement;
-    if (
-      roleChanged ||
-      complementChanged ||
-      (unitId !== undefined && unitId !== target.unitId)
-    ) {
+    const touchesProfile =
+      input.kind !== undefined ||
+      input.unitId !== undefined ||
+      input.unitComplement !== undefined ||
+      input.employee !== undefined;
+    const current = currentProfile(target);
+    const profile = touchesProfile
+      ? await this.profile(condominiumId, input, current)
+      : current;
+    const profileChanged = !sameProfile(profile, current);
+    if (roleChanged || profileChanged) {
       await this.memberships.update(target.membershipId, {
         role: roleChanged ? input.group : undefined,
-        unitId,
-        unitComplement: complementChanged ? complement : undefined,
+        profile: profileChanged ? profile : undefined,
       });
       if (roleChanged) {
         await this.permissions.resetToGroupDefaults(target.membershipId);
@@ -332,6 +332,64 @@ export class ManageUsersUseCase {
     return phone;
   }
 
+  /**
+   * The resident or employee record from the input, over the current one
+   * (null: a new member). A unit only goes with a resident.
+   */
+  private async profile(
+    condominiumId: string,
+    input: Pick<
+      UpdateMemberInput,
+      "kind" | "unitId" | "unitComplement" | "employee"
+    >,
+    current: MemberProfile | null,
+  ): Promise<MemberProfile> {
+    const kind = input.kind ?? current?.kind ?? MemberKind.RESIDENT;
+    if (kind === MemberKind.EMPLOYEE) {
+      if (input.unitId || input.unitComplement?.trim()) {
+        throw AppException.from(APP_ERRORS.identity.employeeUnit, undefined);
+      }
+      const base =
+        current?.kind === MemberKind.EMPLOYEE ? current : EMPTY_EMPLOYEE;
+      const typed = input.employee ?? {};
+      const pick = <K extends keyof EmployeeProfileInput>(key: K) =>
+        typed[key] !== undefined ? typed[key] : base[key];
+      const employee = normalizeEmployee(
+        {
+          jobTitle: pick("jobTitle"),
+          hiredOn: pick("hiredOn"),
+          workShift: pick("workShift"),
+          contractor: pick("contractor"),
+        },
+        this.today(),
+      );
+      if ("violation" in employee) {
+        throw AppException.from(APP_ERRORS.identity.invalidEmployee, {
+          reason: EMPLOYEE_VIOLATION_MESSAGES[employee.violation],
+        });
+      }
+      return employee;
+    }
+    const base =
+      current?.kind === MemberKind.RESIDENT ? current : residentProfile();
+    const unitId =
+      input.unitId === undefined
+        ? base.unitId
+        : await this.policy.unitOf(condominiumId, input.unitId);
+    const complement = this.complement(input.unitComplement);
+    return residentProfile(
+      unitId,
+      complement === undefined ? base.unitComplement : complement,
+    );
+  }
+
+  /** Today in Brazil (YYYY-MM-DD), for the hiring date. */
+  private today(): string {
+    return this.clock
+      .now()
+      .toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  }
+
   /** undefined: not sent; null: cleared. */
   private complement(
     value: string | null | undefined,
@@ -351,3 +409,13 @@ export class ManageUsersUseCase {
     return this.policy.loadMember(condominiumId, userId);
   }
 }
+
+/** The member's record as the directory read it. */
+function currentProfile(member: MemberAccount): MemberProfile {
+  return member.kind === MemberKind.EMPLOYEE && member.employee
+    ? member.employee
+    : residentProfile(member.unitId, member.unitComplement);
+}
+
+const sameProfile = (a: MemberProfile, b: MemberProfile): boolean =>
+  JSON.stringify(a) === JSON.stringify(b);

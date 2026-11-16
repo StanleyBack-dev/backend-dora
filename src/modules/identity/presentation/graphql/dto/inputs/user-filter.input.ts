@@ -11,6 +11,8 @@ import {
 } from "class-validator";
 import { UserGroup } from "@/modules/access-control/domain/user-group";
 import "@/modules/access-control/presentation/graphql/access-control.graphql-enums";
+import { MemberKind } from "@/modules/identity/domain/member-profile";
+import "@/modules/identity/presentation/graphql/identity.graphql-enums";
 
 @InputType()
 export class UserFilterInput {
@@ -40,6 +42,14 @@ export class UserFilterInput {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  @Field(() => MemberKind, {
+    nullable: true,
+    description: "Só moradores ou só funcionários.",
+  })
+  @IsOptional()
+  @IsEnum(MemberKind)
+  kind?: MemberKind;
 
   @Field(() => ID, { nullable: true })
   @IsOptional()

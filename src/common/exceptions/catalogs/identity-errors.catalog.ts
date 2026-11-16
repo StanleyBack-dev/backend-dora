@@ -111,6 +111,16 @@ export const identityErrors = {
     status: HttpStatus.UNPROCESSABLE_ENTITY,
     message: "O complemento deve ter até 80 caracteres.",
   },
+  employeeUnit: {
+    code: "USER_EMPLOYEE_UNIT",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: "Funcionários não têm unidade nem complemento.",
+  },
+  invalidEmployee: {
+    code: "USER_INVALID_EMPLOYEE",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: (params: { reason: string }) => params.reason,
+  },
   alreadyMember: {
     code: "USER_ALREADY_MEMBER",
     status: HttpStatus.CONFLICT,

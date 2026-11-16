@@ -20,7 +20,11 @@ import type {
 } from "@/modules/identity/application/ports/user-repository.port";
 import type { User } from "@/modules/identity/domain/user";
 import { CredentialOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/credential.orm-entity";
+import { MemberKind } from "@/modules/identity/domain/member-profile";
+import { EmployeeOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/employee.orm-entity";
 import { MembershipOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/membership.orm-entity";
+import { ResidentOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/resident.orm-entity";
+import { insertMembership } from "@/modules/identity/infrastructure/persistence/typeorm/repositories/member-profile.store";
 import { UserOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/user.orm-entity";
 import {
   paginate,
@@ -51,8 +55,13 @@ type MemberRaw = {
   membership_id: string;
   membership_role: UserGroup;
   membership_active: boolean;
-  membership_unit_id: string | null;
-  membership_unit_complement: string | null;
+  membership_kind: MemberKind;
+  resident_unit_id: string | null;
+  resident_unit_complement: string | null;
+  employee_job_title: string | null;
+  employee_hired_on: string | null;
+  employee_work_shift: string | null;
+  employee_contractor: string | null;
   unit_street: string | null;
   unit_block: string | null;
   unit_number: string | null;
@@ -149,9 +158,7 @@ export class UserTypeormRepository implements UserRepositoryPort {
         mustChangePassword: credential.mustChangePassword,
       });
       if (membership) {
-        await manager
-          .getRepository(MembershipOrmEntity)
-          .insert({ ...membership, userId: saved.id });
+        await insertMembership(manager, { ...membership, userId: saved.id });
       }
       return toUser(saved);
     });
@@ -174,7 +181,8 @@ export class UserTypeormRepository implements UserRepositoryPort {
     await this.repository.update({ id }, { lastLoginAt: at });
   }
 
-  // Units come from tb_units (condominiums module), read-only.
+  // Units come from tb_units (condominiums module), read-only; the unit is
+  // the resident record's, the staff data the employee record's.
   private async queryMembers(
     condominiumId: string,
     filter: UserFilter,
@@ -189,7 +197,17 @@ export class UserTypeormRepository implements UserRepositoryPort {
         "membership.idtb_users = account.idtb_users AND membership.idtb_condominiums = :condominiumId",
         { condominiumId },
       )
-      .leftJoin("tb_units", "unit", "unit.idtb_units = membership.idtb_units")
+      .leftJoin(
+        ResidentOrmEntity,
+        "resident",
+        "resident.idtb_memberships = membership.idtb_memberships",
+      )
+      .leftJoin(
+        EmployeeOrmEntity,
+        "employee",
+        "employee.idtb_memberships = membership.idtb_memberships",
+      )
+      .leftJoin("tb_units", "unit", "unit.idtb_units = resident.idtb_units")
       .leftJoin(
         CredentialOrmEntity,
         "credential",
@@ -203,8 +221,16 @@ export class UserTypeormRepository implements UserRepositoryPort {
       .addSelect("membership.idtb_memberships", "membership_id")
       .addSelect("membership.role", "membership_role")
       .addSelect("membership.active", "membership_active")
-      .addSelect("membership.idtb_units", "membership_unit_id")
-      .addSelect("membership.unit_complement", "membership_unit_complement")
+      .addSelect("membership.kind", "membership_kind")
+      .addSelect("resident.idtb_units", "resident_unit_id")
+      .addSelect("resident.unit_complement", "resident_unit_complement")
+      .addSelect("employee.job_title", "employee_job_title")
+      .addSelect(
+        "to_char(employee.hired_on, 'YYYY-MM-DD')",
+        "employee_hired_on",
+      )
+      .addSelect("employee.work_shift", "employee_work_shift")
+      .addSelect("employee.contractor", "employee_contractor")
       .addSelect("unit.street", "unit_street")
       .addSelect("unit.block", "unit_block")
       .addSelect("unit.number", "unit_number")
@@ -233,8 +259,11 @@ export class UserTypeormRepository implements UserRepositoryPort {
     } else if (filter.active === false) {
       query.andWhere("NOT (membership.active AND account.active)");
     }
+    if (filter.kind) {
+      query.andWhere("membership.kind = :kind", { kind: filter.kind });
+    }
     if (filter.unitId) {
-      query.andWhere("membership.idtb_units = :unitId", {
+      query.andWhere("resident.idtb_units = :unitId", {
         unitId: filter.unitId,
       });
     }
@@ -268,11 +297,22 @@ export class UserTypeormRepository implements UserRepositoryPort {
         membershipId: extra.membership_id,
         role: extra.membership_role,
         membershipActive: extra.membership_active,
-        unitId: extra.membership_unit_id,
+        kind: extra.membership_kind,
+        unitId: extra.resident_unit_id,
         unitStreet: extra.unit_street,
         unitBlock: extra.unit_block,
         unitNumber: extra.unit_number,
-        unitComplement: extra.membership_unit_complement,
+        unitComplement: extra.resident_unit_complement,
+        employee:
+          extra.membership_kind === MemberKind.EMPLOYEE
+            ? {
+                kind: MemberKind.EMPLOYEE,
+                jobTitle: extra.employee_job_title,
+                hiredOn: extra.employee_hired_on,
+                workShift: extra.employee_work_shift,
+                contractor: extra.employee_contractor,
+              }
+            : null,
         sharedAccount:
           user.group === UserGroup.ADMIN_MASTER ||
           Number(extra.other_memberships) > 0,

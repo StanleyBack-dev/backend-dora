@@ -2,6 +2,10 @@ import type { UserGroup } from "@/modules/access-control/domain/user-group";
 import type { NewMembership } from "@/modules/identity/application/ports/membership-repository.port";
 import type { User } from "@/modules/identity/domain/user";
 import type { PageRequest, Paginated } from "@/shared/application/pagination";
+import type {
+  EmployeeProfile,
+  MemberKind,
+} from "@/modules/identity/domain/member-profile";
 
 export type NewUser = {
   name: string;
@@ -38,6 +42,8 @@ export type UserFilter = {
   groups?: UserGroup[];
   /** Membership active (and account active). */
   active?: boolean;
+  /** Residents or employees. */
+  kind?: MemberKind;
   unitId?: string;
 };
 
@@ -53,12 +59,16 @@ export type MemberAccount = UserAccount & {
   /** Role in this condominium (`group` stays the account-level group). */
   role: UserGroup;
   membershipActive: boolean;
+  /** Resident (unit fields) or employee (`employee`). */
+  kind: MemberKind;
   unitId: string | null;
   unitStreet: string | null;
   unitBlock: string | null;
   unitNumber: string | null;
   /** Address detail inside the condominium. */
   unitComplement: string | null;
+  /** The staff record (employees only). */
+  employee: EmployeeProfile | null;
   /**
    * The account is also used outside this condominium (another membership,
    * or the platform administrator): its login data is not this

@@ -1,3 +1,4 @@
+import { profileUnitId } from "@/modules/identity/domain/member-profile";
 import { Inject, Injectable } from "@nestjs/common";
 import type { UserGroup } from "@/modules/access-control/domain/user-group";
 import {
@@ -43,7 +44,7 @@ export class UserLookupService {
     condominiumId: string,
   ): Promise<string | null> {
     const membership = await this.memberships.find(userId, condominiumId);
-    return membership?.active ? membership.unitId : null;
+    return membership?.active ? profileUnitId(membership.profile) : null;
   }
 
   /** Whether this e-mail's account already belongs to the condominium. */
