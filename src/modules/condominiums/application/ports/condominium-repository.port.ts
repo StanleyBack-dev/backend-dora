@@ -1,3 +1,4 @@
+import type { AppModule } from "@/modules/condominiums/domain/app-module";
 import type {
   Condominium,
   CondominiumDraft,
@@ -11,6 +12,8 @@ export type CondominiumSummary = Condominium & {
   managers: number;
   units: number;
   pendingEnrollments: number;
+  /** Optional modules turned on (contracted apart). */
+  modules: AppModule[];
   /** Most recent sign-in of any of its members. */
   lastActivityAt: Date | null;
 };

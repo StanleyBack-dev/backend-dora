@@ -1,6 +1,7 @@
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { UserGroup } from "@/modules/access-control/domain/user-group";
 import type { CondominiumLookupService } from "@/modules/condominiums/application/condominium-lookup.service";
+import type { ModuleAccessService } from "@/modules/condominiums/application/module-access.service";
 import {
   CondominiumStatus,
   type Condominium,
@@ -57,6 +58,7 @@ function setup(options: {
       users,
       clock,
       lookup,
+      { enabled: async () => [] } as unknown as ModuleAccessService,
     ),
     patches,
     sessions,

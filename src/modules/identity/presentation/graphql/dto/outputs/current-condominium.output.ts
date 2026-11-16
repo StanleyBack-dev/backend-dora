@@ -1,4 +1,5 @@
 import { Field, ID, ObjectType } from "@nestjs/graphql";
+import { AppModule } from "@/modules/condominiums/domain/app-module";
 import {
   AddressFormat,
   CondominiumStatus,
@@ -28,4 +29,9 @@ export class CurrentCondominiumType {
     description: "Apartamentos (bloco e número) ou casas (rua, quadra e lote).",
   })
   addressFormat!: AddressFormat;
+
+  @Field(() => [AppModule], {
+    description: "Módulos contratados à parte que estão ligados.",
+  })
+  modules!: AppModule[];
 }
