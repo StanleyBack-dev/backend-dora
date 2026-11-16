@@ -7,6 +7,7 @@ import { bookingsErrors } from "@/common/exceptions/catalogs/bookings-errors.cat
 import { broadcastsErrors } from "@/common/exceptions/catalogs/broadcasts-errors.catalog";
 import { enrollmentErrors } from "@/common/exceptions/catalogs/enrollment-errors.catalog";
 import { eventsErrors } from "@/common/exceptions/catalogs/events-errors.catalog";
+import { dependentsErrors } from "@/common/exceptions/catalogs/dependents-errors.catalog";
 import { identityErrors } from "@/common/exceptions/catalogs/identity-errors.catalog";
 import { mailsErrors } from "@/common/exceptions/catalogs/mails-errors.catalog";
 import { platformMetricsErrors } from "@/common/exceptions/catalogs/platform-metrics-errors.catalog";
@@ -26,6 +27,7 @@ export const APP_ERRORS = {
   condominiums: condominiumsErrors,
   enrollment: enrollmentErrors,
   events: eventsErrors,
+  dependents: dependentsErrors,
   identity: identityErrors,
   mails: mailsErrors,
   notifications: notificationsErrors,

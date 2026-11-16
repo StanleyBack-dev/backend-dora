@@ -37,6 +37,10 @@ export class UserOrmEntity {
   @Column({ type: "varchar", length: 11, nullable: true })
   phone!: string | null;
 
+  /** YYYY-MM-DD (a date column comes back as a string). */
+  @Column({ name: "birth_date", type: "date", nullable: true })
+  birthDate!: string | null;
+
   @Column({ name: "avatar_key", type: "varchar", length: 200, nullable: true })
   avatarKey!: string | null;
 

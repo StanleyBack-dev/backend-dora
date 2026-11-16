@@ -38,6 +38,11 @@ export const condominiumsErrors = {
     message: (params: { labels: string }) =>
       `Estas unidades já existem: ${params.labels}.`,
   },
+  invalidPix: {
+    code: "CONDOMINIUM_INVALID_PIX",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: (params: { reason: string }) => params.reason,
+  },
   unitInUse: {
     code: "UNIT_IN_USE",
     status: HttpStatus.CONFLICT,

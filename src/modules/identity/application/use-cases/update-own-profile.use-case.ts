@@ -10,18 +10,26 @@ import {
 import type { User } from "@/modules/identity/domain/user";
 import { normalizeEmail } from "@/modules/identity/domain/username";
 import { normalizePhone } from "@/shared/domain/phone";
+import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
+import { localDay, normalizeBirthDate } from "@/shared/domain/birth-date";
 
 @Injectable()
 export class UpdateOwnProfileUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepositoryPort,
     private readonly audit: AuditTrailService,
+    @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
   async execute(
     actor: AuthenticatedUser,
-    /** phone: undefined keeps it; null or "" removes it. */
-    input: { name: string; email: string; phone?: string | null },
+    /** phone, birthDate: undefined keeps it; null or "" removes it. */
+    input: {
+      name: string;
+      email: string;
+      phone?: string | null;
+      birthDate?: string | null;
+    },
   ): Promise<User> {
     const before = await this.users.findById(actor.id);
     if (!before) {
@@ -41,6 +49,7 @@ export class UpdateOwnProfileUseCase {
       name,
       email,
       phone: this.phone(input.phone),
+      birthDate: this.birthDate(input.birthDate),
     });
     await this.audit.stamp({
       actorId: actor.id,
@@ -48,6 +57,21 @@ export class UpdateOwnProfileUseCase {
       entityId: actor.id,
     });
     return updated;
+  }
+
+  private birthDate(
+    value: string | null | undefined,
+  ): string | null | undefined {
+    if (value === undefined) return undefined;
+    if (value === null || value.trim() === "") return null;
+    const date = normalizeBirthDate(
+      value,
+      localDay(this.clock.now(), this.clock.timeZone),
+    );
+    if (!date) {
+      throw AppException.from(APP_ERRORS.identity.invalidBirthDate, undefined);
+    }
+    return date;
   }
 
   private phone(value: string | null | undefined): string | null | undefined {

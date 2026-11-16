@@ -58,6 +58,14 @@ export class MembershipTypeormRepository implements MembershipRepositoryPort {
     return row ? this.withProfile(this.dataSource.manager, row) : null;
   }
 
+  async userIdOf(membershipId: string): Promise<string | null> {
+    const row = await this.repository.findOne({
+      where: { id: membershipId },
+      select: { id: true, userId: true },
+    });
+    return row?.userId ?? null;
+  }
+
   create(membership: NewMembership): Promise<Membership> {
     return this.dataSource.transaction(async (manager) =>
       this.withProfile(manager, await insertMembership(manager, membership)),

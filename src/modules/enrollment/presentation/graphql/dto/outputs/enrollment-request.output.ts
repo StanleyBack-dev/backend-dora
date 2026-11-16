@@ -27,6 +27,12 @@ export class EnrollmentRequestType {
   @Field()
   phone!: string;
 
+  @Field(() => String, {
+    nullable: true,
+    description: "Data de nascimento (AAAA-MM-DD).",
+  })
+  birthDate!: string | null;
+
   @Field(() => ID, { nullable: true })
   unitId!: string | null;
 

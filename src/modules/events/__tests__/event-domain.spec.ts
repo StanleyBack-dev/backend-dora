@@ -1,6 +1,11 @@
 import { publishedNotices } from "@/modules/events/application/event-notices";
 import type { EventView } from "@/modules/events/application/ports/event-repository.port";
 import {
+  EventPixSource,
+  TicketKind,
+  TicketPriceMode,
+} from "@/modules/events/domain/event-tickets";
+import {
   EVENT_MAX_DAYS,
   EventStatus,
   isOpen,
@@ -27,6 +32,9 @@ const inSpace: EventInput = {
   capacity: 200,
   externalGuestLimit: 50,
   ticketed: true,
+  fullPriceCents: 5000,
+  ticketTypes: [{ kind: TicketKind.ADULT, priceMode: TicketPriceMode.FULL }],
+  pixSource: EventPixSource.CONDOMINIUM,
 };
 
 const address = {
@@ -59,6 +67,20 @@ describe("normalizeEvent", () => {
       capacity: 200,
       externalGuestLimit: 50,
       ticketed: true,
+      fullPriceCents: 5000,
+      ticketTypes: [
+        {
+          id: null,
+          kind: TicketKind.ADULT,
+          priceMode: TicketPriceMode.FULL,
+          customPriceCents: null,
+          minAge: null,
+          maxAge: null,
+        },
+      ],
+      unitTicketLimit: null,
+      pixSource: EventPixSource.CONDOMINIUM,
+      customPix: null,
     });
   });
 

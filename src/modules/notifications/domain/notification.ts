@@ -25,6 +25,18 @@ export enum NotificationType {
   EVENT_PUBLISHED = "EVENT_PUBLISHED",
   /** A published event was cancelled. */
   EVENT_CANCELLED = "EVENT_CANCELLED",
+  /** For whoever reviews payments: a ticket receipt waits for review. */
+  EVENT_ORDER_RECEIPT = "EVENT_ORDER_RECEIPT",
+  /** Your event tickets are confirmed. */
+  EVENT_ORDER_CONFIRMED = "EVENT_ORDER_CONFIRMED",
+  /** Your ticket receipt was not accepted. */
+  EVENT_ORDER_REJECTED = "EVENT_ORDER_REJECTED",
+  /** For managers: a resident's dependent waits for approval. */
+  DEPENDENT_SUBMITTED = "DEPENDENT_SUBMITTED",
+  /** Your dependent was approved. */
+  DEPENDENT_APPROVED = "DEPENDENT_APPROVED",
+  /** Your dependent was not approved (with the reason). */
+  DEPENDENT_REJECTED = "DEPENDENT_REJECTED",
 }
 
 export const ALL_NOTIFICATION_TYPES: readonly NotificationType[] =

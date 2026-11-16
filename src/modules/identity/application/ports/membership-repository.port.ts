@@ -19,6 +19,8 @@ export type MembershipPatch = Partial<
 
 export interface MembershipRepositoryPort {
   find(userId: string, condominiumId: string): Promise<Membership | null>;
+  /** The account of a membership (null: none). */
+  userIdOf(membershipId: string): Promise<string | null>;
   create(membership: NewMembership): Promise<Membership>;
   update(id: string, patch: MembershipPatch): Promise<Membership>;
   /** Active memberships in active condominiums, by name. */

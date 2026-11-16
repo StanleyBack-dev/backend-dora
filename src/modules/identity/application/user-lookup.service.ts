@@ -47,6 +47,11 @@ export class UserLookupService {
     return membership?.active ? profileUnitId(membership.profile) : null;
   }
 
+  /** The account holding a membership (null: none). */
+  memberUserId(membershipId: string): Promise<string | null> {
+    return this.memberships.userIdOf(membershipId);
+  }
+
   /** Whether this e-mail's account already belongs to the condominium. */
   async isMemberEmail(email: string, condominiumId: string): Promise<boolean> {
     const user = await this.users.findByEmail(email);
@@ -90,6 +95,11 @@ export class UserLookupService {
   /** Contact phone of the account, digits only (null: none). */
   async phoneOf(id: string): Promise<string | null> {
     return (await this.users.findById(id))?.phone ?? null;
+  }
+
+  /** YYYY-MM-DD, or null when not informed. */
+  async birthDateOf(id: string): Promise<string | null> {
+    return (await this.users.findById(id))?.birthDate ?? null;
   }
 
   /** Whether the person already saw (or skipped) the guided tour. */

@@ -75,6 +75,11 @@ export const enrollmentErrors = {
     status: HttpStatus.UNPROCESSABLE_ENTITY,
     message: "Informe o motivo da recusa (de 3 a 500 caracteres).",
   },
+  invalidBirthDate: {
+    code: "ENROLLMENT_INVALID_BIRTH_DATE",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: "Informe a data de nascimento (de 1900 até hoje).",
+  },
   invalidTypedHouse: {
     code: "ENROLLMENT_INVALID_TYPED_HOUSE",
     status: HttpStatus.UNPROCESSABLE_ENTITY,

@@ -55,6 +55,12 @@ export class UserAccountType {
   })
   phone!: string | null;
 
+  @Field(() => String, {
+    nullable: true,
+    description: "Data de nascimento (AAAA-MM-DD).",
+  })
+  birthDate!: string | null;
+
   /** Resolved into a signed link by the `photoUrl` field. */
   avatarKey!: string | null;
 

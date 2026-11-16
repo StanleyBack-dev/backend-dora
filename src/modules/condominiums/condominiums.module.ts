@@ -18,6 +18,11 @@ import { SetCondominiumModuleUseCase } from "@/modules/condominiums/application/
 import { ModuleAccessService } from "@/modules/condominiums/application/module-access.service";
 import { CONDOMINIUM_MODULE_REPOSITORY } from "@/modules/condominiums/application/ports/condominium-module-repository.port";
 import { CondominiumModuleTypeormRepository } from "@/modules/condominiums/infrastructure/persistence/typeorm/condominium-module-typeorm.repository";
+import { CondominiumPixLookupService } from "@/modules/condominiums/application/condominium-pix-lookup.service";
+import { CONDOMINIUM_PIX_REPOSITORY } from "@/modules/condominiums/application/ports/condominium-pix-repository.port";
+import { CondominiumPixUseCase } from "@/modules/condominiums/application/use-cases/condominium-pix.use-case";
+import { CondominiumPixSqlRepository } from "@/modules/condominiums/infrastructure/persistence/condominium-pix-sql.repository";
+import { CondominiumPixResolver } from "@/modules/condominiums/presentation/graphql/condominium-pix.resolver";
 
 // The tenants (condominiums, managed by the platform) and their units
 // (managed by each condominium's managers). Who belongs to a condominium is
@@ -38,6 +43,13 @@ import { CondominiumModuleTypeormRepository } from "@/modules/condominiums/infra
     CondominiumModulesResolver,
     SetCondominiumModuleUseCase,
     ModuleAccessService,
+    CondominiumPixUseCase,
+    CondominiumPixLookupService,
+    CondominiumPixResolver,
+    {
+      provide: CONDOMINIUM_PIX_REPOSITORY,
+      useClass: CondominiumPixSqlRepository,
+    },
     {
       provide: CONDOMINIUM_MODULE_REPOSITORY,
       useClass: CondominiumModuleTypeormRepository,
@@ -45,6 +57,11 @@ import { CondominiumModuleTypeormRepository } from "@/modules/condominiums/infra
     { provide: CONDOMINIUM_REPOSITORY, useClass: CondominiumTypeormRepository },
     { provide: UNIT_REPOSITORY, useClass: UnitTypeormRepository },
   ],
-  exports: [CondominiumLookupService, UnitRegistryService, ModuleAccessService],
+  exports: [
+    CondominiumLookupService,
+    UnitRegistryService,
+    ModuleAccessService,
+    CondominiumPixLookupService,
+  ],
 })
 export class CondominiumsModule {}

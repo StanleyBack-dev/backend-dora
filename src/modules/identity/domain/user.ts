@@ -14,6 +14,8 @@ export type User = {
   lastLoginAt: Date | null;
   /** Contact phone, digits only (DDD + number; null: not informed). */
   phone: string | null;
+  /** YYYY-MM-DD (null: not informed); prices event tickets by age. */
+  birthDate: string | null;
   /** Profile photo in the object storage (null: none). */
   avatarKey: string | null;
   /**

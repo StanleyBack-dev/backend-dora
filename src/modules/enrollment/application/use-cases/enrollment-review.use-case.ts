@@ -1,5 +1,6 @@
 import { MemberKind } from "@/modules/identity/domain/member-profile";
 import { UnitRegistryService } from "@/modules/condominiums/application/unit-registry.service";
+import { localDay } from "@/shared/domain/birth-date";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { tenantOf } from "@/common/auth/tenant";
@@ -106,7 +107,12 @@ export class EnrollmentReviewUseCase {
     // The applicant's answer is the tie (resident or employee); the role
     // only sets permissions, so any role fits either.
     const employee = request.applicant === EnrollmentApplicant.EMPLOYEE;
-    const data = validateEnrollment(input);
+    // An older request has no birth date: the manager may add it or not.
+    const data = validateEnrollment(
+      { ...input, birthDate: input.birthDate ?? request.birthDate },
+      localDay(this.clock.now(), this.clock.timeZone),
+      false,
+    );
     // The manager's corrections win; what wasn't sent keeps the request's.
     const typed = input.unitNumber !== undefined;
     const place = typed
@@ -143,6 +149,7 @@ export class EnrollmentReviewUseCase {
       name: data.fullName,
       email: data.email,
       phone: data.phone,
+      birthDate: data.birthDate,
       group,
       ...(employee
         ? { kind: MemberKind.EMPLOYEE }

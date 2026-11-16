@@ -51,6 +51,7 @@ const toRequest = (row: EnrollmentRequestOrmEntity): EnrollmentRequest => ({
   fullName: row.fullName,
   email: row.email,
   phone: row.phone,
+  birthDate: row.birthDate,
   unitId: row.unitId,
   unitComplement: row.unitComplement,
   typedUnitStreet: row.typedUnitStreet,

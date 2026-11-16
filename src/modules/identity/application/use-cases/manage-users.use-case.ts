@@ -42,6 +42,7 @@ import { normalizeEmail } from "@/modules/identity/domain/username";
 import { normalizeUnitComplement } from "@/modules/condominiums/domain/unit";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
 import { normalizePhone } from "@/shared/domain/phone";
+import { normalizeBirthDate } from "@/shared/domain/birth-date";
 import { UserManagementPolicy } from "@/modules/identity/application/user-management.policy";
 
 // The login is never typed: it comes from the name ("ana.souza",
@@ -61,6 +62,8 @@ export type CreateMemberInput = {
   employee?: EmployeeProfileInput | null;
   /** Contact phone (any format; stored as digits). */
   phone?: string | null;
+  /** YYYY-MM-DD (optional). */
+  birthDate?: string | null;
 };
 
 export type UpdateMemberInput = {
@@ -77,6 +80,8 @@ export type UpdateMemberInput = {
   employee?: EmployeeProfileInput | null;
   /** undefined: unchanged; null or "": none. */
   phone?: string | null;
+  /** undefined: unchanged; null or "": none. */
+  birthDate?: string | null;
 };
 
 /**
@@ -122,6 +127,7 @@ export class ManageUsersUseCase {
     this.policy.assertCanAssign(actor, input.group);
     const profile = await this.profile(condominiumId, input, null);
     const phone = this.phone(input.phone) ?? null;
+    const birthDate = this.birthDate(input.birthDate) ?? null;
     const email = normalizeEmail(input.email);
 
     const existing = await this.users.findByEmail(email);
@@ -135,10 +141,14 @@ export class ManageUsersUseCase {
         role: input.group,
         profile,
       });
-      // The account's own data stays the person's: only a missing phone is
-      // filled in.
-      if (phone && !existing.phone) {
-        await this.users.update(existing.id, { phone });
+      // The account's own data stays the person's: only a missing phone or
+      // birth date is filled in.
+      const fill = {
+        phone: phone && !existing.phone ? phone : undefined,
+        birthDate: birthDate && !existing.birthDate ? birthDate : undefined,
+      };
+      if (fill.phone || fill.birthDate) {
+        await this.users.update(existing.id, fill);
       }
       await this.audit.stamp({
         actorId: actor.id,
@@ -160,7 +170,7 @@ export class ManageUsersUseCase {
 
     const { temporary, hash } = await this.passwords.hashTemporary();
     const created = await this.users.createWithCredential(
-      { name, email, username, group: UserGroup.USER, phone },
+      { name, email, username, group: UserGroup.USER, phone, birthDate },
       { passwordHash: hash, mustChangePassword: true },
       { condominiumId, role: input.group, profile },
     );
@@ -193,9 +203,14 @@ export class ManageUsersUseCase {
     const email =
       input.email !== undefined ? normalizeEmail(input.email) : undefined;
     const phone = this.phone(input.phone);
+    const birthDate = this.birthDate(input.birthDate);
     const accountPatch = {
       name: name !== undefined && name !== target.name ? name : undefined,
       phone: phone !== undefined && phone !== target.phone ? phone : undefined,
+      birthDate:
+        birthDate !== undefined && birthDate !== target.birthDate
+          ? birthDate
+          : undefined,
       email: email !== undefined && email !== target.email ? email : undefined,
     };
     const accountChanged = Object.values(accountPatch).some(
@@ -319,6 +334,19 @@ export class ManageUsersUseCase {
       entityId: userId,
     });
     return this.reload(tenantOf(actor), userId);
+  }
+
+  /** undefined: not sent; null: cleared; YYYY-MM-DD otherwise. */
+  private birthDate(
+    value: string | null | undefined,
+  ): string | null | undefined {
+    if (value === undefined) return undefined;
+    if (value === null || value.trim() === "") return null;
+    const date = normalizeBirthDate(value, this.today());
+    if (!date) {
+      throw AppException.from(APP_ERRORS.identity.invalidBirthDate, undefined);
+    }
+    return date;
   }
 
   /** undefined: not sent; null: cleared; digits otherwise. */

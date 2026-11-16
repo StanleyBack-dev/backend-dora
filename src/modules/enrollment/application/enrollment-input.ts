@@ -13,12 +13,15 @@ import {
   normalizeUnitNumber,
 } from "@/modules/condominiums/domain/unit";
 import { normalizeEmail } from "@/modules/identity/domain/username";
+import { normalizeBirthDate } from "@/shared/domain/birth-date";
 
 /** What the public form sends (raw, validated here). */
 export type EnrollmentInput = {
   fullName: string;
   email: string;
   phone: string;
+  /** YYYY-MM-DD (required on the public form). */
+  birthDate?: string | null;
   unitId?: string | null;
   /** Address detail inside the condominium ("casa dos fundos"). */
   unitComplement?: string | null;
@@ -87,11 +90,14 @@ export function validatePlace(
 
 /**
  * Checks and normalizes the form. Shared by the public submission and the
- * manager's corrections.
+ * manager's corrections (`today`: YYYY-MM-DD; the birth date is required
+ * on the public form, optional when a manager approves an older request).
  */
 export function validateEnrollment(
   input: EnrollmentInput,
-): Pick<EnrollmentData, "fullName" | "email" | "phone"> {
+  today: string,
+  birthDateRequired = true,
+): Pick<EnrollmentData, "fullName" | "email" | "phone" | "birthDate"> {
   const error = (key: keyof typeof APP_ERRORS.enrollment) =>
     AppException.from(APP_ERRORS.enrollment[key], undefined);
 
@@ -104,5 +110,11 @@ export function validateEnrollment(
   const phone = normalizePhone(input.phone);
   if (!phone) throw error("invalidPhone");
 
-  return { fullName, email, phone };
+  const typedBirth = input.birthDate?.trim() ?? "";
+  const birthDate = typedBirth ? normalizeBirthDate(typedBirth, today) : null;
+  if ((typedBirth && !birthDate) || (!birthDate && birthDateRequired)) {
+    throw error("invalidBirthDate");
+  }
+
+  return { fullName, email, phone, birthDate };
 }

@@ -4,6 +4,7 @@ import { APP_ERRORS } from "@/common/exceptions/app-errors.catalog";
 import { AppException } from "@/common/exceptions/app-exception";
 import { AuditTrailService } from "@/modules/audit/application/audit-trail.service";
 import { EventAccessService } from "@/modules/events/application/event-access.service";
+import { EventPaymentService } from "@/modules/events/application/event-payment.service";
 import { publishedNotices } from "@/modules/events/application/event-notices";
 import {
   EVENT_REPOSITORY,
@@ -16,12 +17,14 @@ import { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
 
 // A manager publishes a draft: every active member of the condominium is
-// told (app, e-mail per their preferences, calendar entry).
+// told (app, e-mail per their preferences, calendar entry). A ticketed
+// event needs its PIX (the condominium's or its own) first.
 @Injectable()
 export class PublishEventUseCase {
   constructor(
     @Inject(EVENT_REPOSITORY) private readonly events: EventRepositoryPort,
     private readonly access: EventAccessService,
+    private readonly payment: EventPaymentService,
     private readonly users: UserLookupService,
     private readonly outbox: OutboxDispatcher,
     private readonly audit: AuditTrailService,
@@ -38,6 +41,10 @@ export class PublishEventUseCase {
     const now = this.clock.now();
     if (!isOpen(event, now) || event.startsAt <= now) {
       throw AppException.from(APP_ERRORS.events.closed, undefined);
+    }
+    // A ticketed event goes out only with a PIX to charge with.
+    if (event.ticketed && !(await this.payment.pixFor(event))) {
+      throw AppException.from(APP_ERRORS.events.paymentSetupMissing, undefined);
     }
     const userIds = await this.users.activeMemberIds(condominiumId);
     const published = await this.events.publish(

@@ -23,6 +23,8 @@ export enum Permission {
   GUESTS_CHECKIN = "GUESTS_CHECKIN",
   /** Create, publish and cancel events (module contracted apart). */
   EVENTS_MANAGE = "EVENTS_MANAGE",
+  /** The condominium's PIX and the review of payment receipts (e.g. event tickets). */
+  PAYMENTS_MANAGE = "PAYMENTS_MANAGE",
   AUDIT_READ = "AUDIT_READ",
   /** Answer and close the app's support requests (platform). */
   SUPPORT_MANAGE = "SUPPORT_MANAGE",

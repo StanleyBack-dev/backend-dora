@@ -106,7 +106,7 @@ function setup(options: Setup = {}) {
   const useCase = new PublicEnrollmentUseCase(
     repository,
     secrets,
-    { now: () => now } as unknown as ClockPort,
+    { now: () => now, timeZone: "America/Sao_Paulo" } as unknown as ClockPort,
     limits,
     new SharpImageProcessor(),
     storage,
@@ -130,12 +130,23 @@ const form = {
   fullName: "joão DA silva",
   email: "Joao@Example.com",
   phone: "(62) 99999-1234",
+  birthDate: "1990-05-20",
   unitBlock: " Torre  2 ",
   unitNumber: "1204",
   unitComplement: " Final  4 ",
 };
 
 describe("PublicEnrollmentUseCase", () => {
+  it("requires a real birth date on the public form", async () => {
+    const { useCase } = setup();
+    for (const birthDate of [undefined, "2090-01-01", "1990-02-30"]) {
+      const token = await useCase.verify("123456", null);
+      await expect(
+        useCase.submit(token, { ...form, birthDate }, true, null),
+      ).rejects.toThrow("data de nascimento");
+    }
+  });
+
   it("turns a valid code into a form token that sends the form", async () => {
     const { useCase, created } = setup();
     const token = await useCase.verify("123456", "1.1.1.1");
@@ -145,6 +156,7 @@ describe("PublicEnrollmentUseCase", () => {
         fullName: "João da Silva",
         email: "joao@example.com",
         phone: "62999991234",
+        birthDate: "1990-05-20",
         inviteId: "invite-1",
         condominiumId: "condo-1",
         unitId: null,
@@ -270,7 +282,12 @@ describe("PublicEnrollmentUseCase", () => {
     const token = await useCase.verify("123456", null);
     await useCase.submit(
       token,
-      { fullName: form.fullName, email: form.email, phone: form.phone },
+      {
+        fullName: form.fullName,
+        email: form.email,
+        phone: form.phone,
+        birthDate: form.birthDate,
+      },
       true,
       null,
       null,
@@ -284,6 +301,7 @@ describe("PublicEnrollmentUseCase", () => {
       fullName: "Maria Souza",
       email: "maria@example.com",
       phone: "(62) 99999-1234",
+      birthDate: "1990-05-20",
       unitStreet: "  Rua das   Flores ",
       unitBlock: " 3 ",
       unitNumber: "12",

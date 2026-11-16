@@ -36,6 +36,7 @@ import {
   type ObjectStoragePort,
 } from "@/shared/application/ports/object-storage.port";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
+import { localDay } from "@/shared/domain/birth-date";
 import {
   IMAGE_PROCESSOR,
   type ImageProcessorPort,
@@ -183,10 +184,10 @@ export class PublicEnrollmentUseCase {
     await this.consume("submit", ip);
     // Only the public form: on approval the manager's spelling is kept
     // (exceptions like "McDonald" stay possible).
-    const data = validateEnrollment({
-      ...input,
-      fullName: capitalizeFullName(input.fullName),
-    });
+    const data = validateEnrollment(
+      { ...input, fullName: capitalizeFullName(input.fullName) },
+      localDay(this.clock.now(), this.clock.timeZone),
+    );
 
     // Employees don't live there: no unit nor address, whatever was sent.
     const employee = applicant === EnrollmentApplicant.EMPLOYEE;

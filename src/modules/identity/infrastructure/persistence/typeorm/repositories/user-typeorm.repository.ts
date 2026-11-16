@@ -44,6 +44,7 @@ const toUser = (row: UserOrmEntity): User => ({
   deactivatedAt: row.deactivatedAt,
   lastLoginAt: row.lastLoginAt,
   phone: row.phone,
+  birthDate: row.birthDate,
   avatarKey: row.avatarKey,
   onboardingCompletedAt: row.onboardingCompletedAt,
   lastCondominiumId: row.lastCondominiumId,
