@@ -1,6 +1,9 @@
 import { Field, ID, ObjectType } from "@nestjs/graphql";
 import { UserGroup } from "@/modules/access-control/domain/user-group";
 import "@/modules/access-control/presentation/graphql/access-control.graphql-enums";
+import { MemberKind } from "@/modules/identity/domain/member-profile";
+import { EmployeeProfileType } from "@/modules/identity/presentation/graphql/dto/outputs/employee-profile.output";
+import "@/modules/identity/presentation/graphql/identity.graphql-enums";
 
 @ObjectType("UserAccount", { description: "Usuário visto pela administração." })
 export class UserAccountType {
@@ -22,6 +25,9 @@ export class UserAccountType {
   @Field({ description: "Acesso ativo neste condomínio." })
   active!: boolean;
 
+  @Field(() => MemberKind, { description: "Morador ou funcionário." })
+  kind!: MemberKind;
+
   @Field(() => ID, { nullable: true })
   unitId!: string | null;
 
@@ -36,6 +42,12 @@ export class UserAccountType {
     description: 'Complemento do endereço no condomínio ("casa dos fundos").',
   })
   unitComplement!: string | null;
+
+  @Field(() => EmployeeProfileType, {
+    nullable: true,
+    description: "Ficha do funcionário (só funcionários).",
+  })
+  employee!: EmployeeProfileType | null;
 
   @Field(() => String, {
     nullable: true,

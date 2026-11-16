@@ -405,6 +405,16 @@ type Dashboard {
   failedNotifications: Int
 }
 
+"""Ficha do funcionário."""
+type EmployeeProfile {
+  jobTitle: String
+
+  """Data de admissão (AAAA-MM-DD)."""
+  hiredOn: String
+  workShift: String
+  contractor: String
+}
+
 """Usuário visto pela administração."""
 type UserAccount {
   id: ID!
@@ -417,6 +427,9 @@ type UserAccount {
 
   """Acesso ativo neste condomínio."""
   active: Boolean!
+
+  """Morador ou funcionário."""
+  kind: MemberKind!
   unitId: ID
 
   """Unidade: "Bloco A · 101"."""
@@ -424,6 +437,9 @@ type UserAccount {
 
   """Complemento do endereço no condomínio ("casa dos fundos")."""
   unitComplement: String
+
+  """Ficha do funcionário (só funcionários)."""
+  employee: EmployeeProfile
 
   """Telefone de contato (só dígitos: DDD + número)."""
   phone: String
@@ -447,6 +463,12 @@ type UserAccount {
 
   """Bloqueado agora por tentativas inválidas de login."""
   locked: Boolean!
+}
+
+"""Vínculo com o condomínio: morador ou funcionário."""
+enum MemberKind {
+  RESIDENT
+  EMPLOYEE
 }
 
 """Senha temporária, exibida uma única vez para quem a gerou."""
@@ -1272,6 +1294,9 @@ input UserFilterInput {
   """Qualquer um destes papéis (ex.: a equipe, ADMIN e CONCIERGE)."""
   groups: [UserGroup!]
   active: Boolean
+
+  """Só moradores ou só funcionários."""
+  kind: MemberKind
   unitId: ID
 }
 
@@ -1686,31 +1711,56 @@ input CreateUserInput {
   name: String!
   email: String!
 
-  """Login: 3 a 32 caracteres (a-z, 0-9, ., -, _). Vazio: gerado do nome."""
-  username: String
-
-  """USER (morador) ou ADMIN (gestor)."""
+  """Permissões: USER, CONCIERGE (portaria) ou ADMIN (gestor)."""
   group: UserGroup!
+
+  """Morador (padrão) ou funcionário."""
+  kind: MemberKind
+
+  """Só para moradores."""
   unitId: ID
 
   """Complemento do endereço no condomínio ("casa dos fundos")."""
   unitComplement: String
 
+  """Só para funcionários."""
+  employee: EmployeeProfileInput
+
   """Telefone de contato."""
   phone: String
+}
+
+"""Ficha do funcionário (todos os campos opcionais)."""
+input EmployeeProfileInput {
+  """Cargo."""
+  jobTitle: String
+
+  """Data de admissão (AAAA-MM-DD)."""
+  hiredOn: String
+
+  """Turno ou jornada."""
+  workShift: String
+
+  """Empresa terceirizada, quando houver."""
+  contractor: String
 }
 
 input UpdateUserInput {
   name: String
   email: String
-  username: String
   group: UserGroup
+
+  """Ausente: não muda."""
+  kind: MemberKind
 
   """Ausente: não muda. null: sem unidade."""
   unitId: ID
 
   """Complemento do endereço no condomínio ("casa dos fundos")."""
   unitComplement: String
+
+  """Só para funcionários."""
+  employee: EmployeeProfileInput
 
   """Telefone de contato."""
   phone: String

@@ -18,6 +18,7 @@ export function toAccountType(member: MemberAccount): UserAccountType {
         ? UserGroup.ADMIN_MASTER
         : member.role,
     active: member.membershipActive && member.active,
+    kind: member.kind,
     unitId: member.unitId,
     unitLabel:
       member.unitNumber !== null
@@ -28,6 +29,14 @@ export function toAccountType(member: MemberAccount): UserAccountType {
           })
         : null,
     unitComplement: member.unitComplement,
+    employee: member.employee
+      ? {
+          jobTitle: member.employee.jobTitle,
+          hiredOn: member.employee.hiredOn,
+          workShift: member.employee.workShift,
+          contractor: member.employee.contractor,
+        }
+      : null,
     phone: member.phone,
     avatarKey: member.avatarKey,
     sharedAccount: member.sharedAccount,

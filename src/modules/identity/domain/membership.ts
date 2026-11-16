@@ -1,18 +1,19 @@
 import { UserGroup } from "@/modules/access-control/domain/user-group";
+import type { MemberProfile } from "@/modules/identity/domain/member-profile";
 
 /**
- * A person's place in a condominium: their role there (resident or manager)
- * and their unit. One account can belong to many condominiums.
+ * A person's place in a condominium: their role there (permissions) and
+ * their tie to it (a resident with a unit, or an employee with a staff
+ * record). One account can belong to many condominiums.
  */
 export type Membership = {
   id: string;
   userId: string;
   condominiumId: string;
-  /** USER (resident) or ADMIN (manager). */
+  /** Permissions: USER, CONCIERGE or ADMIN. */
   role: UserGroup;
-  unitId: string | null;
-  /** Address detail inside the condominium ("casa dos fundos"). */
-  unitComplement: string | null;
+  /** Resident (unit) or employee (staff record). */
+  profile: MemberProfile;
   active: boolean;
   lastSelectedAt: Date | null;
   createdAt: Date;

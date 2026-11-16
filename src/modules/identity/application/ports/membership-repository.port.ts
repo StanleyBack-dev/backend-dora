@@ -1,4 +1,5 @@
 import type { UserGroup } from "@/modules/access-control/domain/user-group";
+import type { MemberProfile } from "@/modules/identity/domain/member-profile";
 import type {
   MemberCondominium,
   Membership,
@@ -8,12 +9,12 @@ export type NewMembership = {
   userId: string;
   condominiumId: string;
   role: UserGroup;
-  unitId: string | null;
-  unitComplement?: string | null;
+  profile: MemberProfile;
 };
 
+/** `profile` replaces the record, also when the kind changes. */
 export type MembershipPatch = Partial<
-  Pick<Membership, "role" | "unitId" | "unitComplement" | "active">
+  Pick<Membership, "role" | "profile" | "active">
 >;
 
 export interface MembershipRepositoryPort {

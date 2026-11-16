@@ -1,3 +1,4 @@
+import { MemberKind } from "@/modules/identity/domain/member-profile";
 import { UnitRegistryService } from "@/modules/condominiums/application/unit-registry.service";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
@@ -102,17 +103,9 @@ export class EnrollmentReviewUseCase {
     group: UserGroup,
   ): Promise<EnrollmentApproval> {
     const request = await this.pending(actor, id);
-    // Employees join the team (Portaria or Administrador), never the
-    // residents: the Moradores page lists residents only.
-    if (
-      request.applicant === EnrollmentApplicant.EMPLOYEE &&
-      group === UserGroup.USER
-    ) {
-      throw AppException.from(
-        APP_ERRORS.enrollment.employeeAsResident,
-        undefined,
-      );
-    }
+    // The applicant's answer is the tie (resident or employee); the role
+    // only sets permissions, so any role fits either.
+    const employee = request.applicant === EnrollmentApplicant.EMPLOYEE;
     const data = validateEnrollment(input);
     // The manager's corrections win; what wasn't sent keeps the request's.
     const typed = input.unitNumber !== undefined;
@@ -151,8 +144,13 @@ export class EnrollmentReviewUseCase {
       email: data.email,
       phone: data.phone,
       group,
-      unitId,
-      unitComplement: place.unitComplement,
+      ...(employee
+        ? { kind: MemberKind.EMPLOYEE }
+        : {
+            kind: MemberKind.RESIDENT,
+            unitId,
+            unitComplement: place.unitComplement,
+          }),
     });
     // The photo sent with the sign-up becomes the account's photo, unless
     // an existing account already has one.

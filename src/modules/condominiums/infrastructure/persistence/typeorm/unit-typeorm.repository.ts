@@ -72,13 +72,15 @@ export class UnitTypeormRepository implements UnitRepositoryPort {
     await this.repository.delete({ id });
   }
 
-  // Residents come from tb_memberships (identity), read-only.
+  // Residents come from tb_residents / tb_memberships (identity), read-only.
   private query(where: string, params: unknown[]): Promise<UnitView[]> {
     return this.dataSource.query<UnitView[]>(
       `SELECT un.idtb_units AS id, un.idtb_condominiums AS "condominiumId",
               un.street, un.block, un.number,
-              (SELECT count(*)::int FROM tb_memberships m
-                WHERE m.idtb_units = un.idtb_units AND m.active) AS residents
+              (SELECT count(*)::int FROM tb_residents r
+                 JOIN tb_memberships m
+                   ON m.idtb_memberships = r.idtb_memberships
+                WHERE r.idtb_units = un.idtb_units AND m.active) AS residents
          FROM tb_units un
         WHERE ${where}
         ORDER BY ${UNIT_ORDER}`,

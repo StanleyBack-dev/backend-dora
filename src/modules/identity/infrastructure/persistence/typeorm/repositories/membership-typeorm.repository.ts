@@ -1,25 +1,38 @@
 import { Injectable } from "@nestjs/common";
 import { InjectDataSource, InjectRepository } from "@nestjs/typeorm";
-import { Not, type DataSource, type Repository } from "typeorm";
+import {
+  Not,
+  type DataSource,
+  type EntityManager,
+  type Repository,
+} from "typeorm";
 import type { UserGroup } from "@/modules/access-control/domain/user-group";
 import type {
   MembershipPatch,
   MembershipRepositoryPort,
   NewMembership,
 } from "@/modules/identity/application/ports/membership-repository.port";
+import type { MemberProfile } from "@/modules/identity/domain/member-profile";
 import type {
   MemberCondominium,
   Membership,
 } from "@/modules/identity/domain/membership";
 import { MembershipOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/membership.orm-entity";
+import {
+  insertMembership,
+  readProfile,
+  writeProfile,
+} from "@/modules/identity/infrastructure/persistence/typeorm/repositories/member-profile.store";
 
-const toMembership = (row: MembershipOrmEntity): Membership => ({
+const toMembership = (
+  row: MembershipOrmEntity,
+  profile: MemberProfile,
+): Membership => ({
   id: row.id,
   userId: row.userId,
   condominiumId: row.condominiumId,
   role: row.role,
-  unitId: row.unitId,
-  unitComplement: row.unitComplement,
+  profile,
   active: row.active,
   lastSelectedAt: row.lastSelectedAt,
   createdAt: row.createdAt,
@@ -42,22 +55,42 @@ export class MembershipTypeormRepository implements MembershipRepositoryPort {
     const row = await this.repository.findOne({
       where: { userId, condominiumId },
     });
-    return row ? toMembership(row) : null;
+    return row ? this.withProfile(this.dataSource.manager, row) : null;
   }
 
-  async create(membership: NewMembership): Promise<Membership> {
-    const row = await this.repository.save(this.repository.create(membership));
-    return toMembership(row);
-  }
-
-  async update(id: string, patch: MembershipPatch): Promise<Membership> {
-    const changes = Object.fromEntries(
-      Object.entries(patch).filter(([, value]) => value !== undefined),
+  create(membership: NewMembership): Promise<Membership> {
+    return this.dataSource.transaction(async (manager) =>
+      this.withProfile(manager, await insertMembership(manager, membership)),
     );
-    if (Object.keys(changes).length > 0) {
-      await this.repository.update({ id }, changes);
-    }
-    return toMembership(await this.repository.findOneOrFail({ where: { id } }));
+  }
+
+  update(id: string, patch: MembershipPatch): Promise<Membership> {
+    return this.dataSource.transaction(async (manager) => {
+      const repository = manager.getRepository(MembershipOrmEntity);
+      const current = await repository.findOneOrFail({ where: { id } });
+      const changes = Object.fromEntries(
+        Object.entries({ role: patch.role, active: patch.active }).filter(
+          ([, value]) => value !== undefined,
+        ),
+      );
+      if (Object.keys(changes).length > 0) {
+        await repository.update({ id }, changes);
+      }
+      if (patch.profile) {
+        await writeProfile(manager, id, patch.profile, current.kind);
+      }
+      return this.withProfile(
+        manager,
+        await repository.findOneOrFail({ where: { id } }),
+      );
+    });
+  }
+
+  private async withProfile(
+    manager: EntityManager,
+    row: MembershipOrmEntity,
+  ): Promise<Membership> {
+    return toMembership(row, await readProfile(manager, row.id, row.kind));
   }
 
   listOpenable(userId: string): Promise<MemberCondominium[]> {

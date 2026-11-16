@@ -38,6 +38,8 @@ import { ScryptPasswordHasher } from "@/modules/identity/infrastructure/crypto/s
 import { MailIdentityNotifier } from "@/modules/identity/infrastructure/notifications/mail-identity.notifier";
 import { CredentialOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/credential.orm-entity";
 import { MembershipOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/membership.orm-entity";
+import { ResidentOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/resident.orm-entity";
+import { EmployeeOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/employee.orm-entity";
 import { SessionOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/session.orm-entity";
 import { UserOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/user.orm-entity";
 import { VerificationCodeOrmEntity } from "@/modules/identity/infrastructure/persistence/typeorm/entities/verification-code.orm-entity";
@@ -68,6 +70,8 @@ import { MailModule } from "@/modules/mails/mail.module";
       SessionOrmEntity,
       VerificationCodeOrmEntity,
       MembershipOrmEntity,
+      ResidentOrmEntity,
+      EmployeeOrmEntity,
     ]),
     AccessControlModule,
     AuditModule,

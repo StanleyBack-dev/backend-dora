@@ -7,9 +7,14 @@ import {
   IsUUID,
   Length,
   MaxLength,
+  ValidateNested,
 } from "class-validator";
 import { UserGroup } from "@/modules/access-control/domain/user-group";
 import "@/modules/access-control/presentation/graphql/access-control.graphql-enums";
+import { Type } from "class-transformer";
+import { MemberKind } from "@/modules/identity/domain/member-profile";
+import { EmployeeProfileInput } from "@/modules/identity/presentation/graphql/dto/inputs/employee-profile.input";
+import "@/modules/identity/presentation/graphql/identity.graphql-enums";
 
 @InputType()
 export class CreateUserInput {
@@ -23,21 +28,21 @@ export class CreateUserInput {
   @MaxLength(254)
   email!: string;
 
-  @Field(() => String, {
-    nullable: true,
-    description:
-      "Login: 3 a 32 caracteres (a-z, 0-9, ., -, _). Vazio: gerado do nome.",
+  @Field(() => UserGroup, {
+    description: "Permissões: USER, CONCIERGE (portaria) ou ADMIN (gestor).",
   })
-  @IsOptional()
-  @IsString()
-  @Length(3, 32)
-  username?: string | null;
-
-  @Field(() => UserGroup, { description: "USER (morador) ou ADMIN (gestor)." })
   @IsEnum(UserGroup)
   group!: UserGroup;
 
-  @Field(() => ID, { nullable: true })
+  @Field(() => MemberKind, {
+    nullable: true,
+    description: "Morador (padrão) ou funcionário.",
+  })
+  @IsOptional()
+  @IsEnum(MemberKind)
+  kind?: MemberKind;
+
+  @Field(() => ID, { nullable: true, description: "Só para moradores." })
   @IsOptional()
   @IsUUID()
   unitId?: string | null;
@@ -50,6 +55,15 @@ export class CreateUserInput {
   @IsString()
   @MaxLength(160)
   unitComplement?: string | null;
+
+  @Field(() => EmployeeProfileInput, {
+    nullable: true,
+    description: "Só para funcionários.",
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => EmployeeProfileInput)
+  employee?: EmployeeProfileInput | null;
 
   @Field(() => String, { nullable: true, description: "Telefone de contato." })
   @IsOptional()
