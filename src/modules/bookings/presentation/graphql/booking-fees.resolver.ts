@@ -7,9 +7,12 @@ import { ListBookingFeesUseCase } from "@/modules/bookings/application/use-cases
 import { SetBookingFeesBilledUseCase } from "@/modules/bookings/application/use-cases/set-booking-fees-billed.use-case";
 import { toBookingType } from "@/modules/bookings/presentation/graphql/booking.mapper";
 import { SetBookingFeesBilledInput } from "@/modules/bookings/presentation/graphql/dto/inputs/set-booking-fees-billed.input";
+import { AppModule } from "@/modules/condominiums/domain/app-module";
+import { RequireModule } from "@/modules/condominiums/presentation/decorators/require-module.decorator";
 import { BookingFeesType } from "@/modules/bookings/presentation/graphql/dto/outputs/booking-fees.output";
 
 // Usage fees for the condominium's billing (managers).
+@RequireModule(AppModule.BOOKINGS)
 @Resolver()
 export class BookingFeesResolver {
   constructor(

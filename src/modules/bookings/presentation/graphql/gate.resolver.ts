@@ -8,6 +8,8 @@ import { CheckInGuestUseCase } from "@/modules/bookings/application/use-cases/ch
 import { ListGateGuestsUseCase } from "@/modules/bookings/application/use-cases/list-gate-guests.use-case";
 import { CheckInGuestInput } from "@/modules/bookings/presentation/graphql/dto/inputs/check-in-guest.input";
 import { GateGuestType } from "@/modules/bookings/presentation/graphql/dto/outputs/gate-guest.output";
+import { AppModule } from "@/modules/condominiums/domain/app-module";
+import { RequireModule } from "@/modules/condominiums/presentation/decorators/require-module.decorator";
 import { toGateGuestType } from "@/modules/bookings/presentation/graphql/guest.mapper";
 
 // The gate (Portaria): the day's guests and their entry.
@@ -36,6 +38,7 @@ export class GateResolver {
     );
   }
 
+  @RequireModule(AppModule.BOOKINGS)
   @RequirePermissions(Permission.GUESTS_CHECKIN)
   @Mutation(() => GateGuestType, {
     description: "Libera a entrada de um convidado (pelo código ou da lista).",
@@ -47,6 +50,7 @@ export class GateResolver {
     return toGateGuestType(await this.checkingIn.execute(actor, input));
   }
 
+  @RequireModule(AppModule.BOOKINGS)
   @RequirePermissions(Permission.GUESTS_CHECKIN)
   @Mutation(() => GateGuestType, {
     description: "Desfaz a entrada marcada por engano.",

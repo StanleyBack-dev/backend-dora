@@ -12,7 +12,9 @@ export function toOrderType(order: EventOrder): EventOrderType {
     code: order.code,
     status: order.status,
     totalCents: order.totalCents,
+    buyerId: order.userId,
     buyerName: order.buyerName,
+    unitId: order.unitId,
     unitLabel: order.unitLabel,
     // The ticket codes only once the order is confirmed (the QR is valid).
     attendees: order.attendees.map((person) => ({

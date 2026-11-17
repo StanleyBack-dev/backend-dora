@@ -104,7 +104,7 @@ export function approvalNeededNotice(
     type: NotificationType.BOOKING_PENDING,
     title: `Reserva para aprovar: ${booking.spaceName}`,
     body: `${bookerName} · ${period}`,
-    link: "/reservas/gestao",
+    link: "/gestao/reservas",
     email: {
       subject: `Reserva para aprovar: ${booking.spaceName}`,
       intro: "Uma reserva aguarda a sua aprovação.",
@@ -288,7 +288,7 @@ export function seriesApprovalNotice(
     type: NotificationType.BOOKING_PENDING,
     title: `Reserva recorrente para aprovar: ${series.spaceName}`,
     body: `${bookerName} · ${series.count} semanas a partir de ${formatDateTime(series.first, timeZone)}`,
-    link: "/reservas/gestao",
+    link: "/gestao/reservas",
     email: {
       subject: `Reserva recorrente para aprovar: ${series.spaceName}`,
       intro:

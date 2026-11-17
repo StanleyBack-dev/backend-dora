@@ -13,6 +13,7 @@ import { CreateSpaceBlockUseCase } from "@/modules/bookings/application/use-case
 import { DeleteSpaceBlockUseCase } from "@/modules/bookings/application/use-cases/delete-space-block.use-case";
 import { GetSpaceAvailabilityUseCase } from "@/modules/bookings/application/use-cases/get-space-availability.use-case";
 import { ListBookingsUseCase } from "@/modules/bookings/application/use-cases/list-bookings.use-case";
+import { ListCondominiumBlocksUseCase } from "@/modules/bookings/application/use-cases/list-condominium-blocks.use-case";
 import { ListSpaceBlocksUseCase } from "@/modules/bookings/application/use-cases/list-space-blocks.use-case";
 import { RejectBookingUseCase } from "@/modules/bookings/application/use-cases/reject-booking.use-case";
 import { BookingOrmEntity } from "@/modules/bookings/infrastructure/persistence/typeorm/booking.orm-entity";
@@ -50,6 +51,7 @@ import { GateResolver } from "@/modules/bookings/presentation/graphql/gate.resol
 import { GuestInviteResolver } from "@/modules/bookings/presentation/graphql/guest-invite.resolver";
 import { IdentityModule } from "@/modules/identity/identity.module";
 import { OutboxModule } from "@/modules/outbox/outbox.module";
+import { CondominiumsModule } from "@/modules/condominiums/condominiums.module";
 import { SpacesModule } from "@/modules/spaces/spaces.module";
 
 // Bookings of spaces under each space's rules, approvals, cancellations and
@@ -61,6 +63,7 @@ import { SpacesModule } from "@/modules/spaces/spaces.module";
     TypeOrmModule.forFeature([BookingOrmEntity, SpaceBlockOrmEntity]),
     AccessControlModule,
     AuditModule,
+    CondominiumsModule,
     IdentityModule,
     OutboxModule,
     SpacesModule,
@@ -99,6 +102,7 @@ import { SpacesModule } from "@/modules/spaces/spaces.module";
     CreateSpaceBlockUseCase,
     DeleteSpaceBlockUseCase,
     ListSpaceBlocksUseCase,
+    ListCondominiumBlocksUseCase,
     BookingsResolver,
     SpaceAvailabilityResolver,
     SpaceBlocksResolver,

@@ -1,3 +1,4 @@
+import type { PageRequest, Paginated } from "@/shared/application/pagination";
 import type {
   Attendee,
   EventOrderStatus,
@@ -72,6 +73,30 @@ export type OrderLimits = {
 export type OrderRefusal =
   "full" | "outside-full" | "unit-limit" | { held: string[] };
 
+/** Filters of an event's orders (null: any). */
+export type EventOrderFilter = {
+  statuses: EventOrderStatus[] | null;
+  /** Who ordered (their user id). */
+  buyerId: string | null;
+  unitId: string | null;
+  /** The order's code. */
+  code: string | null;
+};
+
+/**
+ * An event's orders at a glance, whatever the filters: how many in each
+ * status, what was received and who is confirmed, and what the filters
+ * offer (who ordered, the units, the codes).
+ */
+export type EventOrderOverview = {
+  byStatus: { status: EventOrderStatus; count: number }[];
+  receivedCents: number;
+  confirmedPeople: number;
+  buyers: { id: string; name: string }[];
+  units: { id: string; label: string }[];
+  codes: { code: string; buyerName: string | null }[];
+};
+
 export interface EventOrderRepositoryPort {
   /**
    * Stores the order if it still fits (capacity, outside guests, unit
@@ -88,10 +113,24 @@ export interface EventOrderRepositoryPort {
   find(condominiumId: string, id: string): Promise<EventOrder | null>;
   /** The person's orders for an event, newest first. */
   listMine(userId: string, eventId: string): Promise<EventOrder[]>;
-  /** An event's orders (optionally one status), oldest first. */
+  /**
+   * An event's orders that match the filter: those waiting for review
+   * first, then oldest first.
+   */
   listForEvent(
     eventId: string,
-    status: EventOrderStatus | null,
+    filter: EventOrderFilter,
+    page: PageRequest,
+  ): Promise<Paginated<EventOrder>>;
+  /** The numbers and the filter options of one event's orders. */
+  overviewOfEvent(eventId: string): Promise<EventOrderOverview>;
+  /**
+   * The orders of every event of a condominium (or of one), oldest first:
+   * the review queue.
+   */
+  listForCondominium(
+    condominiumId: string,
+    filter: { status: EventOrderStatus | null; eventId: string | null },
   ): Promise<EventOrder[]>;
   /**
    * Attaches the receipt, only while the order is pending and within its

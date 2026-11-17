@@ -375,7 +375,7 @@ describe("PublicEnrollmentUseCase", () => {
         payload: expect.objectContaining({
           userId: "manager-1",
           type: "ENROLLMENT_SUBMITTED",
-          link: "/admin/cadastros",
+          link: "/gestao/cadastros",
           email: expect.objectContaining({ ctaLabel: "Analisar cadastro" }),
         }),
       }),

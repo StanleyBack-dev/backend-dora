@@ -36,6 +36,12 @@ export class SessionUserType {
   })
   permissions!: Permission[];
 
+  @Field({
+    description:
+      "Tem vínculo (morador ou funcionário) com o condomínio da sessão. A administração da plataforma entra em qualquer um sem ter.",
+  })
+  member!: boolean;
+
   /** Resolved by the `condominium` field (not exposed as such). */
   condominiumId!: string | null;
 }

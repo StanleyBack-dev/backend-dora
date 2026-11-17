@@ -62,6 +62,9 @@ export class GateEventTicketType {
   @Field(() => String, { nullable: true, description: "Quem pediu." })
   buyerName!: string | null;
 
+  @Field(() => ID, { nullable: true, description: "A unidade de quem pediu." })
+  unitId!: string | null;
+
   @Field(() => String, { nullable: true })
   unitLabel!: string | null;
 }

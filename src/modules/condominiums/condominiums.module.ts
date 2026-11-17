@@ -16,6 +16,7 @@ import { UnitsResolver } from "@/modules/condominiums/presentation/graphql/units
 import { CondominiumModulesResolver } from "@/modules/condominiums/presentation/graphql/condominium-modules.resolver";
 import { SetCondominiumModuleUseCase } from "@/modules/condominiums/application/use-cases/set-condominium-module.use-case";
 import { ModuleAccessService } from "@/modules/condominiums/application/module-access.service";
+import { ModuleGuard } from "@/modules/condominiums/presentation/guards/module.guard";
 import { CONDOMINIUM_MODULE_REPOSITORY } from "@/modules/condominiums/application/ports/condominium-module-repository.port";
 import { CondominiumModuleTypeormRepository } from "@/modules/condominiums/infrastructure/persistence/typeorm/condominium-module-typeorm.repository";
 import { CondominiumPixLookupService } from "@/modules/condominiums/application/condominium-pix-lookup.service";
@@ -43,6 +44,7 @@ import { CondominiumPixResolver } from "@/modules/condominiums/presentation/grap
     CondominiumModulesResolver,
     SetCondominiumModuleUseCase,
     ModuleAccessService,
+    ModuleGuard,
     CondominiumPixUseCase,
     CondominiumPixLookupService,
     CondominiumPixResolver,
@@ -61,6 +63,7 @@ import { CondominiumPixResolver } from "@/modules/condominiums/presentation/grap
     CondominiumLookupService,
     UnitRegistryService,
     ModuleAccessService,
+    ModuleGuard,
     CondominiumPixLookupService,
   ],
 })

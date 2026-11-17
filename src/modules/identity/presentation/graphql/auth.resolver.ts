@@ -23,7 +23,7 @@ import { SessionUserType } from "@/modules/identity/presentation/graphql/dto/out
 import { UpdateMyProfileInput } from "@/modules/identity/presentation/graphql/dto/inputs/update-my-profile.input";
 import { VerifyRecoveryCodeInput } from "@/modules/identity/presentation/graphql/dto/inputs/verify-recovery-code.input";
 
-export type SessionSubject = Omit<SessionUserType, "permissions"> & {
+export type SessionSubject = Omit<SessionUserType, "permissions" | "member"> & {
   membershipId: string | null;
 };
 
@@ -159,6 +159,7 @@ export class AuthResolver {
       platformAdmin: subject.platformAdmin,
       mustChangePassword: subject.mustChangePassword,
       permissions: matrix.effective,
+      member: subject.membershipId !== null,
       condominiumId: subject.condominiumId,
     };
   }
