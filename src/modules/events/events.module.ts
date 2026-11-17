@@ -35,7 +35,9 @@ import { DependentsModule } from "@/modules/dependents/dependents.module";
 import { EVENT_TICKET_REPOSITORY } from "@/modules/events/application/ports/event-ticket-repository.port";
 import { CheckInEventTicketUseCase } from "@/modules/events/application/use-cases/check-in-event-ticket.use-case";
 import { GetEventTicketPassUseCase } from "@/modules/events/application/use-cases/get-event-ticket-pass.use-case";
+import { ListEventTicketsUseCase } from "@/modules/events/application/use-cases/list-event-tickets.use-case";
 import { ListGateEventTicketsUseCase } from "@/modules/events/application/use-cases/list-gate-event-tickets.use-case";
+import { ListOrdersQueueUseCase } from "@/modules/events/application/use-cases/list-orders-queue.use-case";
 import { EventTicketSqlRepository } from "@/modules/events/infrastructure/persistence/event-ticket-sql.repository";
 import { EventGateResolver } from "@/modules/events/presentation/graphql/event-gate.resolver";
 import { EventTicketPassResolver } from "@/modules/events/presentation/graphql/event-ticket-pass.resolver";
@@ -85,6 +87,8 @@ import { SpacesModule } from "@/modules/spaces/spaces.module";
     SubmitAttendeeProofUseCase,
     AttendeeFieldsResolver,
     ListGateEventTicketsUseCase,
+    ListEventTicketsUseCase,
+    ListOrdersQueueUseCase,
     CheckInEventTicketUseCase,
     GetEventTicketPassUseCase,
     EventGateResolver,

@@ -75,6 +75,21 @@ export class EventTicketSqlRepository implements EventTicketRepositoryPort {
     return rows.map(toTicket);
   }
 
+  async forEvent(
+    condominiumId: string,
+    eventId: string,
+  ): Promise<EventTicket[]> {
+    const rows = await this.dataSource.query<TicketRow[]>(
+      `${SELECT}
+        WHERE o.idtb_condominiums = $1 AND o.idtb_events = $2
+          AND o.status = '${EventOrderStatus.CONFIRMED}'
+        ORDER BY o.created_at, a.position
+        LIMIT 5000`,
+      [condominiumId, eventId],
+    );
+    return rows.map(toTicket);
+  }
+
   async find(
     condominiumId: string,
     attendeeId: string,

@@ -1704,6 +1704,9 @@ type Query {
     date: String
   ): [GateEventTicket!]!
 
+  """Os ingressos de um evento (pedidos confirmados) e quem já entrou."""
+  eventTickets(eventId: ID!): [GateEventTicket!]!
+
   """Os meus pedidos para um evento (mais recentes primeiro)."""
   myEventOrders(eventId: ID!): [EventOrder!]!
 
@@ -1712,6 +1715,11 @@ type Query {
 
   """Pedidos de um evento (opcionalmente de uma situação)."""
   eventOrders(eventId: ID!, status: EventOrderStatus): [EventOrder!]!
+
+  """
+  Pedidos de todos os eventos do condomínio (fila de conferência), os mais antigos primeiro.
+  """
+  eventOrdersQueue(status: EventOrderStatus, eventId: ID): [EventOrder!]!
 
   """
   Ingresso pelo código (null: não existe ou o pedido não está confirmado).

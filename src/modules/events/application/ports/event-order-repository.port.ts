@@ -94,6 +94,14 @@ export interface EventOrderRepositoryPort {
     status: EventOrderStatus | null,
   ): Promise<EventOrder[]>;
   /**
+   * The orders of every event of a condominium (or of one), oldest first:
+   * the review queue.
+   */
+  listForCondominium(
+    condominiumId: string,
+    filter: { status: EventOrderStatus | null; eventId: string | null },
+  ): Promise<EventOrder[]>;
+  /**
    * Attaches the receipt, only while the order is pending and within its
    * time (null otherwise). See `advance`.
    */
