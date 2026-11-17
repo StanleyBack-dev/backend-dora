@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.9.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.8.0...v0.9.0) (2026-11-17)
+
+
+### Features
+
+* app areas, contracted modules and paged event management ([08afc65](https://github.com/StanleyBack-dev/backend-dora/commit/08afc65e6b7904634adb73d63828a477190af843))
+* bookings as a contracted module (app areas phase 1) ([3f18bb2](https://github.com/StanleyBack-dev/backend-dora/commit/3f18bb25fe47e2e4188c8294e42653e7aeb03484))
+* **bookings:** space blocks no longer require the bookings module ([314bfd4](https://github.com/StanleyBack-dev/backend-dora/commit/314bfd428c7ed4e77a0535c99144415992600b1b))
+* events module queries for the management (app areas phase 3) ([9fd2a10](https://github.com/StanleyBack-dev/backend-dora/commit/9fd2a10c93ded7585705aefffd2a344253537692))
+* **events:** filter an event's tickets and orders ([71758ad](https://github.com/StanleyBack-dev/backend-dora/commit/71758adc7e52506c330a2209169f45af11d8b42a))
+* **events:** paged tickets and orders with pick-list filters ([95a21f1](https://github.com/StanleyBack-dev/backend-dora/commit/95a21f13c44f9112fea71b1276e5076392ce86df))
+* every space's blocks for the management (app areas phase 4) ([4f89ff9](https://github.com/StanleyBack-dev/backend-dora/commit/4f89ff9dcb0388b39c49c44e82471e839eb6da80))
+* platform directory (app areas phase 2) ([08808e0](https://github.com/StanleyBack-dev/backend-dora/commit/08808e01f0390ddb38a63a307af751358e9791b3))
+* session tells whether the person is a member here (app areas phase 5) ([4aa3711](https://github.com/StanleyBack-dev/backend-dora/commit/4aa3711d8ddb27e74d94726959fe2874b2a9aef2))
+
+
+### Bug Fixes
+
+* **system-logs:** alerts link to /administracao/logs ([76b15e4](https://github.com/StanleyBack-dev/backend-dora/commit/76b15e4d63c6ea7fa81a1948c05f4c69ba5b835e))
+
 ## [0.8.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.7.0...v0.8.0) (2026-11-16)
 
 
