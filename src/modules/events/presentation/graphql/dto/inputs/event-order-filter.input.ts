@@ -1,10 +1,11 @@
-import { Field, InputType } from "@nestjs/graphql";
+import { Field, ID, InputType } from "@nestjs/graphql";
 import {
   ArrayMaxSize,
   IsArray,
   IsEnum,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
 } from "class-validator";
 import { EventOrderStatus } from "@/modules/events/domain/event-order";
@@ -22,12 +23,19 @@ export class EventOrderFilterInput {
   @IsEnum(EventOrderStatus, { each: true })
   statuses?: EventOrderStatus[];
 
-  @Field({
-    nullable: true,
-    description: "Quem pediu, código do pedido, unidade ou nome de uma pessoa.",
-  })
+  @Field(() => ID, { nullable: true, description: "Quem fez o pedido." })
+  @IsOptional()
+  @IsUUID()
+  buyerId?: string;
+
+  @Field(() => ID, { nullable: true, description: "A unidade do pedido." })
+  @IsOptional()
+  @IsUUID()
+  unitId?: string;
+
+  @Field({ nullable: true, description: "O código do pedido." })
   @IsOptional()
   @IsString()
-  @MaxLength(100)
-  search?: string;
+  @MaxLength(20)
+  code?: string;
 }

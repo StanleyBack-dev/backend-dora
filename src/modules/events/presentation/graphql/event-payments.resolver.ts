@@ -11,22 +11,30 @@ import { EventOrderStatus } from "@/modules/events/domain/event-order";
 import { EventOrderType } from "@/modules/events/presentation/graphql/dto/outputs/event-order.output";
 import { toOrderType } from "@/modules/events/presentation/graphql/event-order.mapper";
 import "@/modules/events/presentation/graphql/events.graphql-enums";
+import { PageInput } from "@/common/graphql/pagination.graphql";
+import { GetEventOrderOverviewUseCase } from "@/modules/events/application/use-cases/get-event-order-overview.use-case";
+import { EventOrderOverviewType } from "@/modules/events/presentation/graphql/dto/outputs/event-order-overview.output";
+import { EventOrderPage } from "@/modules/events/presentation/graphql/dto/outputs/event-order-page.output";
+import type { Paginated } from "@/shared/application/pagination";
 import { EventOrderFilterInput } from "@/modules/events/presentation/graphql/dto/inputs/event-order-filter.input";
 
 // Whoever reviews payments: the orders (of an event, or the queue of every
 // event) and the receipt review.
+const DEFAULT_PAGE = { page: 1, limit: 20 };
+
 @Resolver()
 export class EventPaymentsResolver {
   constructor(
     private readonly listing: ListEventOrdersUseCase,
     private readonly reviewing: ReviewEventOrderUseCase,
     private readonly queue: ListOrdersQueueUseCase,
+    private readonly orderOverview: GetEventOrderOverviewUseCase,
   ) {}
 
   @RequirePermissions(Permission.PAYMENTS_MANAGE)
-  @Query(() => [EventOrderType], {
+  @Query(() => EventOrderPage, {
     description:
-      "Pedidos de um evento, com filtros: os em conferência primeiro, depois os mais antigos.",
+      "Pedidos de um evento, com filtros, por página: os em conferência primeiro, depois os mais antigos.",
   })
   async eventOrders(
     @CurrentUser() actor: AuthenticatedUser,
@@ -35,14 +43,33 @@ export class EventPaymentsResolver {
     status?: EventOrderStatus | null,
     @Args("filter", { type: () => EventOrderFilterInput, nullable: true })
     filter?: EventOrderFilterInput | null,
-  ): Promise<EventOrderType[]> {
+    @Args("page", { nullable: true }) page?: PageInput,
+  ): Promise<Paginated<EventOrderType>> {
     const statuses = [...(status ? [status] : []), ...(filter?.statuses ?? [])];
-    return (
-      await this.listing.execute(actor, eventId, {
+    const result = await this.listing.execute(
+      actor,
+      eventId,
+      {
         statuses: statuses.length > 0 ? statuses : null,
-        search: filter?.search?.trim() || null,
-      })
-    ).map(toOrderType);
+        buyerId: filter?.buyerId ?? null,
+        unitId: filter?.unitId ?? null,
+        code: filter?.code?.trim() || null,
+      },
+      page ?? DEFAULT_PAGE,
+    );
+    return { ...result, items: result.items.map(toOrderType) };
+  }
+
+  @RequirePermissions(Permission.PAYMENTS_MANAGE)
+  @Query(() => EventOrderOverviewType, {
+    description:
+      "Os números dos pedidos de um evento e as opções dos filtros (quem pediu, unidades, códigos).",
+  })
+  eventOrderOverview(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Args("eventId", { type: () => ID }, UuidArg()) eventId: string,
+  ): Promise<EventOrderOverviewType> {
+    return this.orderOverview.execute(actor, eventId);
   }
 
   @RequirePermissions(Permission.PAYMENTS_MANAGE)

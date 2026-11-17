@@ -13,9 +13,10 @@ import {
   EVENT_REPOSITORY,
   type EventRepositoryPort,
 } from "@/modules/events/application/ports/event-repository.port";
+import type { PageRequest, Paginated } from "@/shared/application/pagination";
 
-// The orders of an event that match the filter, for whoever reviews
-// payments.
+// A page of the orders of an event that match the filter, for whoever
+// reviews payments.
 @Injectable()
 export class ListEventOrdersUseCase {
   constructor(
@@ -29,11 +30,12 @@ export class ListEventOrdersUseCase {
     actor: AuthenticatedUser,
     eventId: string,
     filter: EventOrderFilter,
-  ): Promise<EventOrder[]> {
+    page: PageRequest,
+  ): Promise<Paginated<EventOrder>> {
     const condominiumId = await this.access.condominiumOf(actor);
     if (!(await this.events.find(condominiumId, eventId))) {
       throw AppException.from(APP_ERRORS.events.notFound, undefined);
     }
-    return this.orders.listForEvent(eventId, filter);
+    return this.orders.listForEvent(eventId, filter, page);
   }
 }

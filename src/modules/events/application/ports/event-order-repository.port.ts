@@ -1,3 +1,4 @@
+import type { PageRequest, Paginated } from "@/shared/application/pagination";
 import type {
   Attendee,
   EventOrderStatus,
@@ -75,8 +76,25 @@ export type OrderRefusal =
 /** Filters of an event's orders (null: any). */
 export type EventOrderFilter = {
   statuses: EventOrderStatus[] | null;
-  /** Buyer, order code, unit or the name of one of its people. */
-  search: string | null;
+  /** Who ordered (their user id). */
+  buyerId: string | null;
+  unitId: string | null;
+  /** The order's code. */
+  code: string | null;
+};
+
+/**
+ * An event's orders at a glance, whatever the filters: how many in each
+ * status, what was received and who is confirmed, and what the filters
+ * offer (who ordered, the units, the codes).
+ */
+export type EventOrderOverview = {
+  byStatus: { status: EventOrderStatus; count: number }[];
+  receivedCents: number;
+  confirmedPeople: number;
+  buyers: { id: string; name: string }[];
+  units: { id: string; label: string }[];
+  codes: { code: string; buyerName: string | null }[];
 };
 
 export interface EventOrderRepositoryPort {
@@ -102,7 +120,10 @@ export interface EventOrderRepositoryPort {
   listForEvent(
     eventId: string,
     filter: EventOrderFilter,
-  ): Promise<EventOrder[]>;
+    page: PageRequest,
+  ): Promise<Paginated<EventOrder>>;
+  /** The numbers and the filter options of one event's orders. */
+  overviewOfEvent(eventId: string): Promise<EventOrderOverview>;
   /**
    * The orders of every event of a condominium (or of one), oldest first:
    * the review queue.

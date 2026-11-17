@@ -20,6 +20,8 @@ import { EventsMaintenanceService } from "@/modules/events/application/events-ma
 import { EVENT_ORDER_REPOSITORY } from "@/modules/events/application/ports/event-order-repository.port";
 import { CancelEventOrderUseCase } from "@/modules/events/application/use-cases/cancel-event-order.use-case";
 import { CreateEventOrderUseCase } from "@/modules/events/application/use-cases/create-event-order.use-case";
+import { GetEventOrderOverviewUseCase } from "@/modules/events/application/use-cases/get-event-order-overview.use-case";
+import { GetEventTicketOverviewUseCase } from "@/modules/events/application/use-cases/get-event-ticket-overview.use-case";
 import { ListEventOrdersUseCase } from "@/modules/events/application/use-cases/list-event-orders.use-case";
 import { ListMyEventOrdersUseCase } from "@/modules/events/application/use-cases/list-my-event-orders.use-case";
 import { ReviewEventOrderUseCase } from "@/modules/events/application/use-cases/review-event-order.use-case";
@@ -76,6 +78,7 @@ import { SpacesModule } from "@/modules/spaces/spaces.module";
     CreateEventOrderUseCase,
     ListMyEventOrdersUseCase,
     ListEventOrdersUseCase,
+    GetEventOrderOverviewUseCase,
     SubmitOrderReceiptUseCase,
     CancelEventOrderUseCase,
     ReviewEventOrderUseCase,
@@ -88,6 +91,7 @@ import { SpacesModule } from "@/modules/spaces/spaces.module";
     AttendeeFieldsResolver,
     ListGateEventTicketsUseCase,
     ListEventTicketsUseCase,
+    GetEventTicketOverviewUseCase,
     ListOrdersQueueUseCase,
     CheckInEventTicketUseCase,
     GetEventTicketPassUseCase,

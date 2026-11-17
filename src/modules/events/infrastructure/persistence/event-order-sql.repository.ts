@@ -4,6 +4,7 @@ import type { DataSource, EntityManager } from "typeorm";
 import type {
   EventOrder,
   EventOrderFilter,
+  EventOrderOverview,
   EventOrderRepositoryPort,
   NewEventOrder,
   OrderLimits,
@@ -16,9 +17,17 @@ import {
 } from "@/modules/events/domain/event-order";
 import { HOLDING_ORDER } from "@/modules/events/infrastructure/persistence/event-sql.repository";
 import { unitLabel } from "@/modules/condominiums/domain/unit";
+import {
+  toUnitOptions,
+  type UnitRow,
+} from "@/modules/events/infrastructure/persistence/unit-options";
+import {
+  paginate,
+  type PageRequest,
+  type Paginated,
+} from "@/shared/application/pagination";
 import type { OutboxDraft } from "@/modules/outbox/domain/outbox";
 import type { PixKeyType } from "@/shared/domain/pix";
-import { likePattern } from "@/shared/infrastructure/persistence/like-pattern";
 import { OutboxTypeormWriter } from "@/modules/outbox/infrastructure/persistence/typeorm/outbox-typeorm.repository";
 
 type OrderRow = Omit<EventOrder, "pix" | "attendees" | "unitLabel"> & {
@@ -231,35 +240,95 @@ export class EventOrderSqlRepository implements EventOrderRepositoryPort {
     );
   }
 
-  listForEvent(
+  async listForEvent(
     eventId: string,
     filter: EventOrderFilter,
-  ): Promise<EventOrder[]> {
+    page: PageRequest,
+  ): Promise<Paginated<EventOrder>> {
     const params: unknown[] = [eventId];
     const where = ["o.idtb_events = $1"];
     if (filter.statuses) {
       params.push(filter.statuses);
       where.push(`o.status = ANY($${params.length}::varchar[])`);
     }
-    if (filter.search) {
-      params.push(likePattern(filter.search));
-      const term = `unaccent($${params.length})`;
-      where.push(
-        `(unaccent(COALESCE(u.name, '')) ILIKE ${term} OR o.code ILIKE $${params.length}
-          OR concat_ws(' ', un.street, un.block, un.number) ILIKE $${params.length}
-          OR EXISTS (SELECT 1 FROM tb_event_attendees sa
-                      WHERE sa.idtb_event_orders = o.idtb_event_orders
-                        AND unaccent(sa.name) ILIKE ${term}))`,
-      );
+    if (filter.buyerId) {
+      params.push(filter.buyerId);
+      where.push(`o.idtb_users = $${params.length}`);
     }
-    return this.query(
-      this.dataSource.manager,
-      `${SELECT} WHERE ${where.join(" AND ")}
-        ORDER BY (o.status = '${EventOrderStatus.AWAITING_REVIEW}') DESC,
-                 o.created_at
-        LIMIT 500`,
-      params,
-    );
+    if (filter.unitId) {
+      params.push(filter.unitId);
+      where.push(`o.idtb_units = $${params.length}`);
+    }
+    if (filter.code) {
+      params.push(filter.code);
+      where.push(`o.code = $${params.length}`);
+    }
+    const clause = `WHERE ${where.join(" AND ")}`;
+    const [orders, [count]] = await Promise.all([
+      this.query(
+        this.dataSource.manager,
+        `${SELECT} ${clause}
+          ORDER BY (o.status = '${EventOrderStatus.AWAITING_REVIEW}') DESC,
+                   o.created_at, o.idtb_event_orders
+          LIMIT ${Number(page.limit)} OFFSET ${(page.page - 1) * page.limit}`,
+        params,
+      ),
+      this.dataSource.query<{ total: number }[]>(
+        `SELECT count(*)::int AS total FROM tb_event_orders o ${clause}`,
+        params,
+      ),
+    ]);
+    return paginate(orders, count?.total ?? 0, page);
+  }
+
+  async overviewOfEvent(eventId: string): Promise<EventOrderOverview> {
+    const params = [eventId];
+    const [byStatus, [confirmed], buyers, units, codes] = await Promise.all([
+      this.dataSource.query<{ status: EventOrderStatus; count: number }[]>(
+        `SELECT status, count(*)::int AS count
+           FROM tb_event_orders WHERE idtb_events = $1
+          GROUP BY status`,
+        params,
+      ),
+      this.dataSource.query<{ receivedCents: number; people: number }[]>(
+        `SELECT COALESCE(sum(o.total_cents), 0)::bigint::float8 AS "receivedCents",
+                (SELECT count(*)::int FROM tb_event_attendees a
+                   JOIN tb_event_orders c ON c.idtb_event_orders = a.idtb_event_orders
+                  WHERE c.idtb_events = $1
+                    AND c.status = '${EventOrderStatus.CONFIRMED}') AS people
+           FROM tb_event_orders o
+          WHERE o.idtb_events = $1 AND o.status = '${EventOrderStatus.CONFIRMED}'`,
+        params,
+      ),
+      this.dataSource.query<{ id: string; name: string }[]>(
+        `SELECT DISTINCT u.idtb_users AS id, u.name, unaccent(u.name) AS sort
+           FROM tb_event_orders o JOIN tb_users u ON u.idtb_users = o.idtb_users
+          WHERE o.idtb_events = $1
+          ORDER BY sort`,
+        params,
+      ),
+      this.dataSource.query<UnitRow[]>(
+        `SELECT DISTINCT un.idtb_units AS id, un.street, un.block, un.number
+           FROM tb_event_orders o JOIN tb_units un ON un.idtb_units = o.idtb_units
+          WHERE o.idtb_events = $1`,
+        params,
+      ),
+      this.dataSource.query<{ code: string; buyerName: string | null }[]>(
+        `SELECT o.code, u.name AS "buyerName"
+           FROM tb_event_orders o LEFT JOIN tb_users u ON u.idtb_users = o.idtb_users
+          WHERE o.idtb_events = $1
+          ORDER BY o.created_at, o.code`,
+        params,
+      ),
+    ]);
+    return {
+      byStatus,
+      receivedCents: Number(confirmed?.receivedCents ?? 0),
+      confirmedPeople: confirmed?.people ?? 0,
+      buyers: buyers.map(({ id, name }) => ({ id, name })),
+      units: toUnitOptions(units),
+      codes,
+    };
   }
 
   listForCondominium(

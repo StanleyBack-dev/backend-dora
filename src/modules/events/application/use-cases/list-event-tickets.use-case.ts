@@ -15,10 +15,11 @@ import {
 import type { GateTicket } from "@/modules/events/application/use-cases/list-gate-event-tickets.use-case";
 import { entryDenial } from "@/modules/events/domain/event-ticket-entry";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
+import type { PageRequest, Paginated } from "@/shared/application/pagination";
 
-// An event's tickets and entries for its managers (Gestão, Eventos): the
-// people of the confirmed orders that match the filter and whether they
-// came in.
+// An event's tickets and entries for its managers (Gestão, Eventos): a
+// page of the people of the confirmed orders that match the filter and
+// whether they came in.
 @Injectable()
 export class ListEventTicketsUseCase {
   constructor(
@@ -33,14 +34,25 @@ export class ListEventTicketsUseCase {
     actor: AuthenticatedUser,
     eventId: string,
     filter: EventTicketFilter,
-  ): Promise<GateTicket[]> {
+    page: PageRequest,
+  ): Promise<Paginated<GateTicket>> {
     const condominiumId = await this.access.condominiumOf(actor);
     if (!(await this.events.find(condominiumId, eventId))) {
       throw AppException.from(APP_ERRORS.events.notFound, undefined);
     }
     const now = this.clock.now();
-    return (await this.tickets.forEvent(condominiumId, eventId, filter)).map(
-      (ticket) => ({ ...ticket, entryDenial: entryDenial(ticket, now) }),
+    const result = await this.tickets.forEvent(
+      condominiumId,
+      eventId,
+      filter,
+      page,
     );
+    return {
+      ...result,
+      items: result.items.map((ticket) => ({
+        ...ticket,
+        entryDenial: entryDenial(ticket, now),
+      })),
+    };
   }
 }

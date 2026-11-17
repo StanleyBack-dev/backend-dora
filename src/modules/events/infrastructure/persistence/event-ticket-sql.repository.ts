@@ -4,13 +4,22 @@ import type { DataSource } from "typeorm";
 import type {
   EventTicket,
   EventTicketFilter,
+  EventTicketOverview,
   EventTicketRepositoryPort,
 } from "@/modules/events/application/ports/event-ticket-repository.port";
+import {
+  toUnitOptions,
+  type UnitRow,
+} from "@/modules/events/infrastructure/persistence/unit-options";
+import {
+  paginate,
+  type PageRequest,
+  type Paginated,
+} from "@/shared/application/pagination";
 import { EventStatus } from "@/modules/events/domain/event";
 import { EventOrderStatus } from "@/modules/events/domain/event-order";
 import { unitLabel } from "@/modules/condominiums/domain/unit";
 import { AttendeeSource } from "@/modules/events/domain/event-order";
-import { likePattern } from "@/shared/infrastructure/persistence/like-pattern";
 
 type TicketRow = Omit<EventTicket, "unitLabel"> & {
   unitStreet: string | null;
@@ -28,6 +37,7 @@ const SELECT = `
          COALESCE(s.name, e.location, '') AS "placeName",
          o.idtb_event_orders AS "orderId", o.code AS "orderCode",
          o.status AS "orderStatus", u.name AS "buyerName",
+         o.idtb_units AS "unitId",
          un.street AS "unitStreet", un.block AS "unitBlock",
          un.number AS "unitNumber",
          a.name, a.age, a.outside, a.source, a.ticket_name AS "ticketName",
@@ -82,21 +92,25 @@ export class EventTicketSqlRepository implements EventTicketRepositoryPort {
     condominiumId: string,
     eventId: string,
     filter: EventTicketFilter,
-  ): Promise<EventTicket[]> {
+    page: PageRequest,
+  ): Promise<Paginated<EventTicket>> {
     const params: unknown[] = [condominiumId, eventId];
     const where = [
       "o.idtb_condominiums = $1",
       "o.idtb_events = $2",
       `o.status = '${EventOrderStatus.CONFIRMED}'`,
     ];
-    if (filter.search) {
-      params.push(likePattern(filter.search));
-      const term = `unaccent($${params.length})`;
-      where.push(
-        `(unaccent(a.name) ILIKE ${term} OR unaccent(COALESCE(u.name, '')) ILIKE ${term}
-          OR a.ticket_code ILIKE $${params.length} OR o.code ILIKE $${params.length}
-          OR concat_ws(' ', un.street, un.block, un.number) ILIKE $${params.length})`,
-      );
+    if (filter.attendeeId) {
+      params.push(filter.attendeeId);
+      where.push(`a.idtb_event_attendees = $${params.length}`);
+    }
+    if (filter.unitId) {
+      params.push(filter.unitId);
+      where.push(`o.idtb_units = $${params.length}`);
+    }
+    if (filter.code) {
+      params.push(filter.code);
+      where.push(`a.ticket_code = $${params.length}`);
     }
     if (filter.checkedIn !== null) {
       where.push(
@@ -120,14 +134,75 @@ export class EventTicketSqlRepository implements EventTicketRepositoryPort {
           : `a.source <> '${AttendeeSource.SELF}'`,
       );
     }
-    const rows = await this.dataSource.query<TicketRow[]>(
-      `${SELECT}
-        WHERE ${where.join(" AND ")}
-        ORDER BY o.created_at, a.position
-        LIMIT 5000`,
-      params,
-    );
-    return rows.map(toTicket);
+    const clause = `WHERE ${where.join(" AND ")}`;
+    const [rows, [count]] = await Promise.all([
+      this.dataSource.query<TicketRow[]>(
+        `${SELECT} ${clause}
+          ORDER BY o.created_at, a.position
+          LIMIT ${Number(page.limit)} OFFSET ${(page.page - 1) * page.limit}`,
+        params,
+      ),
+      this.dataSource.query<{ total: number }[]>(
+        `SELECT count(*)::int AS total
+           FROM tb_event_attendees a
+           JOIN tb_event_orders o ON o.idtb_event_orders = a.idtb_event_orders
+          ${clause}`,
+        params,
+      ),
+    ]);
+    return paginate(rows.map(toTicket), count?.total ?? 0, page);
+  }
+
+  async overviewOfEvent(
+    condominiumId: string,
+    eventId: string,
+  ): Promise<EventTicketOverview> {
+    const params = [condominiumId, eventId];
+    const confirmed = `FROM tb_event_attendees a
+      JOIN tb_event_orders o ON o.idtb_event_orders = a.idtb_event_orders
+     WHERE o.idtb_condominiums = $1 AND o.idtb_events = $2
+       AND o.status = '${EventOrderStatus.CONFIRMED}'`;
+    const [[totals], byType, people, units] = await Promise.all([
+      this.dataSource.query<
+        { total: number; checkedIn: number; outside: number }[]
+      >(
+        `SELECT count(*)::int AS total,
+                count(a.checked_in_at)::int AS "checkedIn",
+                (count(*) FILTER (WHERE a.outside))::int AS outside
+           ${confirmed}`,
+        params,
+      ),
+      this.dataSource.query<{ name: string | null; count: number }[]>(
+        `SELECT a.ticket_name AS name, count(*)::int AS count
+           ${confirmed}
+          GROUP BY a.ticket_name
+          ORDER BY count(*) DESC, a.ticket_name`,
+        params,
+      ),
+      this.dataSource.query<{ id: string; name: string; ticketCode: string }[]>(
+        `SELECT a.idtb_event_attendees AS id, a.name,
+                a.ticket_code AS "ticketCode"
+           ${confirmed}
+          ORDER BY unaccent(a.name), a.ticket_code`,
+        params,
+      ),
+      this.dataSource.query<UnitRow[]>(
+        `SELECT DISTINCT un.idtb_units AS id, un.street, un.block, un.number
+           ${confirmed.replace(
+             "WHERE",
+             "JOIN tb_units un ON un.idtb_units = o.idtb_units WHERE",
+           )}`,
+        params,
+      ),
+    ]);
+    return {
+      total: totals?.total ?? 0,
+      checkedIn: totals?.checkedIn ?? 0,
+      outside: totals?.outside ?? 0,
+      byType,
+      people,
+      units: toUnitOptions(units),
+    };
   }
 
   async find(
