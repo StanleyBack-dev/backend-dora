@@ -1,17 +1,32 @@
-import { Field, InputType } from "@nestjs/graphql";
-import { IsBoolean, IsOptional, IsString, MaxLength } from "class-validator";
+import { Field, ID, InputType } from "@nestjs/graphql";
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from "class-validator";
 
 @InputType({ description: "Filtros dos ingressos de um evento." })
 export class EventTicketFilterInput {
-  @Field({
+  @Field(() => ID, {
     nullable: true,
-    description:
-      "Nome, quem pediu, unidade ou código (do ingresso ou do pedido).",
+    description: "Uma pessoa (o id do ingresso).",
   })
   @IsOptional()
+  @IsUUID()
+  attendeeId?: string;
+
+  @Field(() => ID, { nullable: true, description: "A unidade de quem pediu." })
+  @IsOptional()
+  @IsUUID()
+  unitId?: string;
+
+  @Field({ nullable: true, description: "O código de um ingresso." })
+  @IsOptional()
   @IsString()
-  @MaxLength(100)
-  search?: string;
+  @MaxLength(20)
+  code?: string;
 
   @Field({
     nullable: true,

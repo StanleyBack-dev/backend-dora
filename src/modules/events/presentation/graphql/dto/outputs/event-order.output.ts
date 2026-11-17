@@ -24,8 +24,17 @@ export class EventOrderType {
   @Field(() => Int, { description: "Total em centavos." })
   totalCents!: number;
 
+  @Field(() => ID, {
+    nullable: true,
+    description: "Quem fez o pedido (null: a conta foi removida).",
+  })
+  buyerId!: string | null;
+
   @Field(() => String, { nullable: true, description: "Quem fez o pedido." })
   buyerName!: string | null;
+
+  @Field(() => ID, { nullable: true, description: "A unidade do pedido." })
+  unitId!: string | null;
 
   @Field(() => String, { nullable: true })
   unitLabel!: string | null;

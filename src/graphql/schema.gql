@@ -698,6 +698,40 @@ enum AttendeeSource {
   GUEST
 }
 
+"""Uma unidade para escolher num filtro."""
+type UnitOption {
+  id: ID!
+
+  """Ex.: Bloco A · 101."""
+  label: String!
+}
+
+type TicketTypeCount {
+  """O tipo de ingresso (vazio: evento grátis)."""
+  name: String
+  count: Int!
+}
+
+"""Uma pessoa com ingresso, para escolher num filtro."""
+type TicketPersonOption {
+  """O id do ingresso."""
+  id: ID!
+  name: String!
+  ticketCode: String!
+}
+
+"""
+Os números dos ingressos de um evento (sem filtros) e as opções dos filtros.
+"""
+type EventTicketOverview {
+  total: Int!
+  checkedIn: Int!
+  outside: Int!
+  byType: [TicketTypeCount!]!
+  people: [TicketPersonOption!]!
+  units: [UnitOption!]!
+}
+
 """Ingresso de evento na lista da portaria."""
 type GateEventTicket {
   """A pessoa do pedido."""
@@ -732,6 +766,9 @@ type GateEventTicket {
 
   """Quem pediu."""
   buyerName: String
+
+  """A unidade de quem pediu."""
+  unitId: ID
   unitLabel: String
 }
 
@@ -750,6 +787,14 @@ enum EventStatus {
   DRAFT
   PUBLISHED
   CANCELLED
+}
+
+type GateEventTicketPage {
+  items: [GateEventTicket!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
 }
 
 """Endereço do local fora do condomínio."""
@@ -899,8 +944,14 @@ type EventOrder {
   """Total em centavos."""
   totalCents: Int!
 
+  """Quem fez o pedido (null: a conta foi removida)."""
+  buyerId: ID
+
   """Quem fez o pedido."""
   buyerName: String
+
+  """A unidade do pedido."""
+  unitId: ID
   unitLabel: String
   attendees: [EventAttendee!]!
 
@@ -937,6 +988,47 @@ enum EventOrderStatus {
   REJECTED
   EXPIRED
   CANCELLED
+}
+
+type OrderStatusCount {
+  status: EventOrderStatus!
+  count: Int!
+}
+
+"""Quem fez pedidos, para escolher num filtro."""
+type OrderBuyerOption {
+  id: ID!
+  name: String!
+}
+
+"""O código de um pedido, para escolher num filtro."""
+type OrderCodeOption {
+  code: String!
+  buyerName: String
+}
+
+"""
+Os números dos pedidos de um evento (sem filtros) e as opções dos filtros.
+"""
+type EventOrderOverview {
+  byStatus: [OrderStatusCount!]!
+
+  """Recebido nos pedidos confirmados (centavos)."""
+  receivedCents: Int!
+
+  """Pessoas nos pedidos confirmados."""
+  confirmedPeople: Int!
+  buyers: [OrderBuyerOption!]!
+  units: [UnitOption!]!
+  codes: [OrderCodeOption!]!
+}
+
+type EventOrderPage {
+  items: [EventOrder!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
 }
 
 """Ingresso de uma pessoa (página pública)."""
@@ -1713,9 +1805,14 @@ type Query {
   ): [GateEventTicket!]!
 
   """
-  Os ingressos de um evento (pedidos confirmados) e quem já entrou, com filtros.
+  Os ingressos de um evento (pedidos confirmados) e quem já entrou, com filtros, por página.
   """
-  eventTickets(eventId: ID!, filter: EventTicketFilterInput): [GateEventTicket!]!
+  eventTickets(eventId: ID!, filter: EventTicketFilterInput, page: PageInput): GateEventTicketPage!
+
+  """
+  Os números dos ingressos de um evento e as opções dos filtros (pessoas, unidades).
+  """
+  eventTicketOverview(eventId: ID!): EventTicketOverview!
 
   """Os meus pedidos para um evento (mais recentes primeiro)."""
   myEventOrders(eventId: ID!): [EventOrder!]!
@@ -1724,9 +1821,14 @@ type Query {
   eventOrder(id: ID!): EventOrder!
 
   """
-  Pedidos de um evento, com filtros: os em conferência primeiro, depois os mais antigos.
+  Pedidos de um evento, com filtros, por página: os em conferência primeiro, depois os mais antigos.
   """
-  eventOrders(eventId: ID!, status: EventOrderStatus, filter: EventOrderFilterInput): [EventOrder!]!
+  eventOrders(eventId: ID!, status: EventOrderStatus, filter: EventOrderFilterInput, page: PageInput): EventOrderPage!
+
+  """
+  Os números dos pedidos de um evento e as opções dos filtros (quem pediu, unidades, códigos).
+  """
+  eventOrderOverview(eventId: ID!): EventOrderOverview!
 
   """
   Pedidos de todos os eventos do condomínio (fila de conferência), os mais antigos primeiro.
@@ -1826,8 +1928,14 @@ input EnrollmentRequestFilterInput {
 
 """Filtros dos ingressos de um evento."""
 input EventTicketFilterInput {
-  """Nome, quem pediu, unidade ou código (do ingresso ou do pedido)."""
-  search: String
+  """Uma pessoa (o id do ingresso)."""
+  attendeeId: ID
+
+  """A unidade de quem pediu."""
+  unitId: ID
+
+  """O código de um ingresso."""
+  code: String
 
   """true: só quem já entrou; false: só quem ainda não entrou."""
   checkedIn: Boolean
@@ -1847,8 +1955,14 @@ input EventOrderFilterInput {
   """Só estas situações (vazio: todas)."""
   statuses: [EventOrderStatus!]
 
-  """Quem pediu, código do pedido, unidade ou nome de uma pessoa."""
-  search: String
+  """Quem fez o pedido."""
+  buyerId: ID
+
+  """A unidade do pedido."""
+  unitId: ID
+
+  """O código do pedido."""
+  code: String
 }
 
 """Próximos (ainda não terminaram) ou passados."""

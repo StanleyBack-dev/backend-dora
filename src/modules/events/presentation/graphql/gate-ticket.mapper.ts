@@ -21,5 +21,6 @@ export const toGateTicketType = (ticket: GateTicket): GateEventTicketType => ({
   placeName: ticket.placeName,
   orderCode: ticket.orderCode,
   buyerName: ticket.buyerName,
+  unitId: ticket.unitId,
   unitLabel: ticket.unitLabel,
 });

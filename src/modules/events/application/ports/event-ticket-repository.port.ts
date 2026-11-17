@@ -1,3 +1,4 @@
+import type { PageRequest, Paginated } from "@/shared/application/pagination";
 import type { EventStatus } from "@/modules/events/domain/event";
 import type {
   AttendeeSource,
@@ -22,6 +23,8 @@ export type EventTicket = {
   orderStatus: EventOrderStatus;
   /** Who ordered (null: the account was deleted). */
   buyerName: string | null;
+  /** The buyer's unit (null: none). */
+  unitId: string | null;
   /** "Bloco A · 101" (null: no unit). */
   unitLabel: string | null;
   name: string;
@@ -36,8 +39,11 @@ export type EventTicket = {
 
 /** Filters of an event's tickets (null: any). */
 export type EventTicketFilter = {
-  /** Name, buyer, unit or a code (ticket or order). */
-  search: string | null;
+  /** One person (the ticket's id). */
+  attendeeId: string | null;
+  unitId: string | null;
+  /** A ticket's code. */
+  code: string | null;
   checkedIn: boolean | null;
   ticketName: string | null;
   outside: boolean | null;
@@ -46,11 +52,30 @@ export type EventTicketFilter = {
 };
 
 export const NO_TICKET_FILTER: EventTicketFilter = {
-  search: null,
+  attendeeId: null,
+  unitId: null,
+  code: null,
   checkedIn: null,
   ticketName: null,
   outside: null,
   buyer: null,
+};
+
+/** A unit to pick in a filter. */
+export type UnitOption = { id: string; label: string };
+
+/**
+ * An event's tickets at a glance, whatever the filters: the numbers and
+ * what the filters offer (every person and unit with a ticket).
+ */
+export type EventTicketOverview = {
+  total: number;
+  checkedIn: number;
+  outside: number;
+  /** How many of each type (null name: free event). */
+  byType: { name: string | null; count: number }[];
+  people: { id: string; name: string; ticketCode: string }[];
+  units: UnitOption[];
 };
 
 export const EVENT_TICKET_REPOSITORY = Symbol("EVENT_TICKET_REPOSITORY");
@@ -69,7 +94,13 @@ export interface EventTicketRepositoryPort {
     condominiumId: string,
     eventId: string,
     filter: EventTicketFilter,
-  ): Promise<EventTicket[]>;
+    page: PageRequest,
+  ): Promise<Paginated<EventTicket>>;
+  /** The numbers and the filter options of one event's tickets. */
+  overviewOfEvent(
+    condominiumId: string,
+    eventId: string,
+  ): Promise<EventTicketOverview>;
   /** Only a ticket of this condominium. */
   find(condominiumId: string, attendeeId: string): Promise<EventTicket | null>;
   /** Any condominium's (the caller checks it). */
