@@ -5,6 +5,11 @@ export type SpaceBlockView = SpaceBlock & { createdByName: string | null };
 export interface SpaceBlockRepositoryPort {
   /** Blocks of a space that have not ended by `from`, soonest first. */
   upcoming(spaceId: string, from: Date): Promise<SpaceBlockView[]>;
+  /** Blocks of every space of a condominium not ended by `from`. */
+  upcomingInCondominium(
+    condominiumId: string,
+    from: Date,
+  ): Promise<SpaceBlockView[]>;
   /** Blocks of a space that overlap [from, to). */
   overlapping(spaceId: string, from: Date, to: Date): Promise<SpaceBlock[]>;
   /** Only when it belongs to the condominium. */

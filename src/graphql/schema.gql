@@ -1669,6 +1669,9 @@ type Query {
   """Bloqueios atuais e futuros do espaço."""
   spaceBlocks(spaceId: ID!): [SpaceBlock!]!
 
+  """Bloqueios atuais e futuros de todos os espaços do condomínio."""
+  condominiumSpaceBlocks: [SpaceBlock!]!
+
   """Últimos 50 comunicados."""
   broadcasts: [Broadcast!]!
 

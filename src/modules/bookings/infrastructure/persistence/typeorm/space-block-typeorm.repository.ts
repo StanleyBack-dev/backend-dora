@@ -19,6 +19,15 @@ const toBlock = (row: SpaceBlockOrmEntity): SpaceBlock => ({
   createdAt: row.createdAt,
 });
 
+/** A block with its author's name (tb_users, identity: read-only). */
+const SELECT_VIEW = `
+  SELECT k.idtb_space_blocks AS id, k.idtb_condominiums AS "condominiumId",
+         k.idtb_spaces AS "spaceId", k.starts_at AS "startsAt",
+         k.ends_at AS "endsAt", k.reason, k.created_by AS "createdBy",
+         k.created_at AS "createdAt", u.name AS "createdByName"
+    FROM tb_space_blocks k
+    LEFT JOIN tb_users u ON u.idtb_users = k.created_by`;
+
 @Injectable()
 export class SpaceBlockTypeormRepository implements SpaceBlockRepositoryPort {
   constructor(
@@ -29,15 +38,21 @@ export class SpaceBlockTypeormRepository implements SpaceBlockRepositoryPort {
   // The author's name comes from tb_users (identity), read-only.
   upcoming(spaceId: string, from: Date): Promise<SpaceBlockView[]> {
     return this.repository.manager.query<SpaceBlockView[]>(
-      `SELECT k.idtb_space_blocks AS id, k.idtb_condominiums AS "condominiumId",
-              k.idtb_spaces AS "spaceId", k.starts_at AS "startsAt",
-              k.ends_at AS "endsAt", k.reason, k.created_by AS "createdBy",
-              k.created_at AS "createdAt", u.name AS "createdByName"
-         FROM tb_space_blocks k
-         LEFT JOIN tb_users u ON u.idtb_users = k.created_by
-        WHERE k.idtb_spaces = $1 AND k.ends_at > $2
+      `${SELECT_VIEW} WHERE k.idtb_spaces = $1 AND k.ends_at > $2
         ORDER BY k.starts_at`,
       [spaceId, from],
+    );
+  }
+
+  upcomingInCondominium(
+    condominiumId: string,
+    from: Date,
+  ): Promise<SpaceBlockView[]> {
+    return this.repository.manager.query<SpaceBlockView[]>(
+      `${SELECT_VIEW} WHERE k.idtb_condominiums = $1 AND k.ends_at > $2
+        ORDER BY k.starts_at
+        LIMIT 500`,
+      [condominiumId, from],
     );
   }
 

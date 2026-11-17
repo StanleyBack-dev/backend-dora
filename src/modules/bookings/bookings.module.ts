@@ -13,6 +13,7 @@ import { CreateSpaceBlockUseCase } from "@/modules/bookings/application/use-case
 import { DeleteSpaceBlockUseCase } from "@/modules/bookings/application/use-cases/delete-space-block.use-case";
 import { GetSpaceAvailabilityUseCase } from "@/modules/bookings/application/use-cases/get-space-availability.use-case";
 import { ListBookingsUseCase } from "@/modules/bookings/application/use-cases/list-bookings.use-case";
+import { ListCondominiumBlocksUseCase } from "@/modules/bookings/application/use-cases/list-condominium-blocks.use-case";
 import { ListSpaceBlocksUseCase } from "@/modules/bookings/application/use-cases/list-space-blocks.use-case";
 import { RejectBookingUseCase } from "@/modules/bookings/application/use-cases/reject-booking.use-case";
 import { BookingOrmEntity } from "@/modules/bookings/infrastructure/persistence/typeorm/booking.orm-entity";
@@ -101,6 +102,7 @@ import { SpacesModule } from "@/modules/spaces/spaces.module";
     CreateSpaceBlockUseCase,
     DeleteSpaceBlockUseCase,
     ListSpaceBlocksUseCase,
+    ListCondominiumBlocksUseCase,
     BookingsResolver,
     SpaceAvailabilityResolver,
     SpaceBlocksResolver,
