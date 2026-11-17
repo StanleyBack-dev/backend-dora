@@ -125,7 +125,7 @@ export class SystemLogsService implements OnModuleInit {
             type: NotificationType.SYSTEM_ALERT,
             title,
             body: message,
-            link: "/plataforma/logs",
+            link: "/administracao/logs",
             email: {
               subject: `[Dora] ${title}`,
               intro:
