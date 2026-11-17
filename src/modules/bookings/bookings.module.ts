@@ -50,6 +50,7 @@ import { GateResolver } from "@/modules/bookings/presentation/graphql/gate.resol
 import { GuestInviteResolver } from "@/modules/bookings/presentation/graphql/guest-invite.resolver";
 import { IdentityModule } from "@/modules/identity/identity.module";
 import { OutboxModule } from "@/modules/outbox/outbox.module";
+import { CondominiumsModule } from "@/modules/condominiums/condominiums.module";
 import { SpacesModule } from "@/modules/spaces/spaces.module";
 
 // Bookings of spaces under each space's rules, approvals, cancellations and
@@ -61,6 +62,7 @@ import { SpacesModule } from "@/modules/spaces/spaces.module";
     TypeOrmModule.forFeature([BookingOrmEntity, SpaceBlockOrmEntity]),
     AccessControlModule,
     AuditModule,
+    CondominiumsModule,
     IdentityModule,
     OutboxModule,
     SpacesModule,

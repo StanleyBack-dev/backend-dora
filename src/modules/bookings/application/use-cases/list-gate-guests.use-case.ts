@@ -9,6 +9,8 @@ import {
   type GateGuest,
 } from "@/modules/bookings/application/ports/booking-guest-repository.port";
 import { isActive } from "@/modules/bookings/domain/booking";
+import { ModuleAccessService } from "@/modules/condominiums/application/module-access.service";
+import { AppModule } from "@/modules/condominiums/domain/app-module";
 import {
   checkInDenial,
   type CheckInDenial,
@@ -21,12 +23,14 @@ export type GateEntry = GateGuest & { checkInDenial: CheckInDenial | null };
 
 // The gate's list (Portaria): guests of the active bookings of a day
 // (today by default), by start time. The gate sees what it needs to let
-// people in: names, documents, the booking and its unit.
+// people in: names, documents, the booking and its unit. Without the
+// bookings module the list is just empty: the gate also serves events.
 @Injectable()
 export class ListGateGuestsUseCase {
   constructor(
     @Inject(BOOKING_GUEST_REPOSITORY)
     private readonly guests: BookingGuestRepositoryPort,
+    private readonly modules: ModuleAccessService,
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
@@ -34,6 +38,12 @@ export class ListGateGuestsUseCase {
     actor: AuthenticatedUser,
     date?: string | null,
   ): Promise<GateEntry[]> {
+    const condominiumId = tenantOf(actor);
+    if (
+      !(await this.modules.enabled(condominiumId)).includes(AppModule.BOOKINGS)
+    ) {
+      return [];
+    }
     const now = this.clock.now();
     const day = date ?? this.clock.localDate(now);
     if (!isLocalDate(day)) {
@@ -42,7 +52,7 @@ export class ListGateGuestsUseCase {
       });
     }
     const rows = await this.guests.forGate(
-      tenantOf(actor),
+      condominiumId,
       this.clock.startOfLocalDate(day),
       this.clock.startOfLocalDate(addDays(day, 1)),
     );

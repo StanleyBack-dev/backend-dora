@@ -12,6 +12,7 @@ import { DatabaseModule } from "@/database/database.module";
 import { EnrollmentModule } from "@/modules/enrollment/enrollment.module";
 import { AccessControlModule } from "@/modules/access-control/access-control.module";
 import { PermissionsGuard } from "@/modules/access-control/presentation/guards/permissions.guard";
+import { ModuleGuard } from "@/modules/condominiums/presentation/guards/module.guard";
 import { AuditModule } from "@/modules/audit/audit.module";
 import { BookingsModule } from "@/modules/bookings/bookings.module";
 import { BroadcastsModule } from "@/modules/broadcasts/broadcasts.module";
@@ -67,11 +68,13 @@ import { SharedModule } from "@/shared/shared.module";
   providers: [
     AppResolver,
     // Global guards run in this order: BFF key → session (sets
-    // request.user) → first access (temporary password) → permissions.
+    // request.user) → first access (temporary password) → permissions →
+    // contracted modules.
     { provide: APP_GUARD, useClass: InternalApiKeyGuard },
     { provide: APP_GUARD, useExisting: UserSessionGuard },
     { provide: APP_GUARD, useExisting: FirstAccessGuard },
     { provide: APP_GUARD, useExisting: PermissionsGuard },
+    { provide: APP_GUARD, useExisting: ModuleGuard },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     {
       provide: APP_PIPE,

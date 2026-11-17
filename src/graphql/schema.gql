@@ -363,6 +363,7 @@ enum AddressFormat {
 
 """Módulos contratados à parte pelo condomínio."""
 enum AppModule {
+  BOOKINGS
   EVENTS
 }
 

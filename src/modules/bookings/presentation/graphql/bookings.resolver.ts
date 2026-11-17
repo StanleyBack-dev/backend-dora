@@ -17,12 +17,15 @@ import { CreateBookingInput } from "@/modules/bookings/presentation/graphql/dto/
 import { BookingPage } from "@/modules/bookings/presentation/graphql/dto/outputs/booking-page.output";
 import { BookingType } from "@/modules/bookings/presentation/graphql/dto/outputs/booking.output";
 import type { Paginated } from "@/shared/application/pagination";
+import { AppModule } from "@/modules/condominiums/domain/app-module";
+import { RequireModule } from "@/modules/condominiums/presentation/decorators/require-module.decorator";
 import "@/modules/bookings/presentation/graphql/bookings.graphql-enums";
 
 const DEFAULT_PAGE = { page: 1, limit: 20 };
 
 // Bookings of the session's condominium: residents book and cancel their
 // own; managers see every booking, approve, reject and cancel.
+@RequireModule(AppModule.BOOKINGS)
 @Resolver()
 export class BookingsResolver {
   constructor(

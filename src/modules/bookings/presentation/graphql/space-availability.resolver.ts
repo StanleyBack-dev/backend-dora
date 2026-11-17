@@ -7,7 +7,10 @@ import {
   type Availability,
 } from "@/modules/bookings/application/use-cases/get-space-availability.use-case";
 import { SpaceAvailabilityType } from "@/modules/bookings/presentation/graphql/dto/outputs/space-availability.output";
+import { AppModule } from "@/modules/condominiums/domain/app-module";
+import { RequireModule } from "@/modules/condominiums/presentation/decorators/require-module.decorator";
 
+@RequireModule(AppModule.BOOKINGS)
 @Resolver()
 export class SpaceAvailabilityResolver {
   constructor(private readonly availability: GetSpaceAvailabilityUseCase) {}
