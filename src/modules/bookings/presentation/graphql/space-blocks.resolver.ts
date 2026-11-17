@@ -10,13 +10,11 @@ import { ListCondominiumBlocksUseCase } from "@/modules/bookings/application/use
 import { ListSpaceBlocksUseCase } from "@/modules/bookings/application/use-cases/list-space-blocks.use-case";
 import { toSpaceBlockType } from "@/modules/bookings/presentation/graphql/booking.mapper";
 import { CreateSpaceBlockInput } from "@/modules/bookings/presentation/graphql/dto/inputs/create-space-block.input";
-import { AppModule } from "@/modules/condominiums/domain/app-module";
-import { RequireModule } from "@/modules/condominiums/presentation/decorators/require-module.decorator";
 import { SpaceBlockType } from "@/modules/bookings/presentation/graphql/dto/outputs/space-block.output";
 
 // Periods a space can't be booked: everyone reads a space's; managers see
-// every space's, create and remove them.
-@RequireModule(AppModule.BOOKINGS)
+// every space's, create and remove them. Spaces belong to the condominium
+// (bookings and events use them), so their blocks need no module.
 @Resolver()
 export class SpaceBlocksResolver {
   constructor(
