@@ -8,6 +8,7 @@ import { CheckInEventTicketUseCase } from "@/modules/events/application/use-case
 import { ListEventTicketsUseCase } from "@/modules/events/application/use-cases/list-event-tickets.use-case";
 import { ListGateEventTicketsUseCase } from "@/modules/events/application/use-cases/list-gate-event-tickets.use-case";
 import { CheckInEventTicketInput } from "@/modules/events/presentation/graphql/dto/inputs/check-in-event-ticket.input";
+import { EventTicketFilterInput } from "@/modules/events/presentation/graphql/dto/inputs/event-ticket-filter.input";
 import { GateEventTicketType } from "@/modules/events/presentation/graphql/dto/outputs/gate-event-ticket.output";
 import { toGateTicketType } from "@/modules/events/presentation/graphql/gate-ticket.mapper";
 
@@ -43,15 +44,23 @@ export class EventGateResolver {
   @RequirePermissions(Permission.EVENTS_MANAGE)
   @Query(() => [GateEventTicketType], {
     description:
-      "Os ingressos de um evento (pedidos confirmados) e quem já entrou.",
+      "Os ingressos de um evento (pedidos confirmados) e quem já entrou, com filtros.",
   })
   async eventTickets(
     @CurrentUser() actor: AuthenticatedUser,
     @Args("eventId", { type: () => ID }, UuidArg()) eventId: string,
+    @Args("filter", { type: () => EventTicketFilterInput, nullable: true })
+    filter?: EventTicketFilterInput | null,
   ): Promise<GateEventTicketType[]> {
-    return (await this.ticketsOfEvent.execute(actor, eventId)).map(
-      toGateTicketType,
-    );
+    return (
+      await this.ticketsOfEvent.execute(actor, eventId, {
+        search: filter?.search?.trim() || null,
+        checkedIn: filter?.checkedIn ?? null,
+        ticketName: filter?.ticketName?.trim() || null,
+        outside: filter?.outside ?? null,
+        buyer: filter?.buyer ?? null,
+      })
+    ).map(toGateTicketType);
   }
 
   @RequirePermissions(Permission.GUESTS_CHECKIN)

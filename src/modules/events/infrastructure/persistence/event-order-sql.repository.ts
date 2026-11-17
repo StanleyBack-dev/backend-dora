@@ -3,6 +3,7 @@ import { InjectDataSource } from "@nestjs/typeorm";
 import type { DataSource, EntityManager } from "typeorm";
 import type {
   EventOrder,
+  EventOrderFilter,
   EventOrderRepositoryPort,
   NewEventOrder,
   OrderLimits,
@@ -17,6 +18,7 @@ import { HOLDING_ORDER } from "@/modules/events/infrastructure/persistence/event
 import { unitLabel } from "@/modules/condominiums/domain/unit";
 import type { OutboxDraft } from "@/modules/outbox/domain/outbox";
 import type { PixKeyType } from "@/shared/domain/pix";
+import { likePattern } from "@/shared/infrastructure/persistence/like-pattern";
 import { OutboxTypeormWriter } from "@/modules/outbox/infrastructure/persistence/typeorm/outbox-typeorm.repository";
 
 type OrderRow = Omit<EventOrder, "pix" | "attendees" | "unitLabel"> & {
@@ -231,15 +233,32 @@ export class EventOrderSqlRepository implements EventOrderRepositoryPort {
 
   listForEvent(
     eventId: string,
-    status: EventOrderStatus | null,
+    filter: EventOrderFilter,
   ): Promise<EventOrder[]> {
+    const params: unknown[] = [eventId];
+    const where = ["o.idtb_events = $1"];
+    if (filter.statuses) {
+      params.push(filter.statuses);
+      where.push(`o.status = ANY($${params.length}::varchar[])`);
+    }
+    if (filter.search) {
+      params.push(likePattern(filter.search));
+      const term = `unaccent($${params.length})`;
+      where.push(
+        `(unaccent(COALESCE(u.name, '')) ILIKE ${term} OR o.code ILIKE $${params.length}
+          OR concat_ws(' ', un.street, un.block, un.number) ILIKE $${params.length}
+          OR EXISTS (SELECT 1 FROM tb_event_attendees sa
+                      WHERE sa.idtb_event_orders = o.idtb_event_orders
+                        AND unaccent(sa.name) ILIKE ${term}))`,
+      );
+    }
     return this.query(
       this.dataSource.manager,
-      `${SELECT} WHERE o.idtb_events = $1
-          AND ($2::varchar IS NULL OR o.status = $2)
-        ORDER BY o.created_at
+      `${SELECT} WHERE ${where.join(" AND ")}
+        ORDER BY (o.status = '${EventOrderStatus.AWAITING_REVIEW}') DESC,
+                 o.created_at
         LIMIT 500`,
-      [eventId, status],
+      params,
     );
   }
 

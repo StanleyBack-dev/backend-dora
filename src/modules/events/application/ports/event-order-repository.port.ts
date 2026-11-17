@@ -72,6 +72,13 @@ export type OrderLimits = {
 export type OrderRefusal =
   "full" | "outside-full" | "unit-limit" | { held: string[] };
 
+/** Filters of an event's orders (null: any). */
+export type EventOrderFilter = {
+  statuses: EventOrderStatus[] | null;
+  /** Buyer, order code, unit or the name of one of its people. */
+  search: string | null;
+};
+
 export interface EventOrderRepositoryPort {
   /**
    * Stores the order if it still fits (capacity, outside guests, unit
@@ -88,10 +95,13 @@ export interface EventOrderRepositoryPort {
   find(condominiumId: string, id: string): Promise<EventOrder | null>;
   /** The person's orders for an event, newest first. */
   listMine(userId: string, eventId: string): Promise<EventOrder[]>;
-  /** An event's orders (optionally one status), oldest first. */
+  /**
+   * An event's orders that match the filter: those waiting for review
+   * first, then oldest first.
+   */
   listForEvent(
     eventId: string,
-    status: EventOrderStatus | null,
+    filter: EventOrderFilter,
   ): Promise<EventOrder[]>;
   /**
    * The orders of every event of a condominium (or of one), oldest first:

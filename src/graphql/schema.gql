@@ -1712,8 +1712,10 @@ type Query {
     date: String
   ): [GateEventTicket!]!
 
-  """Os ingressos de um evento (pedidos confirmados) e quem já entrou."""
-  eventTickets(eventId: ID!): [GateEventTicket!]!
+  """
+  Os ingressos de um evento (pedidos confirmados) e quem já entrou, com filtros.
+  """
+  eventTickets(eventId: ID!, filter: EventTicketFilterInput): [GateEventTicket!]!
 
   """Os meus pedidos para um evento (mais recentes primeiro)."""
   myEventOrders(eventId: ID!): [EventOrder!]!
@@ -1721,8 +1723,10 @@ type Query {
   """Um pedido: de quem o fez ou de quem confere os pagamentos."""
   eventOrder(id: ID!): EventOrder!
 
-  """Pedidos de um evento (opcionalmente de uma situação)."""
-  eventOrders(eventId: ID!, status: EventOrderStatus): [EventOrder!]!
+  """
+  Pedidos de um evento, com filtros: os em conferência primeiro, depois os mais antigos.
+  """
+  eventOrders(eventId: ID!, status: EventOrderStatus, filter: EventOrderFilterInput): [EventOrder!]!
 
   """
   Pedidos de todos os eventos do condomínio (fila de conferência), os mais antigos primeiro.
@@ -1817,6 +1821,33 @@ input CondominiumFilterInput {
 
 input EnrollmentRequestFilterInput {
   status: EnrollmentStatus
+  search: String
+}
+
+"""Filtros dos ingressos de um evento."""
+input EventTicketFilterInput {
+  """Nome, quem pediu, unidade ou código (do ingresso ou do pedido)."""
+  search: String
+
+  """true: só quem já entrou; false: só quem ainda não entrou."""
+  checkedIn: Boolean
+
+  """O tipo de ingresso (pelo nome)."""
+  ticketName: String
+
+  """true: só convidados de fora; false: só do condomínio."""
+  outside: Boolean
+
+  """true: só quem fez o pedido; false: só os acompanhantes."""
+  buyer: Boolean
+}
+
+"""Filtros dos pedidos de um evento."""
+input EventOrderFilterInput {
+  """Só estas situações (vazio: todas)."""
+  statuses: [EventOrderStatus!]
+
+  """Quem pediu, código do pedido, unidade ou nome de uma pessoa."""
   search: String
 }
 

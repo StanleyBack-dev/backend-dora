@@ -34,6 +34,25 @@ export type EventTicket = {
   checkedInAt: Date | null;
 };
 
+/** Filters of an event's tickets (null: any). */
+export type EventTicketFilter = {
+  /** Name, buyer, unit or a code (ticket or order). */
+  search: string | null;
+  checkedIn: boolean | null;
+  ticketName: string | null;
+  outside: boolean | null;
+  /** true: who ordered; false: who came in someone's order. */
+  buyer: boolean | null;
+};
+
+export const NO_TICKET_FILTER: EventTicketFilter = {
+  search: null,
+  checkedIn: null,
+  ticketName: null,
+  outside: null,
+  buyer: null,
+};
+
 export const EVENT_TICKET_REPOSITORY = Symbol("EVENT_TICKET_REPOSITORY");
 
 export interface EventTicketRepositoryPort {
@@ -42,8 +61,15 @@ export interface EventTicketRepositoryPort {
    * happen in [from, to) (published or cancelled), by start time.
    */
   forGate(condominiumId: string, from: Date, to: Date): Promise<EventTicket[]>;
-  /** The tickets of one event's confirmed orders, by order and position. */
-  forEvent(condominiumId: string, eventId: string): Promise<EventTicket[]>;
+  /**
+   * The tickets of one event's confirmed orders that match the filter, by
+   * order and position.
+   */
+  forEvent(
+    condominiumId: string,
+    eventId: string,
+    filter: EventTicketFilter,
+  ): Promise<EventTicket[]>;
   /** Only a ticket of this condominium. */
   find(condominiumId: string, attendeeId: string): Promise<EventTicket | null>;
   /** Any condominium's (the caller checks it). */
