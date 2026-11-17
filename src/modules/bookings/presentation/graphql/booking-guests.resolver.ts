@@ -7,10 +7,13 @@ import { ListBookingGuestsUseCase } from "@/modules/bookings/application/use-cas
 import { RemoveBookingGuestUseCase } from "@/modules/bookings/application/use-cases/remove-booking-guest.use-case";
 import { AddBookingGuestsInput } from "@/modules/bookings/presentation/graphql/dto/inputs/add-booking-guests.input";
 import { BookingGuestType } from "@/modules/bookings/presentation/graphql/dto/outputs/booking-guest.output";
+import { AppModule } from "@/modules/condominiums/domain/app-module";
+import { RequireModule } from "@/modules/condominiums/presentation/decorators/require-module.decorator";
 import { toBookingGuestType } from "@/modules/bookings/presentation/graphql/guest.mapper";
 
 // The guest list of a booking: the booker manages their own, a manager any
 // (the use cases check both).
+@RequireModule(AppModule.BOOKINGS)
 @Resolver()
 export class BookingGuestsResolver {
   constructor(

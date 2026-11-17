@@ -26,7 +26,7 @@ export function receiptNotices(
         type: NotificationType.EVENT_ORDER_RECEIPT,
         title: `Pedido para conferir: ${order.eventTitle}`,
         body: `${order.buyerName ?? "Morador"}${order.unitLabel ? ` (${order.unitLabel})` : ""} · ${summary}`,
-        link: `/eventos/${order.eventId}/pedidos`,
+        link: `/gestao/eventos/${order.eventId}/pedidos`,
         email: {
           subject: `Pedido de ingressos para conferir: ${order.eventTitle}`,
           intro:

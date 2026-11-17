@@ -3,6 +3,8 @@
 // each one on per condominium; while off, its menu and API are closed.
 
 export enum AppModule {
+  /** Spaces booked by residents: bookings, approvals, guests and fees. */
+  BOOKINGS = "BOOKINGS",
   /** Condominium events: tickets (free or paid by PIX) and entry by QR. */
   EVENTS = "EVENTS",
 }

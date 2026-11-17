@@ -86,7 +86,7 @@ export function submittedNotice(
     type: NotificationType.ENROLLMENT_SUBMITTED,
     title: "Novo cadastro aguardando aprovação",
     body: `${who} enviou o cadastro pelo link público (${condominiumName}).`,
-    link: "/admin/cadastros",
+    link: "/gestao/cadastros",
     email: {
       subject: `Cadastro aguardando aprovação: ${data.fullName}`,
       intro:

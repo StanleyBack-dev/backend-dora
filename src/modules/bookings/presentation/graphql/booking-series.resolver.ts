@@ -12,9 +12,12 @@ import { CreateBookingSeriesUseCase } from "@/modules/bookings/application/use-c
 import { toBookingType } from "@/modules/bookings/presentation/graphql/booking.mapper";
 import { CreateBookingSeriesInput } from "@/modules/bookings/presentation/graphql/dto/inputs/create-booking-series.input";
 import { BookingSeriesResultType } from "@/modules/bookings/presentation/graphql/dto/outputs/booking-series-result.output";
+import { AppModule } from "@/modules/condominiums/domain/app-module";
+import { RequireModule } from "@/modules/condominiums/presentation/decorators/require-module.decorator";
 import { SeriesCancellationType } from "@/modules/bookings/presentation/graphql/dto/outputs/series-cancellation.output";
 
 // Weekly bookings: the same slot for several weeks.
+@RequireModule(AppModule.BOOKINGS)
 @Resolver()
 export class BookingSeriesResolver {
   constructor(

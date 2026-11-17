@@ -29,7 +29,7 @@ export function submittedNotices(
         type: NotificationType.DEPENDENT_SUBMITTED,
         title: "Dependente para aprovar",
         body: holder ? `${who} · ${holder}` : who,
-        link: "/admin/dependentes",
+        link: "/gestao/dependentes",
         email: {
           subject: "Dependente para aprovar",
           intro:
