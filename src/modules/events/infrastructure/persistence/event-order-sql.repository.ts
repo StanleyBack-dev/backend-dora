@@ -243,6 +243,21 @@ export class EventOrderSqlRepository implements EventOrderRepositoryPort {
     );
   }
 
+  listForCondominium(
+    condominiumId: string,
+    filter: { status: EventOrderStatus | null; eventId: string | null },
+  ): Promise<EventOrder[]> {
+    return this.query(
+      this.dataSource.manager,
+      `${SELECT} WHERE o.idtb_condominiums = $1
+          AND ($2::varchar IS NULL OR o.status = $2)
+          AND ($3::uuid IS NULL OR o.idtb_events = $3)
+        ORDER BY o.created_at
+        LIMIT 500`,
+      [condominiumId, filter.status, filter.eventId],
+    );
+  }
+
   async attachReceipt(
     id: string,
     receipt: { key: string; contentType: string },

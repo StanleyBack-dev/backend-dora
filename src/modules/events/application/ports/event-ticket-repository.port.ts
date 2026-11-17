@@ -42,6 +42,8 @@ export interface EventTicketRepositoryPort {
    * happen in [from, to) (published or cancelled), by start time.
    */
   forGate(condominiumId: string, from: Date, to: Date): Promise<EventTicket[]>;
+  /** The tickets of one event's confirmed orders, by order and position. */
+  forEvent(condominiumId: string, eventId: string): Promise<EventTicket[]>;
   /** Only a ticket of this condominium. */
   find(condominiumId: string, attendeeId: string): Promise<EventTicket | null>;
   /** Any condominium's (the caller checks it). */
