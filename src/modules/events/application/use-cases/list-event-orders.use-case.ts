@@ -6,15 +6,16 @@ import { EventAccessService } from "@/modules/events/application/event-access.se
 import {
   EVENT_ORDER_REPOSITORY,
   type EventOrder,
+  type EventOrderFilter,
   type EventOrderRepositoryPort,
 } from "@/modules/events/application/ports/event-order-repository.port";
 import {
   EVENT_REPOSITORY,
   type EventRepositoryPort,
 } from "@/modules/events/application/ports/event-repository.port";
-import type { EventOrderStatus } from "@/modules/events/domain/event-order";
 
-// Every order of an event, for whoever reviews payments.
+// The orders of an event that match the filter, for whoever reviews
+// payments.
 @Injectable()
 export class ListEventOrdersUseCase {
   constructor(
@@ -27,12 +28,12 @@ export class ListEventOrdersUseCase {
   async execute(
     actor: AuthenticatedUser,
     eventId: string,
-    status: EventOrderStatus | null,
+    filter: EventOrderFilter,
   ): Promise<EventOrder[]> {
     const condominiumId = await this.access.condominiumOf(actor);
     if (!(await this.events.find(condominiumId, eventId))) {
       throw AppException.from(APP_ERRORS.events.notFound, undefined);
     }
-    return this.orders.listForEvent(eventId, status);
+    return this.orders.listForEvent(eventId, filter);
   }
 }

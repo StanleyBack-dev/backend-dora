@@ -11,6 +11,7 @@ import { EventOrderStatus } from "@/modules/events/domain/event-order";
 import { EventOrderType } from "@/modules/events/presentation/graphql/dto/outputs/event-order.output";
 import { toOrderType } from "@/modules/events/presentation/graphql/event-order.mapper";
 import "@/modules/events/presentation/graphql/events.graphql-enums";
+import { EventOrderFilterInput } from "@/modules/events/presentation/graphql/dto/inputs/event-order-filter.input";
 
 // Whoever reviews payments: the orders (of an event, or the queue of every
 // event) and the receipt review.
@@ -24,17 +25,24 @@ export class EventPaymentsResolver {
 
   @RequirePermissions(Permission.PAYMENTS_MANAGE)
   @Query(() => [EventOrderType], {
-    description: "Pedidos de um evento (opcionalmente de uma situação).",
+    description:
+      "Pedidos de um evento, com filtros: os em conferência primeiro, depois os mais antigos.",
   })
   async eventOrders(
     @CurrentUser() actor: AuthenticatedUser,
     @Args("eventId", { type: () => ID }, UuidArg()) eventId: string,
     @Args("status", { type: () => EventOrderStatus, nullable: true })
     status?: EventOrderStatus | null,
+    @Args("filter", { type: () => EventOrderFilterInput, nullable: true })
+    filter?: EventOrderFilterInput | null,
   ): Promise<EventOrderType[]> {
-    return (await this.listing.execute(actor, eventId, status ?? null)).map(
-      toOrderType,
-    );
+    const statuses = [...(status ? [status] : []), ...(filter?.statuses ?? [])];
+    return (
+      await this.listing.execute(actor, eventId, {
+        statuses: statuses.length > 0 ? statuses : null,
+        search: filter?.search?.trim() || null,
+      })
+    ).map(toOrderType);
   }
 
   @RequirePermissions(Permission.PAYMENTS_MANAGE)

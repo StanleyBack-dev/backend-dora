@@ -3,11 +3,14 @@ import { InjectDataSource } from "@nestjs/typeorm";
 import type { DataSource } from "typeorm";
 import type {
   EventTicket,
+  EventTicketFilter,
   EventTicketRepositoryPort,
 } from "@/modules/events/application/ports/event-ticket-repository.port";
 import { EventStatus } from "@/modules/events/domain/event";
 import { EventOrderStatus } from "@/modules/events/domain/event-order";
 import { unitLabel } from "@/modules/condominiums/domain/unit";
+import { AttendeeSource } from "@/modules/events/domain/event-order";
+import { likePattern } from "@/shared/infrastructure/persistence/like-pattern";
 
 type TicketRow = Omit<EventTicket, "unitLabel"> & {
   unitStreet: string | null;
@@ -78,14 +81,51 @@ export class EventTicketSqlRepository implements EventTicketRepositoryPort {
   async forEvent(
     condominiumId: string,
     eventId: string,
+    filter: EventTicketFilter,
   ): Promise<EventTicket[]> {
+    const params: unknown[] = [condominiumId, eventId];
+    const where = [
+      "o.idtb_condominiums = $1",
+      "o.idtb_events = $2",
+      `o.status = '${EventOrderStatus.CONFIRMED}'`,
+    ];
+    if (filter.search) {
+      params.push(likePattern(filter.search));
+      const term = `unaccent($${params.length})`;
+      where.push(
+        `(unaccent(a.name) ILIKE ${term} OR unaccent(COALESCE(u.name, '')) ILIKE ${term}
+          OR a.ticket_code ILIKE $${params.length} OR o.code ILIKE $${params.length}
+          OR concat_ws(' ', un.street, un.block, un.number) ILIKE $${params.length})`,
+      );
+    }
+    if (filter.checkedIn !== null) {
+      where.push(
+        filter.checkedIn
+          ? "a.checked_in_at IS NOT NULL"
+          : "a.checked_in_at IS NULL",
+      );
+    }
+    if (filter.ticketName) {
+      params.push(filter.ticketName);
+      where.push(`a.ticket_name = $${params.length}`);
+    }
+    if (filter.outside !== null) {
+      params.push(filter.outside);
+      where.push(`a.outside = $${params.length}`);
+    }
+    if (filter.buyer !== null) {
+      where.push(
+        filter.buyer
+          ? `a.source = '${AttendeeSource.SELF}'`
+          : `a.source <> '${AttendeeSource.SELF}'`,
+      );
+    }
     const rows = await this.dataSource.query<TicketRow[]>(
       `${SELECT}
-        WHERE o.idtb_condominiums = $1 AND o.idtb_events = $2
-          AND o.status = '${EventOrderStatus.CONFIRMED}'
+        WHERE ${where.join(" AND ")}
         ORDER BY o.created_at, a.position
         LIMIT 5000`,
-      [condominiumId, eventId],
+      params,
     );
     return rows.map(toTicket);
   }
