@@ -997,6 +997,11 @@ type SessionUser {
   """Permissões efetivas no condomínio atual."""
   permissions: [Permission!]!
 
+  """
+  Tem vínculo (morador ou funcionário) com o condomínio da sessão. A administração da plataforma entra em qualquer um sem ter.
+  """
+  member: Boolean!
+
   """Já viu (ou pulou) a apresentação guiada do app."""
   onboardingCompleted: Boolean!
 
