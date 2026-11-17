@@ -1142,6 +1142,74 @@ type NotificationPreference {
   emailEnabled: Boolean!
 }
 
+"""Uma pessoa de um condomínio, vista pela plataforma."""
+type CondominiumMember {
+  userId: ID!
+  name: String!
+  email: String!
+  username: String!
+  phone: String
+
+  """Papel no condomínio."""
+  role: UserGroup!
+  kind: MemberKind!
+
+  """Acesso ativo ao condomínio."""
+  active: Boolean!
+
+  """Moradores."""
+  unitLabel: String
+
+  """Funcionários."""
+  jobTitle: String
+  lastLoginAt: DateTime
+
+  """Desde quando tem acesso."""
+  since: DateTime!
+}
+
+"""O acesso de uma pessoa a um condomínio."""
+type PersonMembership {
+  condominiumId: ID!
+  condominiumName: String!
+
+  """Papel no condomínio."""
+  role: UserGroup!
+  kind: MemberKind!
+
+  """Acesso ativo."""
+  active: Boolean!
+}
+
+"""Uma pessoa com conta no Dora (diretório da plataforma)."""
+type PlatformPerson {
+  id: ID!
+  name: String!
+  email: String!
+  username: String!
+  phone: String
+
+  """Administra a plataforma."""
+  platformAdmin: Boolean!
+
+  """Conta ativa."""
+  active: Boolean!
+
+  """Bloqueada por senhas erradas até este momento."""
+  lockedUntil: DateTime
+  lastLoginAt: DateTime
+  createdAt: DateTime!
+  memberships: [PersonMembership!]!
+}
+
+type PlatformPersonPage {
+  items: [PlatformPerson!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
 """Reservas de um intervalo da série."""
 type BookingsPoint {
   """Primeiro dia do intervalo (YYYY-MM-DD)."""
@@ -1670,6 +1738,12 @@ type Query {
   """Chave VAPID para o navegador assinar o push (null = desligado)."""
   pushPublicKey: String
 
+  """Todas as pessoas com conta no Dora, com os condomínios."""
+  platformPeople(filter: PlatformPeopleFilterInput, page: PageInput): PlatformPersonPage!
+
+  """As pessoas de um condomínio (gestão, portaria e moradores)."""
+  condominiumMembers(condominiumId: ID!): [CondominiumMember!]!
+
   """
   Números da plataforma no período: reservas, uso dos espaços, moradores e o que precisa de atenção.
   """
@@ -1747,6 +1821,15 @@ input UserFilterInput {
   """Só moradores ou só funcionários."""
   kind: MemberKind
   unitId: ID
+}
+
+input PlatformPeopleFilterInput {
+  """Nome, e-mail ou usuário (a partir de 2 letras)."""
+  search: String
+
+  """ADMIN_MASTER: a plataforma; os outros: o papel em algum condomínio."""
+  role: UserGroup
+  condominiumId: ID
 }
 
 input PlatformMetricsFilterInput {
