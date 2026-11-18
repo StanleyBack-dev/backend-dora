@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.11.0...v0.12.0) (2026-11-18)
+
+
+### Features
+
+* **bookings:** add filtered and paged usage fees for managers ([074b14b](https://github.com/StanleyBack-dev/backend-dora/commit/074b14b6ab192ace3a037a80e893fde06888594e))
+* **bookings:** add filtered and paged usage fees for managers ([a1dce7b](https://github.com/StanleyBack-dev/backend-dora/commit/a1dce7bf6f497a1412479d6208d814d2a9bde0c2))
+
 ## [0.11.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.10.0...v0.11.0) (2026-11-18)
 
 
