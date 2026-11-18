@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.9.0...v0.10.0) (2026-11-18)
+
+
+### Features
+
+* **bookings:** accept a date range in the bookings filter ([edb9132](https://github.com/StanleyBack-dev/backend-dora/commit/edb9132e2f5a2ea3823ae4716479fb0ce85b58cf))
+* **bookings:** accept a date range in the bookings filter ([cebb3c8](https://github.com/StanleyBack-dev/backend-dora/commit/cebb3c8cf08d5f503bfb9bb84809716b98964061))
+
 ## [0.9.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.8.0...v0.9.0) (2026-11-17)
 
 
