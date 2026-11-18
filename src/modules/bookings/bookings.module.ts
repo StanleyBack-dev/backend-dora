@@ -48,6 +48,9 @@ import { BookingGuestsResolver } from "@/modules/bookings/presentation/graphql/b
 import { BookingSeriesResolver } from "@/modules/bookings/presentation/graphql/booking-series.resolver";
 import { BookingWaitlistResolver } from "@/modules/bookings/presentation/graphql/booking-waitlist.resolver";
 import { GateResolver } from "@/modules/bookings/presentation/graphql/gate.resolver";
+import { DayGuestsResolver } from "@/modules/bookings/presentation/graphql/day-guests.resolver";
+import { GetDayGuestsOverviewUseCase } from "@/modules/bookings/application/use-cases/get-day-guests-overview.use-case";
+import { ListDayGuestsUseCase } from "@/modules/bookings/application/use-cases/list-day-guests.use-case";
 import { GuestInviteResolver } from "@/modules/bookings/presentation/graphql/guest-invite.resolver";
 import { IdentityModule } from "@/modules/identity/identity.module";
 import { OutboxModule } from "@/modules/outbox/outbox.module";
@@ -84,12 +87,15 @@ import { SpacesModule } from "@/modules/spaces/spaces.module";
     RemoveBookingGuestUseCase,
     GetGuestInviteUseCase,
     ListGateGuestsUseCase,
+    ListDayGuestsUseCase,
+    GetDayGuestsOverviewUseCase,
     CheckInGuestUseCase,
     ListBookingFeesUseCase,
     SetBookingFeesBilledUseCase,
     BookingGuestsResolver,
     GuestInviteResolver,
     GateResolver,
+    DayGuestsResolver,
     BookingWaitlistResolver,
     BookingSeriesResolver,
     BookingFeesResolver,
