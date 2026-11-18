@@ -53,6 +53,39 @@ export type BookingFilter = {
   to?: Date;
 };
 
+/** What narrows a period's usage fees (null: any). */
+export type FeeFilter = {
+  unitId: string | null;
+  spaceId: string | null;
+  /** Who booked. */
+  userId: string | null;
+  /** true: only fees sent to billing; false: only the pending ones. */
+  billed: boolean | null;
+};
+
+export const NO_FEE_FILTER: FeeFilter = {
+  unitId: null,
+  spaceId: null,
+  userId: null,
+  billed: null,
+};
+
+/** Something to pick in a filter of the fees. */
+export type FeeFilterOption = { id: string; label: string };
+
+/**
+ * A period's usage fees at a glance, whatever the filters: the numbers and
+ * what the filters offer.
+ */
+export type FeesOverview = {
+  count: number;
+  totalCents: number;
+  billedCents: number;
+  units: FeeFilterOption[];
+  spaces: FeeFilterOption[];
+  users: FeeFilterOption[];
+};
+
 /** Another active booking holds the slot (the exclusion constraint fired). */
 export class SlotTakenError extends Error {
   constructor() {
@@ -98,7 +131,22 @@ export interface BookingRepositoryPort {
     condominiumId: string,
     from: Date,
     to: Date,
+    filter?: FeeFilter,
   ): Promise<BookingView[]>;
+  /** A page of the same fees that match the filter, in the same order. */
+  feesPageInRange(
+    condominiumId: string,
+    from: Date,
+    to: Date,
+    filter: FeeFilter,
+    page: PageRequest,
+  ): Promise<Paginated<BookingView>>;
+  /** The numbers and the filter options of the same fees. */
+  feesOverviewInRange(
+    condominiumId: string,
+    from: Date,
+    to: Date,
+  ): Promise<FeesOverview>;
   /**
    * Marks (at) or unmarks (null) the fees of these bookings as sent to the
    * billing; only confirmed bookings with a fee of the condominium change.

@@ -29,6 +29,32 @@ type RecordStamp {
   updatedByName: String
 }
 
+"""Algo para escolher num filtro das taxas de uso."""
+type FeeFilterOption {
+  id: ID!
+  label: String!
+}
+
+"""
+Os números das taxas de uso de um mês (sem filtros) e as opções dos filtros.
+"""
+type BookingFeesOverview {
+  """YYYY-MM."""
+  month: String!
+
+  """Quantas taxas."""
+  count: Int!
+  totalCents: Int!
+
+  """Já lançado na cobrança."""
+  billedCents: Int!
+  units: [FeeFilterOption!]!
+  spaces: [FeeFilterOption!]!
+
+  """Quem reservou."""
+  users: [FeeFilterOption!]!
+}
+
 """Reserva de um espaço."""
 type Booking {
   id: ID!
@@ -104,6 +130,14 @@ type BookingFees {
   billedCents: Int!
 }
 
+type BookingPage {
+  items: [Booking!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
 """Convidado de uma reserva."""
 type BookingGuest {
   id: ID!
@@ -157,14 +191,6 @@ type SeriesCancellation {
 
   """Datas mantidas (fora do prazo de cancelamento)."""
   kept: Int!
-}
-
-type BookingPage {
-  items: [Booking!]!
-  total: Int!
-  page: Int!
-  limit: Int!
-  totalPages: Int!
 }
 
 """Algo para escolher num filtro dos convidados."""
@@ -1764,11 +1790,28 @@ type Query {
   """
   recordStamp(entity: String!, id: ID!): RecordStamp
 
-  """Taxas de uso de um mês (padrão: o atual), por unidade."""
+  """
+  Todas as taxas de uso de um mês que atendem aos filtros, por unidade (a planilha).
+  """
   bookingFees(
-    """YYYY-MM."""
+    """YYYY-MM (padrão: o mês atual)."""
     month: String
+    filter: FeeFilterInput
   ): BookingFees!
+
+  """As taxas de uso de um mês, com filtros, por página (por unidade)."""
+  bookingFeesPage(
+    """YYYY-MM (padrão: o mês atual)."""
+    month: String
+    filter: FeeFilterInput
+    page: PageInput
+  ): BookingPage!
+
+  """Os números das taxas de uso de um mês e as opções dos filtros."""
+  bookingFeesOverview(
+    """YYYY-MM (padrão: o mês atual)."""
+    month: String
+  ): BookingFeesOverview!
 
   """Convidados de uma reserva (sua, ou qualquer para gestores)."""
   bookingGuests(bookingId: ID!): [BookingGuest!]!
@@ -1946,15 +1989,30 @@ type Query {
   systemLogSummary: [SystemLogSummary!]!
 }
 
-"""Próximas (ainda não terminaram) ou passadas."""
-enum BookingWhen {
-  UPCOMING
-  PAST
+"""Filtros das taxas de uso de um mês."""
+input FeeFilterInput {
+  """A unidade da reserva."""
+  unitId: ID
+
+  """O espaço reservado."""
+  spaceId: ID
+
+  """Quem reservou."""
+  userId: ID
+
+  """true: só as lançadas na cobrança; false: só as pendentes."""
+  billed: Boolean
 }
 
 input PageInput {
   page: Int! = 1
   limit: Int! = 20
+}
+
+"""Próximas (ainda não terminaram) ou passadas."""
+enum BookingWhen {
+  UPCOMING
+  PAST
 }
 
 input BookingFilterInput {
