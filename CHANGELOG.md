@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.10.0...v0.11.0) (2026-11-18)
+
+
+### Features
+
+* **bookings:** add filtered and paged day guests for managers ([8238243](https://github.com/StanleyBack-dev/backend-dora/commit/82382431db91f6438699d0be19d9ffae8db5988d))
+* **bookings:** add filtered and paged day guests for managers ([4d89249](https://github.com/StanleyBack-dev/backend-dora/commit/4d89249ad070cf2e9628a30b60ba9931649100c1))
+
 ## [0.10.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.9.0...v0.10.0) (2026-11-18)
 
 
