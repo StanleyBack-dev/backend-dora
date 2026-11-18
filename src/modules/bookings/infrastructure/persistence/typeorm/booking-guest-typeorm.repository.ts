@@ -4,12 +4,25 @@ import { QueryFailedError, type DataSource } from "typeorm";
 import {
   GuestCodeTakenError,
   type BookingGuestRepositoryPort,
+  type DayGuestFilter,
+  type DayGuestsOverview,
   type GateGuest,
+  type GuestFilterOption,
   type GuestInviteView,
+  type GuestPeriod,
   type NewGuest,
 } from "@/modules/bookings/application/ports/booking-guest-repository.port";
 import { ACTIVE_STATUSES } from "@/modules/bookings/domain/booking";
 import type { BookingGuest } from "@/modules/bookings/domain/booking-guest";
+import {
+  toUnitOptions,
+  type UnitRow,
+} from "@/modules/condominiums/infrastructure/persistence/unit-options";
+import {
+  paginate,
+  type PageRequest,
+  type Paginated,
+} from "@/shared/application/pagination";
 
 const GUEST_COLUMNS = `
   g.idtb_booking_guests AS id, g.idtb_bookings AS "bookingId",
@@ -35,6 +48,10 @@ const GATE_SQL = `
     LEFT JOIN tb_units un ON un.idtb_units = b.idtb_units`;
 
 const ACTIVE_SQL = ACTIVE_STATUSES.map((status) => `'${status}'`).join(", ");
+
+// Guests of the condominium's ($1) active bookings that overlap [$2, $3).
+const DAY_SQL = `g.idtb_condominiums = $1 AND b.status IN (${ACTIVE_SQL})
+  AND b.starts_at < $3 AND b.ends_at > $2`;
 
 const isUniqueViolation = (error: unknown) =>
   error instanceof QueryFailedError &&
@@ -123,11 +140,110 @@ export class BookingGuestTypeormRepository implements BookingGuestRepositoryPort
   forGate(condominiumId: string, from: Date, to: Date): Promise<GateGuest[]> {
     return this.dataSource.query<GateGuest[]>(
       `${GATE_SQL}
-        WHERE g.idtb_condominiums = $1 AND b.status IN (${ACTIVE_SQL})
-          AND b.starts_at < $3 AND b.ends_at > $2
+        WHERE ${DAY_SQL}
         ORDER BY b.starts_at, unaccent(g.name)`,
       [condominiumId, from, to],
     );
+  }
+
+  async forDay(
+    condominiumId: string,
+    period: GuestPeriod,
+    filter: DayGuestFilter,
+    page: PageRequest,
+  ): Promise<Paginated<GateGuest>> {
+    const params: unknown[] = [condominiumId, period.from, period.to];
+    const where = [DAY_SQL];
+    const narrow = (column: string, value: string | null) => {
+      if (value === null) return;
+      params.push(value);
+      where.push(`${column} = $${params.length}`);
+    };
+    narrow("g.idtb_booking_guests", filter.guestId);
+    narrow("b.idtb_users", filter.hostId);
+    narrow("b.idtb_units", filter.unitId);
+    narrow("b.idtb_spaces", filter.spaceId);
+    if (filter.checkedIn !== null) {
+      where.push(
+        filter.checkedIn
+          ? "g.checked_in_at IS NOT NULL"
+          : "g.checked_in_at IS NULL",
+      );
+    }
+    const clause = `WHERE ${where.join(" AND ")}`;
+    const [rows, [count]] = await Promise.all([
+      this.dataSource.query<GateGuest[]>(
+        `${GATE_SQL} ${clause}
+          ORDER BY b.starts_at, unaccent(s.name), b.idtb_bookings,
+                   unaccent(g.name)
+          LIMIT ${Number(page.limit)} OFFSET ${(page.page - 1) * page.limit}`,
+        params,
+      ),
+      this.dataSource.query<{ total: number }[]>(
+        `SELECT count(*)::int AS total
+           FROM tb_booking_guests g
+           JOIN tb_bookings b ON b.idtb_bookings = g.idtb_bookings
+          ${clause}`,
+        params,
+      ),
+    ]);
+    return paginate(rows, count?.total ?? 0, page);
+  }
+
+  async overviewOfDay(
+    condominiumId: string,
+    period: GuestPeriod,
+  ): Promise<DayGuestsOverview> {
+    const params = [condominiumId, period.from, period.to];
+    const day = `FROM tb_booking_guests g
+      JOIN tb_bookings b ON b.idtb_bookings = g.idtb_bookings
+     WHERE ${DAY_SQL}`;
+    const [[totals], guests, hosts, units, spaces] = await Promise.all([
+      this.dataSource.query<
+        { total: number; checkedIn: number; bookings: number }[]
+      >(
+        `SELECT count(*)::int AS total,
+                count(g.checked_in_at)::int AS "checkedIn",
+                count(DISTINCT b.idtb_bookings)::int AS bookings
+           ${day}`,
+        params,
+      ),
+      this.dataSource.query<GuestFilterOption[]>(
+        `SELECT g.idtb_booking_guests AS id, g.name AS label
+           ${day}
+          ORDER BY unaccent(g.name)`,
+        params,
+      ),
+      this.dataSource.query<GuestFilterOption[]>(
+        `SELECT DISTINCT u.idtb_users AS id, u.name AS label,
+                unaccent(u.name) AS sort
+           ${day.replace("WHERE", "JOIN tb_users u ON u.idtb_users = b.idtb_users WHERE")}
+          ORDER BY sort`,
+        params,
+      ),
+      this.dataSource.query<UnitRow[]>(
+        `SELECT DISTINCT un.idtb_units AS id, un.street, un.block, un.number
+           ${day.replace("WHERE", "JOIN tb_units un ON un.idtb_units = b.idtb_units WHERE")}`,
+        params,
+      ),
+      this.dataSource.query<GuestFilterOption[]>(
+        `SELECT DISTINCT s.idtb_spaces AS id, s.name AS label,
+                unaccent(s.name) AS sort
+           ${day.replace("WHERE", "JOIN tb_spaces s ON s.idtb_spaces = b.idtb_spaces WHERE")}
+          ORDER BY sort`,
+        params,
+      ),
+    ]);
+    const option = ({ id, label }: GuestFilterOption) => ({ id, label });
+    return {
+      total: totals?.total ?? 0,
+      checkedIn: totals?.checkedIn ?? 0,
+      bookings: totals?.bookings ?? 0,
+      guests,
+      hosts: hosts.map(option),
+      units: toUnitOptions(units).map(({ id, label }) => ({ id, label })),
+      spaces: spaces.map(option),
+    };
   }
 
   async setCheckIn(

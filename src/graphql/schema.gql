@@ -167,6 +167,31 @@ type BookingPage {
   totalPages: Int!
 }
 
+"""Algo para escolher num filtro dos convidados."""
+type GuestFilterOption {
+  id: ID!
+  label: String!
+}
+
+"""
+Os números dos convidados de um dia (sem filtros) e as opções dos filtros.
+"""
+type DayGuestsOverview {
+  total: Int!
+
+  """Quantos já entraram."""
+  checkedIn: Int!
+
+  """Quantas reservas têm convidados."""
+  bookings: Int!
+  guests: [GuestFilterOption!]!
+
+  """Quem convidou."""
+  hosts: [GuestFilterOption!]!
+  units: [GuestFilterOption!]!
+  spaces: [GuestFilterOption!]!
+}
+
 """Convidado na lista da portaria."""
 type GateGuest {
   id: ID!
@@ -199,6 +224,14 @@ enum GuestCheckInWindow {
   TOO_EARLY
   FINISHED
   CANCELLED
+}
+
+type GateGuestPage {
+  items: [GateGuest!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
 }
 
 """Convite de um convidado (página pública)."""
@@ -1746,6 +1779,20 @@ type Query {
   """Todas as reservas do condomínio."""
   bookings(filter: BookingFilterInput, page: PageInput): BookingPage!
 
+  """Os convidados das reservas de um dia, com filtros, por página."""
+  dayGuests(
+    """YYYY-MM-DD (padrão: hoje)."""
+    date: String
+    filter: DayGuestFilterInput
+    page: PageInput
+  ): GateGuestPage!
+
+  """Os números dos convidados de um dia e as opções dos filtros."""
+  dayGuestsOverview(
+    """YYYY-MM-DD (padrão: hoje)."""
+    date: String
+  ): DayGuestsOverview!
+
   """Convidados das reservas de um dia (padrão: hoje)."""
   gateGuests(
     """YYYY-MM-DD."""
@@ -1920,6 +1967,24 @@ input BookingFilterInput {
 
   """Começa antes deste instante (fim do calendário, exclusivo)."""
   to: DateTime
+}
+
+"""Filtros dos convidados de um dia."""
+input DayGuestFilterInput {
+  """Um convidado."""
+  guestId: ID
+
+  """Quem reservou (quem convidou)."""
+  hostId: ID
+
+  """A unidade da reserva."""
+  unitId: ID
+
+  """O espaço reservado."""
+  spaceId: ID
+
+  """true: só quem já entrou; false: só quem ainda não entrou."""
+  checkedIn: Boolean
 }
 
 input CondominiumFilterInput {

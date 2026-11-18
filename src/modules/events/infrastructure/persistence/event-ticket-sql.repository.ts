@@ -10,7 +10,7 @@ import type {
 import {
   toUnitOptions,
   type UnitRow,
-} from "@/modules/events/infrastructure/persistence/unit-options";
+} from "@/modules/condominiums/infrastructure/persistence/unit-options";
 import {
   paginate,
   type PageRequest,
