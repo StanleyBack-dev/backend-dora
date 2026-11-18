@@ -1914,6 +1914,12 @@ input BookingFilterInput {
   spaceId: ID
   status: BookingStatus
   when: BookingWhen
+
+  """Começa a partir deste instante (início do calendário)."""
+  from: DateTime
+
+  """Começa antes deste instante (fim do calendário, exclusivo)."""
+  to: DateTime
 }
 
 input CondominiumFilterInput {
