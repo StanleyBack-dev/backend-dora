@@ -37,6 +37,8 @@ import { GetGuestInviteUseCase } from "@/modules/bookings/application/use-cases/
 import { JoinWaitlistUseCase } from "@/modules/bookings/application/use-cases/join-waitlist.use-case";
 import { LeaveWaitlistUseCase } from "@/modules/bookings/application/use-cases/leave-waitlist.use-case";
 import { ListBookingFeesUseCase } from "@/modules/bookings/application/use-cases/list-booking-fees.use-case";
+import { ListBookingFeesPageUseCase } from "@/modules/bookings/application/use-cases/list-booking-fees-page.use-case";
+import { GetBookingFeesOverviewUseCase } from "@/modules/bookings/application/use-cases/get-booking-fees-overview.use-case";
 import { ListBookingGuestsUseCase } from "@/modules/bookings/application/use-cases/list-booking-guests.use-case";
 import { ListGateGuestsUseCase } from "@/modules/bookings/application/use-cases/list-gate-guests.use-case";
 import { RemoveBookingGuestUseCase } from "@/modules/bookings/application/use-cases/remove-booking-guest.use-case";
@@ -91,6 +93,8 @@ import { SpacesModule } from "@/modules/spaces/spaces.module";
     GetDayGuestsOverviewUseCase,
     CheckInGuestUseCase,
     ListBookingFeesUseCase,
+    ListBookingFeesPageUseCase,
+    GetBookingFeesOverviewUseCase,
     SetBookingFeesBilledUseCase,
     BookingGuestsResolver,
     GuestInviteResolver,

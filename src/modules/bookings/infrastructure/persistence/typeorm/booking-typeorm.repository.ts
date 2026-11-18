@@ -2,13 +2,21 @@ import { Injectable } from "@nestjs/common";
 import { InjectDataSource } from "@nestjs/typeorm";
 import { QueryFailedError, type DataSource } from "typeorm";
 import {
+  NO_FEE_FILTER,
   SlotTakenError,
   type BookingFilter,
   type BookingPatch,
   type BookingRepositoryPort,
   type BookingView,
+  type FeeFilter,
+  type FeeFilterOption,
+  type FeesOverview,
   type NewBooking,
 } from "@/modules/bookings/application/ports/booking-repository.port";
+import {
+  toUnitOptions,
+  type UnitRow,
+} from "@/modules/condominiums/infrastructure/persistence/unit-options";
 import {
   ACTIVE_STATUSES,
   type Booking,
@@ -65,6 +73,41 @@ const VIEW_SQL = `
     LEFT JOIN tb_units un ON un.idtb_units = b.idtb_units`;
 
 const ACTIVE_SQL = ACTIVE_STATUSES.map((status) => `'${status}'`).join(", ");
+
+// The usage fees: confirmed bookings with a fee starting in [from, to), by
+// unit and then start.
+const FEES_ORDER = "ORDER BY un.block NULLS FIRST, un.number, b.starts_at";
+
+// Uses only `b` (tb_bookings), so the count and the overview reuse it.
+function feesWhere(
+  condominiumId: string,
+  from: Date,
+  to: Date,
+  filter: FeeFilter,
+) {
+  const params: unknown[] = [condominiumId, from, to];
+  const where = [
+    "b.idtb_condominiums = $1",
+    "b.status = 'CONFIRMED'",
+    "b.fee_cents IS NOT NULL",
+    "b.starts_at >= $2",
+    "b.starts_at < $3",
+  ];
+  const narrow = (column: string, value: string | null) => {
+    if (value === null) return;
+    params.push(value);
+    where.push(`${column} = $${params.length}`);
+  };
+  narrow("b.idtb_units", filter.unitId);
+  narrow("b.idtb_spaces", filter.spaceId);
+  narrow("b.idtb_users", filter.userId);
+  if (filter.billed !== null) {
+    where.push(
+      filter.billed ? "b.fee_billed_at IS NOT NULL" : "b.fee_billed_at IS NULL",
+    );
+  }
+  return { clause: `WHERE ${where.join(" AND ")}`, params };
+}
 
 const isExclusionViolation = (error: unknown) =>
   error instanceof QueryFailedError &&
@@ -181,15 +224,89 @@ export class BookingTypeormRepository implements BookingRepositoryPort {
     condominiumId: string,
     from: Date,
     to: Date,
+    filter: FeeFilter = NO_FEE_FILTER,
   ): Promise<BookingView[]> {
+    const { clause, params } = feesWhere(condominiumId, from, to, filter);
     return this.dataSource.query<BookingView[]>(
-      `${VIEW_SQL}
-        WHERE b.idtb_condominiums = $1 AND b.status = 'CONFIRMED'
-          AND b.fee_cents IS NOT NULL
-          AND b.starts_at >= $2 AND b.starts_at < $3
-        ORDER BY un.block NULLS FIRST, un.number, b.starts_at`,
-      [condominiumId, from, to],
+      `${VIEW_SQL} ${clause} ${FEES_ORDER}`,
+      params,
     );
+  }
+
+  async feesPageInRange(
+    condominiumId: string,
+    from: Date,
+    to: Date,
+    filter: FeeFilter,
+    page: PageRequest,
+  ): Promise<Paginated<BookingView>> {
+    const { clause, params } = feesWhere(condominiumId, from, to, filter);
+    const [rows, [count]] = await Promise.all([
+      this.dataSource.query<BookingView[]>(
+        `${VIEW_SQL} ${clause} ${FEES_ORDER}
+          LIMIT ${Number(page.limit)} OFFSET ${(page.page - 1) * page.limit}`,
+        params,
+      ),
+      this.dataSource.query<{ total: number }[]>(
+        `SELECT count(*)::int AS total FROM tb_bookings b ${clause}`,
+        params,
+      ),
+    ]);
+    return paginate(rows, count?.total ?? 0, page);
+  }
+
+  async feesOverviewInRange(
+    condominiumId: string,
+    from: Date,
+    to: Date,
+  ): Promise<FeesOverview> {
+    const { clause, params } = feesWhere(
+      condominiumId,
+      from,
+      to,
+      NO_FEE_FILTER,
+    );
+    const joined = (join: string) => `FROM tb_bookings b ${join} ${clause}`;
+    const [[totals], units, spaces, users] = await Promise.all([
+      this.dataSource.query<
+        { count: number; totalCents: number; billedCents: number }[]
+      >(
+        `SELECT count(*)::int AS count,
+                coalesce(sum(b.fee_cents), 0)::int AS "totalCents",
+                coalesce(sum(b.fee_cents) FILTER
+                  (WHERE b.fee_billed_at IS NOT NULL), 0)::int AS "billedCents"
+           FROM tb_bookings b ${clause}`,
+        params,
+      ),
+      this.dataSource.query<UnitRow[]>(
+        `SELECT DISTINCT un.idtb_units AS id, un.street, un.block, un.number
+           ${joined("JOIN tb_units un ON un.idtb_units = b.idtb_units")}`,
+        params,
+      ),
+      this.dataSource.query<(FeeFilterOption & { sort: string })[]>(
+        `SELECT DISTINCT s.idtb_spaces AS id, s.name AS label,
+                unaccent(s.name) AS sort
+           ${joined("JOIN tb_spaces s ON s.idtb_spaces = b.idtb_spaces")}
+          ORDER BY sort`,
+        params,
+      ),
+      this.dataSource.query<(FeeFilterOption & { sort: string })[]>(
+        `SELECT DISTINCT u.idtb_users AS id, u.name AS label,
+                unaccent(u.name) AS sort
+           ${joined("JOIN tb_users u ON u.idtb_users = b.idtb_users")}
+          ORDER BY sort`,
+        params,
+      ),
+    ]);
+    const option = ({ id, label }: FeeFilterOption) => ({ id, label });
+    return {
+      count: totals?.count ?? 0,
+      totalCents: totals?.totalCents ?? 0,
+      billedCents: totals?.billedCents ?? 0,
+      units: toUnitOptions(units),
+      spaces: spaces.map(option),
+      users: users.map(option),
+    };
   }
 
   async setFeesBilled(
