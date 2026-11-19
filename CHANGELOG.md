@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.13.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.12.0...v0.13.0) (2026-11-19)
+
+
+### Features
+
+* **landing:** add leads, analytics and panel queries for the landing page ([aaae96b](https://github.com/StanleyBack-dev/backend-dora/commit/aaae96b000ea3319e514f496f4456fe4d196841b))
+* **landing:** add leads, analytics and panel queries for the landing page ([aff1ecc](https://github.com/StanleyBack-dev/backend-dora/commit/aff1ecc33ab3c1972b079d843aaf4dd124eadc53))
+* **mails:** add the landing page lead e-mails ([3822ea2](https://github.com/StanleyBack-dev/backend-dora/commit/3822ea2dd35bb79c035a434ec09f2695d46faaa7))
+
 ## [0.12.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.11.0...v0.12.0) (2026-11-18)
 
 
