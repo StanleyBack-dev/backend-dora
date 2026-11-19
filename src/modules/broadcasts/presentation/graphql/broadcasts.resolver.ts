@@ -4,7 +4,11 @@ import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { Permission } from "@/modules/access-control/domain/permission";
 import { RequirePermissions } from "@/modules/access-control/presentation/decorators/require-permissions.decorator";
 import { BroadcastsUseCase } from "@/modules/broadcasts/application/use-cases/broadcasts.use-case";
-import type { BroadcastView } from "@/modules/broadcasts/application/ports/broadcast-repository.port";
+import type {
+  BroadcastStats,
+  BroadcastView,
+} from "@/modules/broadcasts/application/ports/broadcast-repository.port";
+import { BroadcastStatsType } from "@/modules/broadcasts/presentation/graphql/dto/outputs/broadcast-stats.output";
 import { BroadcastType } from "@/modules/broadcasts/presentation/graphql/dto/outputs/broadcast.output";
 import { BroadcastInput } from "@/modules/broadcasts/presentation/graphql/dto/inputs/broadcast.input";
 
@@ -18,6 +22,16 @@ export class BroadcastsResolver {
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<BroadcastView[]> {
     return this.broadcastsUseCase.list(actor);
+  }
+
+  @RequirePermissions(Permission.NOTIFICATIONS_BROADCAST)
+  @Query(() => BroadcastStatsType, {
+    description: "Os comunicados do condomínio em números.",
+  })
+  broadcastStats(
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<BroadcastStats> {
+    return this.broadcastsUseCase.stats(actor);
   }
 
   @RequirePermissions(Permission.NOTIFICATIONS_BROADCAST)

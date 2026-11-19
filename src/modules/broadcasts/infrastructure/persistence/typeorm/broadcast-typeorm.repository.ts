@@ -1,9 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { InjectDataSource } from "@nestjs/typeorm";
 import type { DataSource } from "typeorm";
-import type {
-  BroadcastRepositoryPort,
-  BroadcastView,
+import {
+  BROADCAST_RECENT_DAYS,
+  type BroadcastStats,
+  type BroadcastRepositoryPort,
+  type BroadcastView,
 } from "@/modules/broadcasts/application/ports/broadcast-repository.port";
 import type { Broadcast } from "@/modules/broadcasts/domain/broadcast";
 import { BroadcastOrmEntity } from "@/modules/broadcasts/infrastructure/persistence/typeorm/broadcast.orm-entity";
@@ -50,6 +52,18 @@ export class BroadcastTypeormRepository implements BroadcastRepositoryPort {
 
   list(condominiumId: string, limit: number): Promise<BroadcastView[]> {
     return this.query("WHERE b.idtb_condominiums = $1", [condominiumId], limit);
+  }
+
+  async stats(condominiumId: string): Promise<BroadcastStats> {
+    const [row] = await this.dataSource.query<BroadcastStats[]>(
+      `SELECT count(*)::int AS total,
+              count(*) FILTER (WHERE created_at >= now() - $2 * interval '1 day')::int AS recent,
+              count(*) FILTER (WHERE send_email)::int AS "withEmail",
+              coalesce(sum(recipients) FILTER (WHERE created_at >= now() - $2 * interval '1 day'), 0)::int AS "recentRecipients"
+         FROM tb_broadcasts WHERE idtb_condominiums = $1`,
+      [condominiumId, BROADCAST_RECENT_DAYS],
+    );
+    return row;
   }
 
   // The author's name comes from tb_users (identity), read-only.

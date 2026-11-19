@@ -11,6 +11,7 @@ import { AuditTrailService } from "@/modules/audit/application/audit-trail.servi
 import {
   BROADCAST_REPOSITORY,
   type BroadcastRepositoryPort,
+  type BroadcastStats,
   type BroadcastView,
 } from "@/modules/broadcasts/application/ports/broadcast-repository.port";
 import {
@@ -41,6 +42,11 @@ export class BroadcastsUseCase {
     private readonly audit: AuditTrailService,
     private readonly outbox: OutboxDispatcher,
   ) {}
+
+  /** The condominium's broadcasts at a glance (the page's cards). */
+  stats(actor: AuthenticatedUser): Promise<BroadcastStats> {
+    return this.broadcasts.stats(tenantOf(actor));
+  }
 
   list(actor: AuthenticatedUser): Promise<BroadcastView[]> {
     return this.broadcasts.list(tenantOf(actor), HISTORY_LIMIT);
