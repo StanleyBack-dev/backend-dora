@@ -316,6 +316,9 @@ export class BookingTypeormRepository implements BookingRepositoryPort {
     actorId: string,
   ): Promise<number> {
     if (ids.length === 0) return 0;
+    // Only fees in the other state change: marking a fee that is already
+    // billed keeps when and by whom it was billed, and the count is what
+    // really changed.
     // node-postgres returns [rows, affected] for UPDATE … RETURNING.
     const [, affected] = await this.dataSource.query<[unknown, number]>(
       `UPDATE tb_bookings
@@ -324,6 +327,9 @@ export class BookingTypeormRepository implements BookingRepositoryPort {
               updated_at = now(), updated_by = $4::uuid
         WHERE idtb_condominiums = $1 AND idtb_bookings = ANY($2::uuid[])
           AND status = 'CONFIRMED' AND fee_cents IS NOT NULL
+          AND CASE WHEN $3::timestamptz IS NULL
+                   THEN fee_billed_at IS NOT NULL
+                   ELSE fee_billed_at IS NULL END
         RETURNING 1`,
       [condominiumId, [...ids], at, actorId],
     );

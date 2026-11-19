@@ -149,8 +149,9 @@ export interface BookingRepositoryPort {
   ): Promise<FeesOverview>;
   /**
    * Marks (at) or unmarks (null) the fees of these bookings as sent to the
-   * billing; only confirmed bookings with a fee of the condominium change.
-   * Returns how many changed.
+   * billing; only confirmed bookings with a fee of the condominium change,
+   * and only those in the other state (an already billed fee keeps its
+   * original date and author). Returns how many changed.
    */
   setFeesBilled(
     condominiumId: string,
