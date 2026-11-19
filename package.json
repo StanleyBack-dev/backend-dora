@@ -1,6 +1,6 @@
 {
   "name": "backend-dora",
-  "version": "0.14.1",
+  "version": "0.15.0",
   "description": "Dora backend — bookings and services for condominiums",
   "author": "Stanley Rodrigues",
   "private": true,
