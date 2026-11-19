@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.14.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.13.0...v0.14.0) (2026-11-19)
+
+
+### Features
+
+* **security:** accept a dedicated API key for the landing page ([2b518e0](https://github.com/StanleyBack-dev/backend-dora/commit/2b518e078b703e3567f07fc816f31c4a4850a1f9))
+* **security:** accept a dedicated API key for the landing page ([88ab5b8](https://github.com/StanleyBack-dev/backend-dora/commit/88ab5b86d0fac35453d0d3a7386df2d4f9411e5f))
+
 ## [0.13.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.12.0...v0.13.0) (2026-11-19)
 
 
