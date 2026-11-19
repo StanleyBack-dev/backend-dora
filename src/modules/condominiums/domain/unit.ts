@@ -111,3 +111,9 @@ export function expandUnitNumbers(text: string): string[] | UnitNumbersError {
   }
   return numbers;
 }
+
+/** Whether a unit has active members linked (a units page filter). */
+export enum UnitOccupancy {
+  OCCUPIED = "OCCUPIED",
+  EMPTY = "EMPTY",
+}

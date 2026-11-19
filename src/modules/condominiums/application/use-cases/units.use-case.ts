@@ -5,8 +5,10 @@ import { AppException } from "@/common/exceptions/app-exception";
 import { AuditTrailService } from "@/modules/audit/application/audit-trail.service";
 import {
   UNIT_REPOSITORY,
+  type UnitFilter,
   type UnitRepositoryPort,
   type UnitView,
+  type UnitWithResidents,
 } from "@/modules/condominiums/application/ports/unit-repository.port";
 import {
   expandUnitNumbers,
@@ -18,6 +20,7 @@ import {
   type Unit,
   type UnitNumbersError,
 } from "@/modules/condominiums/domain/unit";
+import type { PageRequest, Paginated } from "@/shared/application/pagination";
 
 export const UNIT_NUMBER_ERRORS: Record<UnitNumbersError, string> = {
   empty: "Informe ao menos um número de unidade.",
@@ -35,6 +38,15 @@ export class UnitsUseCase {
 
   list(condominiumId: string): Promise<UnitView[]> {
     return this.units.list(condominiumId);
+  }
+
+  /** A page of the filtered units, each with the people linked to it. */
+  page(
+    condominiumId: string,
+    filter: UnitFilter,
+    page: PageRequest,
+  ): Promise<Paginated<UnitWithResidents>> {
+    return this.units.page(condominiumId, filter, page);
   }
 
   /**
