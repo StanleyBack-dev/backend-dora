@@ -1,4 +1,5 @@
 import { Args, Int, Mutation, Resolver } from "@nestjs/graphql";
+import { LandingKeyAllowed } from "@/common/decorators/landing-key.decorator";
 import { Public } from "@/common/decorators/public.decorator";
 import {
   CurrentRequestMeta,
@@ -9,8 +10,8 @@ import { SubmitLandingLeadUseCase } from "@/modules/landing/application/use-case
 import { RecordLandingEventsInput } from "@/modules/landing/presentation/graphql/dto/inputs/record-landing-events.input";
 import { SubmitLandingLeadInput } from "@/modules/landing/presentation/graphql/dto/inputs/submit-landing-lead.input";
 
-// Called by the landing page's server (internal key, no session): the
-// contact form and the analytics beacon.
+// Called by the landing page's server with its own key (LANDING_API_KEY,
+// valid only here) and no session: the contact form and the analytics beacon.
 @Resolver()
 export class PublicLandingResolver {
   constructor(
@@ -19,6 +20,7 @@ export class PublicLandingResolver {
   ) {}
 
   @Public()
+  @LandingKeyAllowed()
   @Mutation(() => Boolean, {
     description:
       "Recebe a mensagem do formulário do site e a envia por e-mail à equipe do Dora.",
@@ -51,6 +53,7 @@ export class PublicLandingResolver {
   }
 
   @Public()
+  @LandingKeyAllowed()
   @Mutation(() => Int, {
     description:
       "Registra eventos anônimos de navegação do site; devolve quantos foram guardados.",

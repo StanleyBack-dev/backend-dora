@@ -1,16 +1,28 @@
 import type { INestApplication } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { APP_FILTER, APP_GUARD } from "@nestjs/core";
-import { GraphQLModule } from "@nestjs/graphql";
+import { GraphQLModule, Query, Resolver } from "@nestjs/graphql";
 import type { ApolloDriverConfig } from "@nestjs/apollo";
 import { Test } from "@nestjs/testing";
 import { AppResolver } from "@/app.resolver";
 import { configureApp } from "@/bootstrap/configure-app";
+import { LandingKeyAllowed } from "@/common/decorators/landing-key.decorator";
 import { HttpExceptionFilter } from "@/common/filters/http-exception.filter";
 import { buildGraphqlConfig } from "@/common/graphql/graphql.config";
 import { InternalApiKeyGuard } from "@/common/security/internal-api-key.guard";
 
 const INTERNAL_API_KEY = "k".repeat(32);
+const LANDING_API_KEY = "l".repeat(32);
+
+// Stands in for the landing page's mutations (@LandingKeyAllowed).
+@Resolver()
+class LandingProbeResolver {
+  @LandingKeyAllowed()
+  @Query(() => String)
+  landingProbe(): string {
+    return "ok";
+  }
+}
 
 type GraphqlBody = {
   data?: Record<string, unknown> | null;
@@ -28,12 +40,15 @@ describe("GraphQL gateway", () => {
       imports: [
         ConfigModule.forRoot({
           ignoreEnvFile: true,
-          load: [() => ({ INTERNAL_API_KEY, cors: { origin: [] } })],
+          load: [
+            () => ({ INTERNAL_API_KEY, LANDING_API_KEY, cors: { origin: [] } }),
+          ],
         }),
         GraphQLModule.forRoot<ApolloDriverConfig>(buildGraphqlConfig()),
       ],
       providers: [
         AppResolver,
+        LandingProbeResolver,
         { provide: APP_GUARD, useClass: InternalApiKeyGuard },
         { provide: APP_FILTER, useClass: HttpExceptionFilter },
       ],
@@ -82,6 +97,23 @@ describe("GraphQL gateway", () => {
   it("rejects a request with a wrong internal key", async () => {
     const body = await post("{ ping }", "x".repeat(32));
     expect(body.errors?.[0]?.extensions.code).toBe("AUTH_INVALID_INTERNAL_KEY");
+  });
+
+  it("accepts the landing key on the landing's handlers", async () => {
+    await expect(
+      post("{ landingProbe }", LANDING_API_KEY),
+    ).resolves.toMatchObject({ data: { landingProbe: "ok" } });
+  });
+
+  it("refuses the landing key anywhere else", async () => {
+    const body = await post("{ ping }", LANDING_API_KEY);
+    expect(body.errors?.[0]?.extensions.code).toBe("AUTH_INVALID_INTERNAL_KEY");
+  });
+
+  it("still accepts the internal key on the landing's handlers", async () => {
+    await expect(post("{ landingProbe }")).resolves.toMatchObject({
+      data: { landingProbe: "ok" },
+    });
   });
 
   it("reports unknown fields as a client validation error", async () => {

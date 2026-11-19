@@ -25,6 +25,9 @@ export const envValidationSchema = Joi.object({
   // === SERVICE SECRETS ===
   // Shared secret between the Next.js BFF and this API.
   INTERNAL_API_KEY: Joi.string().min(32).required(),
+  // Key of the public landing page (lange-page-dora). Opens only its
+  // contact form and analytics mutations; empty = the landing is off.
+  LANDING_API_KEY: Joi.string().min(32).allow("").optional(),
   // Sent by the scheduled GitHub Actions workflows as
   // `Authorization: Bearer <CRON_SECRET>`. When unset, /internal/* rejects
   // every request.
