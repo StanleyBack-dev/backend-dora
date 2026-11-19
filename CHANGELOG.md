@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.15.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.14.1...v0.15.0) (2026-11-19)
+
+
+### Features
+
+* **broadcasts:** count the broadcasts for the page's cards ([9cdc3c5](https://github.com/StanleyBack-dev/backend-dora/commit/9cdc3c594fa3699018fd6ca740baa28fe5edf9b3))
+* **condominiums:** page the units with the people linked to them ([a95b298](https://github.com/StanleyBack-dev/backend-dora/commit/a95b298d4cb6dd62f245d91f378f756b02dddcfe))
+* **dependents:** page and filter the dependents for the managers ([a29d47f](https://github.com/StanleyBack-dev/backend-dora/commit/a29d47f8a0051c97f7290579bdaedbe952e4e62e))
+* **enrollment:** filter the sign-ups by name and e-mail ([8abdfbc](https://github.com/StanleyBack-dev/backend-dora/commit/8abdfbc3012f04481947ff7f30e522bf67d4a7f3))
+* filters, paging and stats for the management pages ([9b1436f](https://github.com/StanleyBack-dev/backend-dora/commit/9b1436f1d112eaa693906884831fbe4e693bbf9a))
+* **identity:** filter members by person, e-mail and phone, and count them ([c53d34f](https://github.com/StanleyBack-dev/backend-dora/commit/c53d34ff0886a80b7c28a7e76bc9961a39e751a3))
+
 ## [0.14.1](https://github.com/StanleyBack-dev/backend-dora/compare/v0.14.0...v0.14.1) (2026-11-19)
 
 
