@@ -9,7 +9,15 @@ import {
   DependentStatus,
   type Dependent,
 } from "@/modules/dependents/domain/dependent";
+import { PageInput } from "@/common/graphql/pagination.graphql";
+import type { DependentReviewOverview } from "@/modules/dependents/application/ports/dependent-repository.port";
+import { DependentReviewFilterInput } from "@/modules/dependents/presentation/graphql/dto/inputs/dependent-review-filter.input";
 import { DependentType } from "@/modules/dependents/presentation/graphql/dto/outputs/dependent.output";
+import {
+  DependentPage,
+  DependentReviewOverviewType,
+} from "@/modules/dependents/presentation/graphql/dto/outputs/dependent-review-overview.output";
+import type { Paginated } from "@/shared/application/pagination";
 import "@/modules/dependents/presentation/graphql/dependents.graphql-enums";
 
 // The managers review the condominium's dependents.
@@ -27,6 +35,33 @@ export class DependentsReviewResolver {
     status?: DependentStatus | null,
   ): Promise<Dependent[]> {
     return this.review.list(actor, status ?? null);
+  }
+
+  @RequirePermissions(Permission.USERS_MANAGE)
+  @Query(() => DependentPage, {
+    description: "Página de dependentes do condomínio, filtrada.",
+  })
+  dependentsPage(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Args("filter", { nullable: true }) filter?: DependentReviewFilterInput,
+    @Args("page", { nullable: true }) page?: PageInput,
+  ): Promise<Paginated<Dependent>> {
+    return this.review.page(
+      actor,
+      filter ?? {},
+      page ?? { page: 1, limit: 20 },
+    );
+  }
+
+  @RequirePermissions(Permission.USERS_MANAGE)
+  @Query(() => DependentReviewOverviewType, {
+    description:
+      "Os dependentes em números e as opções dos filtros (qualquer filtro).",
+  })
+  dependentsReviewOverview(
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<DependentReviewOverview> {
+    return this.review.overview(actor);
   }
 
   @RequirePermissions(Permission.USERS_MANAGE)

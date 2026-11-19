@@ -1,5 +1,6 @@
 import { registerEnumType } from "@nestjs/graphql";
 import { AppModule } from "@/modules/condominiums/domain/app-module";
+import { UnitOccupancy } from "@/modules/condominiums/domain/unit";
 import {
   AddressFormat,
   CondominiumStatus,
@@ -19,4 +20,9 @@ registerEnumType(AddressFormat, {
 registerEnumType(AppModule, {
   name: "AppModule",
   description: "Módulos contratados à parte pelo condomínio.",
+});
+
+registerEnumType(UnitOccupancy, {
+  name: "UnitOccupancy",
+  description: "Unidade com moradores ativos (ocupada) ou sem nenhum (vazia).",
 });

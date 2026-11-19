@@ -3,12 +3,22 @@ import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { UuidArg } from "@/common/graphql/uuid-arg.pipe";
 import { tenantOf } from "@/common/auth/tenant";
 import { CurrentUser } from "@/common/decorators/current-user.decorator";
+import {
+  PageInput,
+  type PaginatedShape,
+} from "@/common/graphql/pagination.graphql";
+import type { UserGroup } from "@/modules/access-control/domain/user-group";
 import { Permission } from "@/modules/access-control/domain/permission";
 import { RequirePermissions } from "@/modules/access-control/presentation/decorators/require-permissions.decorator";
 import { UnitsUseCase } from "@/modules/condominiums/application/use-cases/units.use-case";
 import { CreateUnitsInput } from "@/modules/condominiums/presentation/graphql/dto/inputs/create-units.input";
 import { UpdateUnitInput } from "@/modules/condominiums/presentation/graphql/dto/inputs/update-unit.input";
+import { UnitFilterInput } from "@/modules/condominiums/presentation/graphql/dto/inputs/unit-filter.input";
 import { UnitType } from "@/modules/condominiums/presentation/graphql/dto/outputs/unit.output";
+import {
+  UnitWithResidentsPage,
+  type UnitWithResidentsType,
+} from "@/modules/condominiums/presentation/graphql/dto/outputs/unit-with-residents.output";
 import { toUnitType } from "@/modules/condominiums/presentation/graphql/unit.mapper";
 
 @Resolver()
@@ -20,6 +30,33 @@ export class UnitsResolver {
   })
   async units(@CurrentUser() user: AuthenticatedUser): Promise<UnitType[]> {
     return (await this.useCase.list(tenantOf(user))).map(toUnitType);
+  }
+
+  @RequirePermissions(Permission.UNITS_MANAGE)
+  @Query(() => UnitWithResidentsPage, {
+    description:
+      "Página de unidades filtradas, cada uma com as pessoas vinculadas (gestão de Unidades).",
+  })
+  async unitPage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Args("filter", { nullable: true }) filter?: UnitFilterInput,
+    @Args("page", { nullable: true }) page?: PageInput,
+  ): Promise<PaginatedShape<UnitWithResidentsType>> {
+    const found = await this.useCase.page(
+      tenantOf(user),
+      filter ?? {},
+      page ?? { page: 1, limit: 20 },
+    );
+    return {
+      ...found,
+      items: found.items.map((unit) => ({
+        ...toUnitType(unit),
+        people: unit.people.map((person) => ({
+          ...person,
+          role: person.role as UserGroup,
+        })),
+      })),
+    };
   }
 
   @RequirePermissions(Permission.UNITS_MANAGE)

@@ -14,6 +14,7 @@ import { EnrollmentApprovalType } from "@/modules/enrollment/presentation/graphq
 import { EnrollmentDataInput } from "@/modules/enrollment/presentation/graphql/dto/inputs/enrollment-data.input";
 import { EnrollmentInviteType } from "@/modules/enrollment/presentation/graphql/dto/outputs/enrollment-invite.output";
 import { EnrollmentRequestFilterInput } from "@/modules/enrollment/presentation/graphql/dto/inputs/enrollment-request-filter.input";
+import { EnrollmentRequestOptionType } from "@/modules/enrollment/presentation/graphql/dto/outputs/enrollment-request-option.output";
 import { EnrollmentRequestPage } from "@/modules/enrollment/presentation/graphql/dto/outputs/enrollment-request-page.output";
 import { EnrollmentRequestType } from "@/modules/enrollment/presentation/graphql/dto/outputs/enrollment-request.output";
 import { toAccountType } from "@/modules/identity/presentation/graphql/user-account.mapper";
@@ -69,6 +70,17 @@ export class EnrollmentAdminResolver {
       page ?? { page: 1, limit: 10 },
     );
     return { ...found, items: found.items.map(toRequestType) };
+  }
+
+  @RequirePermissions(Permission.USERS_MANAGE)
+  @Query(() => [EnrollmentRequestOptionType], {
+    description:
+      "Os cadastros do condomínio, para os filtros de nome e e-mail.",
+  })
+  enrollmentRequestFilterOptions(
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<EnrollmentRequestOptionType[]> {
+    return this.review.filterOptions(actor);
   }
 
   @RequirePermissions(Permission.USERS_MANAGE)

@@ -7,7 +7,10 @@ import { decidedNotice } from "@/modules/dependents/application/dependent-notice
 import {
   DEPENDENT_REPOSITORY,
   type DependentRepositoryPort,
+  type DependentReviewFilter,
+  type DependentReviewOverview,
 } from "@/modules/dependents/application/ports/dependent-repository.port";
+import type { PageRequest, Paginated } from "@/shared/application/pagination";
 import {
   DependentStatus,
   normalizeDependentRejectReason,
@@ -35,6 +38,20 @@ export class ReviewDependentsUseCase {
     status: DependentStatus | null,
   ): Promise<Dependent[]> {
     return this.dependents.listForReview(tenantOf(actor), status);
+  }
+
+  /** A page of the condominium's dependents, filtered by the API. */
+  page(
+    actor: AuthenticatedUser,
+    filter: DependentReviewFilter,
+    page: PageRequest,
+  ): Promise<Paginated<Dependent>> {
+    return this.dependents.pageForReview(tenantOf(actor), filter, page);
+  }
+
+  /** Counts by status and the filters' options, whatever the filters. */
+  overview(actor: AuthenticatedUser): Promise<DependentReviewOverview> {
+    return this.dependents.reviewOverview(tenantOf(actor));
   }
 
   approve(actor: AuthenticatedUser, id: string): Promise<Dependent> {

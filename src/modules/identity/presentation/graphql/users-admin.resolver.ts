@@ -12,6 +12,10 @@ import { UserDirectoryUseCase } from "@/modules/identity/application/use-cases/u
 import { UserPermissionsUseCase } from "@/modules/identity/application/use-cases/user-permissions.use-case";
 import { CreateUserInput } from "@/modules/identity/presentation/graphql/dto/inputs/create-user.input";
 import { SetUserPermissionsInput } from "@/modules/identity/presentation/graphql/dto/inputs/set-user-permissions.input";
+import { MemberKind } from "@/modules/identity/domain/member-profile";
+import { MemberStatsType } from "@/modules/identity/presentation/graphql/dto/outputs/member-stats.output";
+import { MemberFilterOptionType } from "@/modules/identity/presentation/graphql/dto/outputs/member-filter-option.output";
+import "@/modules/identity/presentation/graphql/identity.graphql-enums";
 import { TemporaryAccessType } from "@/modules/identity/presentation/graphql/dto/outputs/temporary-access.output";
 import { UpdateUserInput } from "@/modules/identity/presentation/graphql/dto/inputs/update-user.input";
 import { UserAccountPage } from "@/modules/identity/presentation/graphql/dto/outputs/user-account-page.output";
@@ -46,6 +50,29 @@ export class UsersAdminResolver {
       page ?? { page: 1, limit: 20 },
     );
     return { ...found, items: found.items.map(toAccountType) };
+  }
+
+  @RequirePermissions(Permission.USERS_MANAGE)
+  @Query(() => [MemberFilterOptionType], {
+    description:
+      "Os membros de um vínculo (moradores ou funcionários), para os filtros de nome, e-mail e telefone.",
+  })
+  memberFilterOptions(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Args("kind", { type: () => MemberKind }) kind: MemberKind,
+  ): Promise<MemberFilterOptionType[]> {
+    return this.directory.filterOptions(actor, kind);
+  }
+
+  @RequirePermissions(Permission.USERS_MANAGE)
+  @Query(() => MemberStatsType, {
+    description: "Os membros de um vínculo em números (cards da página).",
+  })
+  memberStats(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Args("kind", { type: () => MemberKind }) kind: MemberKind,
+  ): Promise<MemberStatsType> {
+    return this.directory.stats(actor, kind);
   }
 
   @RequirePermissions(Permission.USERS_MANAGE)

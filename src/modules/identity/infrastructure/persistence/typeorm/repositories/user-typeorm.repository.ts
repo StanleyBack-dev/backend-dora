@@ -12,6 +12,8 @@ import { UserGroup } from "@/modules/access-control/domain/user-group";
 import type { NewMembership } from "@/modules/identity/application/ports/membership-repository.port";
 import type {
   MemberAccount,
+  MemberFilterOption,
+  MemberStats,
   NewCredential,
   NewUser,
   UserFilter,
@@ -122,6 +124,39 @@ export class UserTypeormRepository implements UserRepositoryPort {
     page: PageRequest,
   ): Promise<Paginated<MemberAccount>> {
     return this.queryMembers(condominiumId, filter, page);
+  }
+
+  async memberFilterOptions(
+    condominiumId: string,
+    kind: MemberKind,
+  ): Promise<MemberFilterOption[]> {
+    const rows = await this.dataSource.query<MemberFilterOption[]>(
+      `SELECT u.idtb_users AS id, u.name, u.email, u.phone
+         FROM tb_users u
+         JOIN tb_memberships m ON m.idtb_users = u.idtb_users
+        WHERE m.idtb_condominiums = $1 AND m.kind = $2
+        ORDER BY u.name`,
+      [condominiumId, kind],
+    );
+    return rows;
+  }
+
+  async memberStats(
+    condominiumId: string,
+    kind: MemberKind,
+  ): Promise<MemberStats> {
+    const [row] = await this.dataSource.query<MemberStats[]>(
+      `SELECT count(*)::int AS total,
+              count(*) FILTER (WHERE m.active AND u.active)::int AS active,
+              count(*) FILTER (WHERE NOT (m.active AND u.active))::int AS inactive,
+              count(*) FILTER (WHERE m.active AND u.active
+                                 AND u.last_login_at IS NULL)::int AS "neverSignedIn"
+         FROM tb_users u
+         JOIN tb_memberships m ON m.idtb_users = u.idtb_users
+        WHERE m.idtb_condominiums = $1 AND m.kind = $2`,
+      [condominiumId, kind],
+    );
+    return row;
   }
 
   countActiveInGroup(group: UserGroup): Promise<number> {
@@ -247,6 +282,18 @@ export class UserTypeormRepository implements UserRepositoryPort {
       .take(page.limit);
 
     if (userId) query.andWhere("account.idtb_users = :userId", { userId });
+    if (filter.userId) {
+      query.andWhere("account.idtb_users = :filterUserId", {
+        filterUserId: filter.userId,
+      });
+    }
+    if (filter.email) {
+      query.andWhere("lower(account.email) = lower(:email)", {
+        email: filter.email.trim(),
+      });
+    }
+    const phone = filter.phone?.replace(/\D/g, "");
+    if (phone) query.andWhere("account.phone = :phone", { phone });
     if (filter.group) {
       query.andWhere("membership.role = :role", { role: filter.group });
     }
