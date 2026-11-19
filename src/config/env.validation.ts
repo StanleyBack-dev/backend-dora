@@ -67,6 +67,13 @@ export const envValidationSchema = Joi.object({
   // Outside production nobody real is e-mailed: with brevo, every e-mail
   // goes only to this address ("[DEV]" in the subject); without it, the log.
   MAIL_DEV_REDIRECT_TO: Joi.string().email().allow("").optional(),
+  // Inbox that receives the landing page's contact form.
+  LANDING_LEADS_INBOX: Joi.string()
+    .email()
+    .default("suporte.doragestao@gmail.com"),
+  // Anti-flood: e-mails the contact form may send per hour in total; above
+  // it leads are stored but held (protects the Brevo quota of the app).
+  LANDING_LEADS_MAIL_HOURLY_LIMIT: Joi.number().integer().min(1).default(50),
 
   // === STORAGE (Neon Object Storage, S3-compatible, per Neon branch) ===
   // Without these the API still boots; only photo uploads fail.
