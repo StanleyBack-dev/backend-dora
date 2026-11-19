@@ -338,6 +338,20 @@ type SpaceBlock {
   createdAt: DateTime!
 }
 
+"""Os comunicados do condomínio em números (cards da página)."""
+type BroadcastStats {
+  total: Int!
+
+  """Enviados nos últimos 30 dias."""
+  recent: Int!
+
+  """Enviados também por e-mail."""
+  withEmail: Int!
+
+  """Pessoas alcançadas nos últimos 30 dias."""
+  recentRecipients: Int!
+}
+
 """Comunicado enviado por um gestor aos membros do condomínio."""
 type Broadcast {
   id: ID!
@@ -463,6 +477,53 @@ type Unit {
   residents: Int!
 }
 
+"""Alguém vinculado à unidade, como a página de unidades mostra."""
+type UnitResident {
+  userId: ID!
+  name: String!
+
+  """Papel no condomínio."""
+  role: UserGroup!
+  email: String!
+
+  """Só dígitos."""
+  phone: String
+
+  """Vínculo e conta ativos."""
+  active: Boolean!
+}
+
+"""Unidade com as pessoas vinculadas a ela."""
+type UnitWithResidents {
+  id: ID!
+
+  """Rua (casas; "" em apartamentos)."""
+  street: String!
+
+  """Bloco ou torre; em casas, a quadra ("" quando não há)."""
+  block: String!
+
+  """Número; em casas, o lote."""
+  number: String!
+
+  """Como exibir: "Bloco A · 101" ou "Rua das Flores, Qd 3, Lt 12"."""
+  label: String!
+
+  """Membros ativos vinculados."""
+  residents: Int!
+
+  """Ativos primeiro, depois por nome."""
+  people: [UnitResident!]!
+}
+
+type UnitWithResidentsPage {
+  items: [UnitWithResidents!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
 """Painel do gestor do condomínio."""
 type Dashboard {
   """Moradores com acesso ativo (sem a equipe)."""
@@ -529,6 +590,32 @@ enum DependentStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+"""Algo para escolher num filtro dos dependentes."""
+type DependentFilterOption {
+  id: ID!
+  label: String!
+}
+
+"""Os dependentes em números (por situação) e o que os filtros oferecem."""
+type DependentReviewOverview {
+  pending: Int!
+  approved: Int!
+  rejected: Int!
+  dependents: [DependentFilterOption!]!
+
+  """Moradores que cadastraram dependentes."""
+  holders: [DependentFilterOption!]!
+  units: [DependentFilterOption!]!
+}
+
+type DependentPage {
+  items: [Dependent!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
 }
 
 """Ficha do funcionário."""
@@ -683,6 +770,13 @@ type EnrollmentInvite {
 
   """Cadastros enviados com este código."""
   requestCount: Int!
+}
+
+"""Um cadastro como os filtros de nome e e-mail o oferecem."""
+type EnrollmentRequestOption {
+  id: ID!
+  name: String!
+  email: String!
 }
 
 type EnrollmentRequestPage {
@@ -1239,6 +1333,32 @@ type PermissionMatrix {
 
   """Exceções do usuário em relação ao grupo."""
   overrides: [PermissionOverride!]!
+}
+
+"""
+Os membros de um vínculo (moradores ou funcionários) em números (cards da página).
+"""
+type MemberStats {
+  total: Int!
+
+  """Vínculo e conta ativos."""
+  active: Int!
+  inactive: Int!
+
+  """Ativos que nunca entraram no app."""
+  neverSignedIn: Int!
+}
+
+"""
+Um membro como os filtros da lista o oferecem (nome, e-mail, telefone).
+"""
+type MemberFilterOption {
+  id: ID!
+  name: String!
+  email: String!
+
+  """Só dígitos."""
+  phone: String
 }
 
 type UserAccountPage {
@@ -1972,6 +2092,9 @@ type Query {
   """Últimos 50 comunicados."""
   broadcasts: [Broadcast!]!
 
+  """Os comunicados do condomínio em números."""
+  broadcastStats: BroadcastStats!
+
   """O PIX do condomínio (nulo: ainda não cadastrado)."""
   condominiumPix: PixReceiver
   condominiums(filter: CondominiumFilterInput): [Condominium!]!
@@ -1979,15 +2102,29 @@ type Query {
 
   """Unidades do condomínio atual."""
   units: [Unit!]!
+
+  """
+  Página de unidades filtradas, cada uma com as pessoas vinculadas (gestão de Unidades).
+  """
+  unitPage(filter: UnitFilterInput, page: PageInput): UnitWithResidentsPage!
   dashboard: Dashboard!
 
   """Dependentes do condomínio (opcionalmente de uma situação)."""
   dependents(status: DependentStatus): [Dependent!]!
 
+  """Página de dependentes do condomínio, filtrada."""
+  dependentsPage(filter: DependentReviewFilterInput, page: PageInput): DependentPage!
+
+  """Os dependentes em números e as opções dos filtros (qualquer filtro)."""
+  dependentsReviewOverview: DependentReviewOverview!
+
   """Os meus dependentes."""
   myDependents: [Dependent!]!
   enrollmentInvites: [EnrollmentInvite!]!
   enrollmentRequests(filter: EnrollmentRequestFilterInput, page: PageInput): EnrollmentRequestPage!
+
+  """Os cadastros do condomínio, para os filtros de nome e e-mail."""
+  enrollmentRequestFilterOptions: [EnrollmentRequestOption!]!
 
   """Cadastros aguardando aprovação."""
   pendingEnrollmentCount: Int!
@@ -2049,6 +2186,14 @@ type Query {
 
   """Membros do condomínio."""
   users(filter: UserFilterInput, page: PageInput): UserAccountPage!
+
+  """
+  Os membros de um vínculo (moradores ou funcionários), para os filtros de nome, e-mail e telefone.
+  """
+  memberFilterOptions(kind: MemberKind!): [MemberFilterOption!]!
+
+  """Os membros de um vínculo em números (cards da página)."""
+  memberStats(kind: MemberKind!): MemberStats!
   user(id: ID!): UserAccount!
   userPermissions(id: ID!): PermissionMatrix!
 
@@ -2173,9 +2318,44 @@ input CondominiumFilterInput {
   status: CondominiumStatus
 }
 
+"""O que filtra a página de unidades."""
+input UnitFilterInput {
+  unitId: ID
+
+  """Exatamente este bloco (a quadra, em casas; "" = sem bloco)."""
+  block: String
+
+  """Exatamente esta rua (casas)."""
+  street: String
+  occupancy: UnitOccupancy
+}
+
+"""Unidade com moradores ativos (ocupada) ou sem nenhum (vazia)."""
+enum UnitOccupancy {
+  OCCUPIED
+  EMPTY
+}
+
+"""O que filtra a lista de dependentes da gestão."""
+input DependentReviewFilterInput {
+  status: DependentStatus
+  dependentId: ID
+
+  """O morador que cadastrou (id do usuário)."""
+  holderId: ID
+  unitId: ID
+  relationship: DependentRelationship
+}
+
 input EnrollmentRequestFilterInput {
   status: EnrollmentStatus
   search: String
+
+  """Exatamente este cadastro."""
+  requestId: ID
+
+  """Exatamente este e-mail."""
+  email: String
 }
 
 """Filtros dos ingressos de um evento."""
@@ -2225,6 +2405,15 @@ enum EventWhen {
 
 input UserFilterInput {
   search: String
+
+  """Exatamente esta pessoa."""
+  userId: ID
+
+  """Exatamente este e-mail."""
+  email: String
+
+  """Exatamente este telefone (dígitos)."""
+  phone: String
   group: UserGroup
 
   """Qualquer um destes papéis (ex.: a equipe, ADMIN e CONCIERGE)."""
