@@ -35,6 +35,12 @@ export type UserPatch = Partial<
 export type UserFilter = {
   /** Matches name, username or e-mail (case-insensitive). */
   search?: string;
+  /** Exactly this person (the name filter). */
+  userId?: string;
+  /** Exactly this e-mail (case-insensitive). */
+  email?: string;
+  /** Exactly this phone (digits). */
+  phone?: string;
   /** Role in the condominium. */
   group?: UserGroup;
   /**
@@ -47,6 +53,24 @@ export type UserFilter = {
   /** Residents or employees. */
   kind?: MemberKind;
   unitId?: string;
+};
+
+/** The members of one tie at a glance (the list page's cards). */
+export type MemberStats = {
+  total: number;
+  /** Membership and account active. */
+  active: number;
+  inactive: number;
+  /** Active, but never signed in. */
+  neverSignedIn: number;
+};
+
+/** A member as the list filters offer it. */
+export type MemberFilterOption = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
 };
 
 /** A user plus its login state, as the admin area shows it. */
@@ -95,6 +119,15 @@ export interface UserRepositoryPort {
     filter: UserFilter,
     page: PageRequest,
   ): Promise<Paginated<MemberAccount>>;
+  /**
+   * Every member of one tie in the condominium (active or not), by name:
+   * what the name, e-mail and phone filters offer.
+   */
+  memberFilterOptions(
+    condominiumId: string,
+    kind: MemberKind,
+  ): Promise<MemberFilterOption[]>;
+  memberStats(condominiumId: string, kind: MemberKind): Promise<MemberStats>;
   findMember(
     condominiumId: string,
     userId: string,

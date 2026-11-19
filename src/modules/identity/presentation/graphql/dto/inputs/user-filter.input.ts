@@ -22,6 +22,23 @@ export class UserFilterInput {
   @MaxLength(100)
   search?: string;
 
+  @Field(() => ID, { nullable: true, description: "Exatamente esta pessoa." })
+  @IsOptional()
+  @IsUUID()
+  userId?: string;
+
+  @Field({ nullable: true, description: "Exatamente este e-mail." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  email?: string;
+
+  @Field({ nullable: true, description: "Exatamente este telefone (dígitos)." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  phone?: string;
+
   @Field(() => UserGroup, { nullable: true })
   @IsOptional()
   @IsEnum(UserGroup)
