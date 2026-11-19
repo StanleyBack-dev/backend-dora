@@ -29,6 +29,7 @@ import { AppInfoModule } from "@/modules/app-info/app-info.module";
 import { IdentityModule } from "@/modules/identity/identity.module";
 import { FirstAccessGuard } from "@/modules/identity/presentation/guards/first-access.guard";
 import { UserSessionGuard } from "@/modules/identity/presentation/guards/user-session.guard";
+import { LandingModule } from "@/modules/landing/landing.module";
 import { MailModule } from "@/modules/mails/mail.module";
 import { MaintenanceModule } from "@/modules/maintenance/maintenance.module";
 import { NotificationsModule } from "@/modules/notifications/notifications.module";
@@ -66,6 +67,7 @@ import { SharedModule } from "@/shared/shared.module";
     DependentsModule,
     AppInfoModule,
     MaintenanceModule,
+    LandingModule,
   ],
   providers: [
     AppResolver,

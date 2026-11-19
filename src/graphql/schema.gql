@@ -1249,6 +1249,116 @@ type UserAccountPage {
   totalPages: Int!
 }
 
+"""Mensagem enviada pelo site."""
+type LandingLead {
+  id: ID!
+  name: String!
+  email: String!
+  phone: String
+  condominium: String
+  role: LandingLeadRole!
+  unitsRange: LandingLeadUnitsRange
+  subject: LandingLeadSubject!
+  message: String!
+  referrerHost: String
+  utmSource: String
+  utmMedium: String
+  utmCampaign: String
+  mailStatus: LandingLeadMailStatus!
+  createdAt: DateTime!
+}
+
+"""Quem escreveu pelo site (síndico, administradora…)."""
+enum LandingLeadRole {
+  SINDICO
+  ADMINISTRADORA
+  CONSELHO
+  MORADOR
+  OUTRO
+}
+
+"""Tamanho do condomínio, em unidades."""
+enum LandingLeadUnitsRange {
+  ATE_50
+  DE_51_A_150
+  DE_151_A_400
+  MAIS_DE_400
+}
+
+"""Assunto da mensagem enviada pelo site."""
+enum LandingLeadSubject {
+  DEMONSTRACAO
+  ORCAMENTO
+  DUVIDA
+  PARCERIA
+  SUPORTE
+}
+
+"""Se o e-mail chegou à caixa do Dora."""
+enum LandingLeadMailStatus {
+  PENDING
+  SENT
+  FAILED
+  HELD
+}
+
+type LandingLeadPage {
+  items: [LandingLead!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+"""Uma linha de ranking: ocorrências e visitantes distintos."""
+type LandingRank {
+  name: String!
+  total: Int!
+  visitors: Int!
+}
+
+type LandingTotals {
+  """Visitantes únicos."""
+  visitors: Int!
+  sessions: Int!
+  pageViews: Int!
+
+  """Mensagens recebidas pelo formulário."""
+  leads: Int!
+
+  """Cliques em WhatsApp, e-mail e redes sociais."""
+  contactClicks: Int!
+  videoPlays: Int!
+
+  """Sessões que começaram o formulário."""
+  formStarts: Int!
+  formSuccesses: Int!
+}
+
+type LandingDay {
+  """YYYY-MM-DD"""
+  day: String!
+  visitors: Int!
+  leads: Int!
+}
+
+"""Tráfego e conversão da landing page no período."""
+type LandingMetrics {
+  days: Int!
+  totals: LandingTotals!
+  daily: [LandingDay!]!
+  pages: [LandingRank!]!
+  sections: [LandingRank!]!
+  clicks: [LandingRank!]!
+  contacts: [LandingRank!]!
+  videos: [LandingRank!]!
+  scrollDepth: [LandingRank!]!
+  referrers: [LandingRank!]!
+  campaigns: [LandingRank!]!
+  devices: [LandingRank!]!
+  leadSubjects: [LandingRank!]!
+}
+
 type Notification {
   id: ID!
   type: NotificationType!
@@ -1942,6 +2052,19 @@ type Query {
   user(id: ID!): UserAccount!
   userPermissions(id: ID!): PermissionMatrix!
 
+  """Tráfego, engajamento e conversão da landing page."""
+  landingMetrics(
+    """Últimos 7, 30, 90 ou 365 dias (padrão: 30)."""
+    days: Int
+  ): LandingMetrics!
+
+  """Mensagens recebidas pelo site, das mais recentes."""
+  landingLeads(
+    """Últimos 7, 30, 90 ou 365 dias (padrão: 30)."""
+    days: Int
+    page: PageInput
+  ): LandingLeadPage!
+
   """Mais recentes primeiro."""
   myNotifications(unreadOnly: Boolean! = false, page: PageInput): NotificationPage!
   unreadNotificationsCount: Int!
@@ -2334,6 +2457,16 @@ type Mutation {
   unlockUser(id: ID!): UserAccount!
   revokeUserSessions(id: ID!): UserAccount!
   setUserPermissions(input: SetUserPermissionsInput!): PermissionMatrix!
+
+  """
+  Recebe a mensagem do formulário do site e a envia por e-mail à equipe do Dora.
+  """
+  submitLandingLead(input: SubmitLandingLeadInput!): Boolean!
+
+  """
+  Registra eventos anônimos de navegação do site; devolve quantos foram guardados.
+  """
+  recordLandingEvents(input: RecordLandingEventsInput!): Int!
   markNotificationRead(id: ID!): Boolean!
 
   """Quantas foram marcadas."""
@@ -2829,6 +2962,70 @@ input SetUserPermissionsInput {
 
   """Conjunto completo desejado (ignorado com useGroupDefaults)."""
   permissions: [Permission!]
+}
+
+"""Mensagem do formulário de contato do site."""
+input SubmitLandingLeadInput {
+  name: String!
+  email: String!
+  phone: String
+  condominium: String
+  role: LandingLeadRole!
+  unitsRange: LandingLeadUnitsRange
+  subject: LandingLeadSubject!
+  message: String!
+
+  """Aceite da política de privacidade (obrigatório)."""
+  consent: Boolean!
+
+  """Id anônimo do visitante (analytics)."""
+  visitorId: String
+  referrerHost: String
+  utmSource: String
+  utmMedium: String
+  utmCampaign: String
+}
+
+"""Um envio do beacon de analytics do site."""
+input RecordLandingEventsInput {
+  visitorId: String!
+  sessionId: String!
+  device: LandingDevice!
+  referrerHost: String
+  utmSource: String
+  utmMedium: String
+  utmCampaign: String
+  events: [LandingEventInput!]!
+}
+
+"""Tipo de tela do visitante."""
+enum LandingDevice {
+  MOBILE
+  TABLET
+  DESKTOP
+}
+
+input LandingEventInput {
+  type: LandingEventType!
+
+  """Seção, alvo do clique ("whatsapp:hero"), vídeo…"""
+  name: String
+  path: String!
+}
+
+"""O que aconteceu na landing page."""
+enum LandingEventType {
+  PAGE_VIEW
+  SECTION_VIEW
+  CLICK
+  VIDEO_PLAY
+  VIDEO_COMPLETE
+  DEMO_STEP
+  FORM_START
+  FORM_SUBMIT
+  FORM_SUCCESS
+  FORM_ERROR
+  SCROLL_DEPTH
 }
 
 """PushSubscription do navegador (PushManager)."""

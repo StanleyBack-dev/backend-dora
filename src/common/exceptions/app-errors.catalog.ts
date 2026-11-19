@@ -9,6 +9,7 @@ import { enrollmentErrors } from "@/common/exceptions/catalogs/enrollment-errors
 import { eventsErrors } from "@/common/exceptions/catalogs/events-errors.catalog";
 import { dependentsErrors } from "@/common/exceptions/catalogs/dependents-errors.catalog";
 import { identityErrors } from "@/common/exceptions/catalogs/identity-errors.catalog";
+import { landingErrors } from "@/common/exceptions/catalogs/landing-errors.catalog";
 import { mailsErrors } from "@/common/exceptions/catalogs/mails-errors.catalog";
 import { platformMetricsErrors } from "@/common/exceptions/catalogs/platform-metrics-errors.catalog";
 import { notificationsErrors } from "@/common/exceptions/catalogs/notifications-errors.catalog";
@@ -29,6 +30,7 @@ export const APP_ERRORS = {
   events: eventsErrors,
   dependents: dependentsErrors,
   identity: identityErrors,
+  landing: landingErrors,
   mails: mailsErrors,
   notifications: notificationsErrors,
   platformMetrics: platformMetricsErrors,
