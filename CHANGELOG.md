@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.14.1](https://github.com/StanleyBack-dev/backend-dora/compare/v0.14.0...v0.14.1) (2026-11-19)
+
+
+### Bug Fixes
+
+* **bookings:** only change usage fees that are in the other state ([d1ff032](https://github.com/StanleyBack-dev/backend-dora/commit/d1ff03262a33d1ab9dc737a4279aef625357ee07))
+* **bookings:** only change usage fees that are in the other state ([72dd9b0](https://github.com/StanleyBack-dev/backend-dora/commit/72dd9b0ef28fc078eb23e85ba3253ecbdca946cd))
+
 ## [0.14.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.13.0...v0.14.0) (2026-11-19)
 
 
