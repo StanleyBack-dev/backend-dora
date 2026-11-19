@@ -8,6 +8,7 @@ import { Reflector } from "@nestjs/core";
 import { APP_ERRORS } from "@/common/exceptions/app-errors.catalog";
 import { AppException } from "@/common/exceptions/app-exception";
 import { IS_INTERNAL_ROUTE_KEY } from "@/common/decorators/internal-route.decorator";
+import { LANDING_KEY_ALLOWED } from "@/common/decorators/landing-key.decorator";
 import { requestFromContext } from "@/common/http/request-from-context";
 import { safeCompare } from "@/common/security/safe-compare";
 
@@ -16,7 +17,8 @@ export const SKIP_INTERNAL_KEY = "skipInternalKey";
 
 // First line of defense: only the Next.js BFF knows INTERNAL_API_KEY, so the
 // API (REST and GraphQL) is closed to the public internet even before the
-// session check.
+// session check. The public landing page has a key of its own
+// (LANDING_API_KEY), accepted only on @LandingKeyAllowed() handlers.
 @Injectable()
 export class InternalApiKeyGuard implements CanActivate {
   constructor(
@@ -39,10 +41,18 @@ export class InternalApiKeyGuard implements CanActivate {
     const received =
       requestFromContext(context).header(INTERNAL_API_KEY_HEADER) ?? "";
     const expected = this.config.get<string>("INTERNAL_API_KEY") ?? "";
+    if (expected && safeCompare(received, expected)) return true;
 
-    if (!expected || !safeCompare(received, expected)) {
-      throw AppException.from(APP_ERRORS.auth.invalidInternalKey, undefined);
+    // The landing page's own key opens only the handlers marked for it.
+    const landingKey = this.config.get<string>("LANDING_API_KEY") ?? "";
+    if (
+      landingKey &&
+      this.reflector.getAllAndOverride<boolean>(LANDING_KEY_ALLOWED, targets) &&
+      safeCompare(received, landingKey)
+    ) {
+      return true;
     }
-    return true;
+
+    throw AppException.from(APP_ERRORS.auth.invalidInternalKey, undefined);
   }
 }
