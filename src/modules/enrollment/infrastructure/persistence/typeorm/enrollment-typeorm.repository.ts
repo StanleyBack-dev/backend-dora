@@ -4,6 +4,7 @@ import { IsNull, MoreThan, type Repository } from "typeorm";
 import type {
   EnrollmentRepositoryPort,
   EnrollmentRequestFilter,
+  EnrollmentRequestOption,
   EnrollmentRequestView,
 } from "@/modules/enrollment/application/ports/enrollment-repository.port";
 import {
@@ -178,6 +179,16 @@ export class EnrollmentTypeormRepository implements EnrollmentRepositoryPort {
     if (filter.status) {
       query.andWhere("request.status = :status", { status: filter.status });
     }
+    if (filter.requestId) {
+      query.andWhere("request.idtb_enrollment_requests = :requestId", {
+        requestId: filter.requestId,
+      });
+    }
+    if (filter.email) {
+      query.andWhere("lower(request.email) = lower(:email)", {
+        email: filter.email.trim(),
+      });
+    }
     const search = filter.search?.trim();
     if (search) {
       query.andWhere(
@@ -195,6 +206,19 @@ export class EnrollmentTypeormRepository implements EnrollmentRepositoryPort {
       total,
       page,
     );
+  }
+
+  async requestFilterOptions(
+    condominiumId: string,
+  ): Promise<EnrollmentRequestOption[]> {
+    const rows: EnrollmentRequestOption[] = await this.requests.query(
+      `SELECT idtb_enrollment_requests AS id, full_name AS name, email
+         FROM tb_enrollment_requests
+        WHERE idtb_condominiums = $1
+        ORDER BY lower(full_name), created_at DESC`,
+      [condominiumId],
+    );
+    return rows;
   }
 
   async findRequest(id: string): Promise<EnrollmentRequestView | null> {

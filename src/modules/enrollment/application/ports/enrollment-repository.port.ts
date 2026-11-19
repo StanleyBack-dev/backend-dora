@@ -19,6 +19,17 @@ export type EnrollmentRequestFilter = {
   status?: EnrollmentStatus;
   /** Name or e-mail. */
   search?: string;
+  /** Exactly this request (the name filter). */
+  requestId?: string;
+  /** Exactly this e-mail (case-insensitive). */
+  email?: string;
+};
+
+/** A request as the name and e-mail filters offer it. */
+export type EnrollmentRequestOption = {
+  id: string;
+  name: string;
+  email: string;
 };
 
 export interface EnrollmentRepositoryPort {
@@ -48,6 +59,10 @@ export interface EnrollmentRepositoryPort {
     filter: EnrollmentRequestFilter,
     page: PageRequest,
   ): Promise<Paginated<EnrollmentRequestView>>;
+  /** Every request of the condominium, by name: the filters' options. */
+  requestFilterOptions(
+    condominiumId: string,
+  ): Promise<EnrollmentRequestOption[]>;
   findRequest(id: string): Promise<EnrollmentRequestView | null>;
   /** A pending request with this e-mail there (to avoid duplicates). */
   findPending(input: {

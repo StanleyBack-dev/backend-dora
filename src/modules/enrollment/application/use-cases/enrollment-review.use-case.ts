@@ -12,6 +12,7 @@ import {
   ENROLLMENT_REPOSITORY,
   type EnrollmentRepositoryPort,
   type EnrollmentRequestFilter,
+  type EnrollmentRequestOption,
   type EnrollmentRequestView,
 } from "@/modules/enrollment/application/ports/enrollment-repository.port";
 import {
@@ -72,6 +73,11 @@ export class EnrollmentReviewUseCase {
       { ...filter, condominiumId: tenantOf(actor) },
       page,
     );
+  }
+
+  /** What the requests list's name and e-mail filters offer. */
+  filterOptions(actor: AuthenticatedUser): Promise<EnrollmentRequestOption[]> {
+    return this.repository.requestFilterOptions(tenantOf(actor));
   }
 
   countPending(actor: AuthenticatedUser): Promise<number> {
