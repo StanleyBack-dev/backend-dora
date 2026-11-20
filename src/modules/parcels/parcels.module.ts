@@ -3,6 +3,9 @@ import { AccessControlModule } from "@/modules/access-control/access-control.mod
 import { CondominiumsModule } from "@/modules/condominiums/condominiums.module";
 import { IdentityModule } from "@/modules/identity/identity.module";
 import { OutboxModule } from "@/modules/outbox/outbox.module";
+import { PARCEL_RECEIPT_RENDERER } from "@/modules/parcels/application/ports/parcel-receipt-renderer.port";
+import { GetParcelReceiptPdfUseCase } from "@/modules/parcels/application/use-cases/get-parcel-receipt-pdf.use-case";
+import { PdfLibParcelReceiptRenderer } from "@/modules/parcels/infrastructure/pdf/pdf-lib-parcel-receipt.renderer";
 import { ParcelAccessService } from "@/modules/parcels/application/parcel-access.service";
 import { ParcelDeclarationService } from "@/modules/parcels/application/parcel-declaration.service";
 import { ParcelsMaintenanceService } from "@/modules/parcels/application/parcels-maintenance.service";
@@ -39,11 +42,16 @@ import { ParcelsResolver } from "@/modules/parcels/presentation/graphql/parcels.
     PickUpParcelUseCase,
     CloseParcelUseCase,
     GetParcelSignatureUseCase,
+    GetParcelReceiptPdfUseCase,
     SearchParcelRecipientsUseCase,
     ParcelsMaintenanceService,
     ParcelsResolver,
     ParcelFieldsResolver,
     { provide: PARCEL_REPOSITORY, useClass: ParcelSqlRepository },
+    {
+      provide: PARCEL_RECEIPT_RENDERER,
+      useClass: PdfLibParcelReceiptRenderer,
+    },
   ],
   exports: [ParcelsMaintenanceService],
 })

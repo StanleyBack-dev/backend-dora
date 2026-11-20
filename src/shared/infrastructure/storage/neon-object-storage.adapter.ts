@@ -85,6 +85,25 @@ export class NeonObjectStorageAdapter implements ObjectStoragePort {
     );
   }
 
+  async get(key: string): Promise<Buffer | null> {
+    const client = this.getClient();
+    try {
+      const result = await client.send(
+        new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
+      if (!result.Body) return null;
+      return Buffer.from(await result.Body.transformToByteArray());
+    } catch (error) {
+      if (
+        error instanceof S3ServiceException &&
+        error.$metadata?.httpStatusCode === 404
+      ) {
+        return null;
+      }
+      throw this.toAppException("get", error);
+    }
+  }
+
   async head(
     key: string,
   ): Promise<{ sizeBytes: number; contentType: string | null } | null> {

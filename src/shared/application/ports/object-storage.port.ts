@@ -18,6 +18,8 @@ export interface ObjectStoragePort {
   }): Promise<UploadForm>;
   /** Stores a file the server already checked (e.g. a profile photo). */
   put(key: string, body: Buffer, contentType: string): Promise<void>;
+  /** The file's bytes (null: not found), e.g. to put it into a PDF. */
+  get(key: string): Promise<Buffer | null>;
   head(
     key: string,
   ): Promise<{ sizeBytes: number; contentType: string | null } | null>;

@@ -1712,6 +1712,18 @@ enum ParcelStatus {
   CANCELLED
 }
 
+"""Comprovante de retirada em PDF."""
+type ParcelReceiptFile {
+  """Nome sugerido do arquivo."""
+  fileName: String!
+
+  """application/pdf"""
+  mimeType: String!
+
+  """O PDF em base64."""
+  base64Content: String!
+}
+
 type ParcelStatusCount {
   status: ParcelStatus!
   count: Int!
@@ -2509,6 +2521,11 @@ type Query {
 
   """Chave VAPID para o navegador assinar o push (null = desligado)."""
   pushPublicKey: String
+
+  """
+  Comprovante de retirada em PDF (portaria e gestores, ou o morador que vê a encomenda).
+  """
+  parcelReceiptPdf(id: ID!): ParcelReceiptFile!
 
   """Encomendas da minha unidade."""
   myParcels(statuses: [ParcelStatus!], page: PageInput): ParcelPage!
