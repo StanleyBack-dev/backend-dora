@@ -133,7 +133,7 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
            (idtb_condominiums, idtb_units, recipient_name, recipient_user_id,
             carrier, tracking_code, notes, storage_location, photo_key,
             pickup_code, received_at, received_by, created_by, updated_by)
-         VALUES (, , , , , , , , , , , , , )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12, $12)
          RETURNING idtb_parcels AS id`,
         [
           parcel.condominiumId,

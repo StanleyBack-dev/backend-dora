@@ -8,7 +8,7 @@ import { formatDateTime } from "@/shared/domain/local-date";
 // stored with the change: it arrived (with the pickup code), it is still
 // waiting, who picked it up, it was returned or cancelled.
 
-const LINK = "/encomendas";
+const LINK = "/encomendas/minhas";
 
 const what = (parcel: Parcel) =>
   [parcel.carrier, parcel.recipientName ? `para ${parcel.recipientName}` : null]
