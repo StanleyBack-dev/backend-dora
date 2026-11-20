@@ -17,12 +17,14 @@ import { FindParcelByCodeUseCase } from "@/modules/parcels/application/use-cases
 import { ListParcelsUseCase } from "@/modules/parcels/application/use-cases/list-parcels.use-case";
 import { PickUpParcelUseCase } from "@/modules/parcels/application/use-cases/pick-up-parcel.use-case";
 import { RegisterParcelUseCase } from "@/modules/parcels/application/use-cases/register-parcel.use-case";
+import { SearchParcelRecipientsUseCase } from "@/modules/parcels/application/use-cases/search-parcel-recipients.use-case";
 import { ParcelStatus } from "@/modules/parcels/domain/parcel";
 import { ParcelFilterInput } from "@/modules/parcels/presentation/graphql/dto/inputs/parcel-filter.input";
 import { PickUpParcelInput } from "@/modules/parcels/presentation/graphql/dto/inputs/pick-up-parcel.input";
 import { RegisterParcelInput } from "@/modules/parcels/presentation/graphql/dto/inputs/register-parcel.input";
 import { ParcelOverviewType } from "@/modules/parcels/presentation/graphql/dto/outputs/parcel-overview.output";
 import { ParcelPage } from "@/modules/parcels/presentation/graphql/dto/outputs/parcel-page.output";
+import { ParcelRecipientType } from "@/modules/parcels/presentation/graphql/dto/outputs/parcel-recipient.output";
 import { ParcelType } from "@/modules/parcels/presentation/graphql/dto/outputs/parcel.output";
 import { toParcelType } from "@/modules/parcels/presentation/graphql/parcel.mapper";
 import type { Paginated } from "@/shared/application/pagination";
@@ -43,6 +45,7 @@ export class ParcelsResolver {
     private readonly registering: RegisterParcelUseCase,
     private readonly pickingUp: PickUpParcelUseCase,
     private readonly closing: CloseParcelUseCase,
+    private readonly recipients: SearchParcelRecipientsUseCase,
   ) {}
 
   @Query(() => ParcelPage, { description: "Encomendas da minha unidade." })
@@ -113,6 +116,18 @@ export class ParcelsResolver {
     @Args("code") code: string,
   ): Promise<ParcelType> {
     return toParcelType(await this.finding.execute(actor, code.slice(0, 20)));
+  }
+
+  @RequirePermissions(Permission.PARCELS_MANAGE)
+  @Query(() => [ParcelRecipientType], {
+    description:
+      "Moradores (com unidade) pelo nome, para registrar uma encomenda (até 20; mínimo de 2 letras).",
+  })
+  parcelRecipients(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Args("search") search: string,
+  ): Promise<ParcelRecipientType[]> {
+    return this.recipients.execute(actor, search.slice(0, 60));
   }
 
   @RequirePermissions(Permission.PARCELS_MANAGE)

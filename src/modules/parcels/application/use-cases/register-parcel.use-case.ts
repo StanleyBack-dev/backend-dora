@@ -15,6 +15,7 @@ import {
 import {
   optionalText,
   PARCEL_TEXT_LIMITS,
+  PARCEL_REQUIRED_FIELDS,
   parcelCode,
   type ParcelTextField,
 } from "@/modules/parcels/domain/parcel";
@@ -32,9 +33,16 @@ import { decodeBase64Image } from "@/shared/domain/image-upload";
 export type RegisterParcelInput = {
   unitId: string;
   recipientName?: string | null;
+  /**
+   * Chosen by name: only this resident (of that unit) is told and sees it
+   * (a surprise, a gift). Absent: every resident of the unit.
+   */
+  recipientUserId?: string | null;
+  /** Required. */
   carrier?: string | null;
   trackingCode?: string | null;
   notes?: string | null;
+  /** Required. */
   storageLocation?: string | null;
   /** Base64 JPEG/PNG/WebP (no data: prefix). */
   photo?: string | null;
@@ -44,17 +52,24 @@ export type RegisterParcelInput = {
 export const PARCEL_PHOTO_MAX_BYTES = 1_000_000;
 export const PARCEL_PHOTO_MAX_SIDE = 1600;
 
+const REQUIRED_MESSAGES: Partial<Record<ParcelTextField, string>> = {
+  carrier: "Informe a transportadora ou loja.",
+  storageLocation: "Informe onde a encomenda ficou guardada.",
+};
+
 const LABELS: Record<ParcelTextField, string> = {
   recipientName: "O destinatário",
-  carrier: "A transportadora",
+  carrier: "A transportadora ou loja",
   trackingCode: "O código de rastreio",
   notes: "A observação",
   storageLocation: "O local onde ficou guardada",
 };
 
-// The gate registers a parcel for a unit, optionally with a photo (re-encoded
-// from its pixels, no metadata). It gets a pickup code, and the unit's
-// residents are told in the same transaction.
+// The gate registers a parcel for a unit (the carrier and where it is kept
+// are required), optionally with a photo (re-encoded from its pixels, no
+// metadata). It gets a pickup code, and the unit's residents (or only
+// the resident it was registered for by name) are told in the same
+// transaction.
 @Injectable()
 export class RegisterParcelUseCase {
   private readonly logger = new Logger(RegisterParcelUseCase.name);
@@ -80,25 +95,34 @@ export class RegisterParcelUseCase {
     }
     const texts = this.texts(input);
 
-    const photoKey = input.photo
-      ? await this.storePhoto(condominiumId, input.photo)
-      : null;
     const residents = await this.users.activeUnitMemberIds(
       condominiumId,
       unit.id,
     );
+    const recipientUserId = input.recipientUserId?.trim() || null;
+    if (recipientUserId && !residents.includes(recipientUserId)) {
+      throw AppException.from(APP_ERRORS.parcels.invalid, {
+        reason: "O morador escolhido não mora nesta unidade.",
+      });
+    }
+    const audience = recipientUserId ? [recipientUserId] : residents;
+
+    const photoKey = input.photo
+      ? await this.storePhoto(condominiumId, input.photo)
+      : null;
     try {
       return await this.parcels.create(
         {
           condominiumId,
           unitId: unit.id,
           ...texts,
+          recipientUserId,
           photoKey,
           pickupCode: await this.freeCode(),
           receivedAt: this.clock.now(),
           receivedBy: actor.id,
         },
-        (parcel) => receivedNotices(parcel, residents, this.clock.timeZone),
+        (parcel) => receivedNotices(parcel, audience, this.clock.timeZone),
       );
     } catch (error) {
       if (photoKey) {
@@ -117,6 +141,11 @@ export class RegisterParcelUseCase {
       if (value === undefined) {
         throw AppException.from(APP_ERRORS.parcels.invalid, {
           reason: `${LABELS[field]} pode ter até ${PARCEL_TEXT_LIMITS[field]} caracteres.`,
+        });
+      }
+      if (value === null && PARCEL_REQUIRED_FIELDS.includes(field)) {
+        throw AppException.from(APP_ERRORS.parcels.invalid, {
+          reason: REQUIRED_MESSAGES[field] ?? `${LABELS[field]} é obrigatório.`,
         });
       }
       result[field] = value;

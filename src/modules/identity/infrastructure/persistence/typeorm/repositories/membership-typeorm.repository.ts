@@ -172,4 +172,24 @@ export class MembershipTypeormRepository implements MembershipRepositoryPort {
     );
     return rows.map((row) => row.id);
   }
+
+  searchResidents(
+    condominiumId: string,
+    term: string,
+    limit: number,
+  ): Promise<{ userId: string; name: string; unitId: string }[]> {
+    const like = `%${term.replace(/[\\%_]/g, "\\$&")}%`;
+    return this.dataSource.query(
+      `SELECT u.idtb_users AS "userId", u.name, r.idtb_units AS "unitId"
+         FROM tb_memberships m
+         JOIN tb_residents r ON r.idtb_memberships = m.idtb_memberships
+         JOIN tb_users u ON u.idtb_users = m.idtb_users
+        WHERE m.idtb_condominiums = $1 AND m.active AND u.active
+          AND r.idtb_units IS NOT NULL
+          AND unaccent(u.name) ILIKE unaccent($2)
+        ORDER BY unaccent(u.name), u.idtb_users
+        LIMIT ${Number(limit)}`,
+      [condominiumId, like],
+    );
+  }
 }

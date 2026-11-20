@@ -17,6 +17,11 @@ export type Parcel = {
   /** "Bloco A · 101" (null: the unit was removed). */
   unitLabel: string | null;
   recipientName: string | null;
+  /**
+   * Registered for this resident by name: only they are told and see it
+   * (null: the whole unit).
+   */
+  recipientUserId: string | null;
   carrier: string | null;
   trackingCode: string | null;
   notes: string | null;
@@ -40,6 +45,7 @@ export type NewParcel = {
   condominiumId: string;
   unitId: string;
   recipientName: string | null;
+  recipientUserId: string | null;
   carrier: string | null;
   trackingCode: string | null;
   notes: string | null;
@@ -121,9 +127,13 @@ export interface ParcelRepositoryPort {
     filter: ParcelFilter,
     page: PageRequest,
   ): Promise<Paginated<Parcel>>;
-  /** A unit's parcels: waiting first, newest first. */
+  /**
+   * A unit's parcels that this resident may see (for the whole unit, or
+   * for them by name): waiting first, newest first.
+   */
   listForUnit(
     unitId: string,
+    viewerId: string,
     statuses: ParcelStatus[] | null,
     page: PageRequest,
   ): Promise<Paginated<Parcel>>;

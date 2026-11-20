@@ -48,7 +48,10 @@ export class ListParcelsUseCase {
     return this.parcels.overview(condominiumId, waitingSince);
   }
 
-  /** The caller's unit parcels (none: not a resident with a unit). */
+  /**
+   * The caller's unit parcels they may see (none: not a resident with a
+   * unit); those registered for another resident by name are left out.
+   */
   async mine(
     actor: AuthenticatedUser,
     statuses: ParcelStatus[] | null,
@@ -59,6 +62,6 @@ export class ListParcelsUseCase {
     if (!unitId) {
       return paginate([], 0, page);
     }
-    return this.parcels.listForUnit(unitId, statuses, page);
+    return this.parcels.listForUnit(unitId, actor.id, statuses, page);
   }
 }

@@ -14,6 +14,7 @@ export function toParcelType(parcel: Parcel): ParcelType {
     unitId: parcel.unitId,
     unitLabel: parcel.unitLabel,
     recipientName: parcel.recipientName,
+    recipientOnly: parcel.recipientUserId !== null,
     carrier: parcel.carrier,
     trackingCode: parcel.trackingCode,
     notes: parcel.notes,

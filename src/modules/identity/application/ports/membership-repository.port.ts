@@ -34,6 +34,15 @@ export interface MembershipRepositoryPort {
   activeUserIds(condominiumId: string, role?: UserGroup): Promise<string[]>;
   /** Residents of a unit with an active membership and an active account. */
   activeUnitUserIds(condominiumId: string, unitId: string): Promise<string[]>;
+  /**
+   * Active residents with a unit whose name contains `term` (accents and
+   * case ignored), by name; at most `limit`.
+   */
+  searchResidents(
+    condominiumId: string,
+    term: string,
+    limit: number,
+  ): Promise<{ userId: string; name: string; unitId: string }[]>;
 }
 
 export const MEMBERSHIP_REPOSITORY = Symbol("MEMBERSHIP_REPOSITORY");

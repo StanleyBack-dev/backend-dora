@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { ModuleAccessService } from "@/modules/condominiums/application/module-access.service";
 import { AppModule } from "@/modules/condominiums/domain/app-module";
-import { UserLookupService } from "@/modules/identity/application/user-lookup.service";
+import { ParcelAccessService } from "@/modules/parcels/application/parcel-access.service";
 import { reminderNotices } from "@/modules/parcels/application/parcel-notices";
 import {
   PARCEL_REPOSITORY,
@@ -32,7 +32,7 @@ export class ParcelsMaintenanceService {
   constructor(
     @Inject(PARCEL_REPOSITORY) private readonly parcels: ParcelRepositoryPort,
     private readonly modules: ModuleAccessService,
-    private readonly users: UserLookupService,
+    private readonly access: ParcelAccessService,
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStoragePort,
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
@@ -62,10 +62,7 @@ export class ParcelsMaintenanceService {
         enabled.set(parcel.condominiumId, on);
       }
       if (!on) continue;
-      const residents = await this.users.activeUnitMemberIds(
-        parcel.condominiumId,
-        parcel.unitId,
-      );
+      const residents = await this.access.audience(parcel);
       const marked = await this.parcels.markReminded(
         parcel.id,
         now,

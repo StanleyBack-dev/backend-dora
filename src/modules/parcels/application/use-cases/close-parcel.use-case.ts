@@ -2,7 +2,6 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { APP_ERRORS } from "@/common/exceptions/app-errors.catalog";
 import { AppException } from "@/common/exceptions/app-exception";
-import { UserLookupService } from "@/modules/identity/application/user-lookup.service";
 import { ParcelAccessService } from "@/modules/parcels/application/parcel-access.service";
 import { closedNotices } from "@/modules/parcels/application/parcel-notices";
 import {
@@ -24,7 +23,6 @@ export class CloseParcelUseCase {
   constructor(
     @Inject(PARCEL_REPOSITORY) private readonly parcels: ParcelRepositoryPort,
     private readonly access: ParcelAccessService,
-    private readonly users: UserLookupService,
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
@@ -43,9 +41,7 @@ export class CloseParcelUseCase {
     if (!why) {
       throw AppException.from(APP_ERRORS.parcels.invalidReason, undefined);
     }
-    const residents = parcel.unitId
-      ? await this.users.activeUnitMemberIds(condominiumId, parcel.unitId)
-      : [];
+    const residents = await this.access.audience(parcel);
     const closed = await this.parcels.close(
       parcel.id,
       { status, reason: why, by: actor.id, at: this.clock.now() },

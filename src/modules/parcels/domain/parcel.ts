@@ -55,6 +55,12 @@ export const PARCEL_TEXT_LIMITS = {
 
 export type ParcelTextField = keyof typeof PARCEL_TEXT_LIMITS;
 
+/** Every parcel says who brought it and where it is kept. */
+export const PARCEL_REQUIRED_FIELDS: readonly ParcelTextField[] = [
+  "carrier",
+  "storageLocation",
+];
+
 /**
  * An optional text: trimmed, inner spaces collapsed, "" -> null; undefined
  * when it is longer than the field allows.
