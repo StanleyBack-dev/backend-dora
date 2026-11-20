@@ -21,6 +21,11 @@ export enum Permission {
   BOOKINGS_MANAGE = "BOOKINGS_MANAGE",
   /** The day's guests at the gate: list and check in (Portaria). */
   GUESTS_CHECKIN = "GUESTS_CHECKIN",
+  /**
+   * Residents' directory, read only: name, photo, unit, phone and approved
+   * dependents (no e-mail, documents or birth dates). Gate and managers.
+   */
+  RESIDENTS_READ = "RESIDENTS_READ",
   /** Parcels: register, hand over (with signature), return; gate and administration (module contracted apart). */
   PARCELS_MANAGE = "PARCELS_MANAGE",
   /** Create, publish and cancel events (module contracted apart). */

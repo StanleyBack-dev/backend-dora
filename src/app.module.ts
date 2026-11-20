@@ -36,6 +36,7 @@ import { NotificationsModule } from "@/modules/notifications/notifications.modul
 import { ProfilePhotosModule } from "@/modules/profile-photos/profile-photos.module";
 import { OutboxModule } from "@/modules/outbox/outbox.module";
 import { ParcelsModule } from "@/modules/parcels/parcels.module";
+import { ResidentsDirectoryModule } from "@/modules/residents-directory/residents-directory.module";
 import { SpacesModule } from "@/modules/spaces/spaces.module";
 import { SharedModule } from "@/shared/shared.module";
 
@@ -55,6 +56,7 @@ import { SharedModule } from "@/shared/shared.module";
     SpacesModule,
     BookingsModule,
     ParcelsModule,
+    ResidentsDirectoryModule,
     ProfilePhotosModule,
     OutboxModule,
     NotificationsModule,
