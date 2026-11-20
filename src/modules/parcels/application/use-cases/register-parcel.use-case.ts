@@ -17,6 +17,9 @@ import {
   PARCEL_TEXT_LIMITS,
   PARCEL_REQUIRED_FIELDS,
   parcelCode,
+  PERISHABLE_DEADLINE_HOURS,
+  PERISHABLE_DEFAULT_DEADLINE_HOURS,
+  perishableDeadline,
   type ParcelTextField,
 } from "@/modules/parcels/domain/parcel";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
@@ -46,6 +49,10 @@ export type RegisterParcelInput = {
   storageLocation?: string | null;
   /** Base64 JPEG/PNG/WebP (no data: prefix). */
   photo?: string | null;
+  /** Food, medicine, flowers…: picked up by a deadline. */
+  perishable?: boolean | null;
+  /** Hours until the deadline (PERISHABLE_DEADLINE_HOURS; default 4). */
+  perishableHours?: number | null;
 };
 
 /** Largest photo (as sent) and the side it is shrunk to. */
@@ -107,6 +114,20 @@ export class RegisterParcelUseCase {
     }
     const audience = recipientUserId ? [recipientUserId] : residents;
 
+    const receivedAt = this.clock.now();
+    let pickupDeadline: Date | null = null;
+    if (input.perishable) {
+      pickupDeadline = perishableDeadline(
+        receivedAt,
+        input.perishableHours ?? PERISHABLE_DEFAULT_DEADLINE_HOURS,
+      );
+      if (!pickupDeadline) {
+        throw AppException.from(APP_ERRORS.parcels.invalid, {
+          reason: `Escolha o prazo de retirada da encomenda perecível (${PERISHABLE_DEADLINE_HOURS.join(", ")} horas).`,
+        });
+      }
+    }
+
     const photoKey = input.photo
       ? await this.storePhoto(condominiumId, input.photo)
       : null;
@@ -119,8 +140,9 @@ export class RegisterParcelUseCase {
           recipientUserId,
           photoKey,
           pickupCode: await this.freeCode(),
-          receivedAt: this.clock.now(),
+          receivedAt,
           receivedBy: actor.id,
+          pickupDeadline,
         },
         (parcel) => receivedNotices(parcel, audience, this.clock.timeZone),
       );

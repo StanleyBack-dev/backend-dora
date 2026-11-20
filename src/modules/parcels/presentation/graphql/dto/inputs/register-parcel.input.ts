@@ -1,5 +1,12 @@
-import { Field, ID, InputType } from "@nestjs/graphql";
-import { IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
+import { Field, ID, InputType, Int } from "@nestjs/graphql";
+import {
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from "class-validator";
 
 @InputType({ description: "Encomenda recebida na portaria." })
 export class RegisterParcelInput {
@@ -62,4 +69,21 @@ export class RegisterParcelInput {
   @IsString()
   @MaxLength(1_400_000)
   photo?: string | null;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      "Perecível (alimento, remédio, flores…): retirar dentro do prazo, com lembretes a cada 2 horas.",
+  })
+  @IsOptional()
+  @IsBoolean()
+  perishable?: boolean | null;
+
+  @Field(() => Int, {
+    nullable: true,
+    description: "Perecível: prazo em horas (2, 4, 8, 12, 24 ou 48; padrão 4).",
+  })
+  @IsOptional()
+  @IsInt()
+  perishableHours?: number | null;
 }

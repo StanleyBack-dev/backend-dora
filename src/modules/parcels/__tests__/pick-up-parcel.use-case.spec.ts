@@ -56,6 +56,9 @@ const parcel: Parcel = {
   closedByName: null,
   closeReason: null,
   remindedAt: null,
+  perishable: false,
+  pickupDeadline: null,
+  perishableRemindedAt: null,
   signerName: null,
 };
 

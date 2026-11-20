@@ -20,6 +20,8 @@ export function toParcelType(parcel: Parcel): ParcelType {
     notes: parcel.notes,
     storageLocation: parcel.storageLocation,
     pickupCode: parcel.pickupCode,
+    perishable: parcel.perishable,
+    pickupDeadline: parcel.pickupDeadline,
     status: parcel.status,
     receivedAt: parcel.receivedAt,
     receivedByName: parcel.receivedByName,

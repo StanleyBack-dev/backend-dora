@@ -37,6 +37,11 @@ export type Parcel = {
   closedByName: string | null;
   closeReason: string | null;
   remindedAt: Date | null;
+  /** Perishable: picked up by `pickupDeadline` (null when not perishable). */
+  perishable: boolean;
+  pickupDeadline: Date | null;
+  /** Perishable: the last reminder (every few hours until the deadline). */
+  perishableRemindedAt: Date | null;
   /** Picked up: who signed (null otherwise). */
   signerName: string | null;
 };
@@ -54,6 +59,8 @@ export type NewParcel = {
   pickupCode: string;
   receivedAt: Date;
   receivedBy: string;
+  /** Set: a perishable parcel, picked up by then. */
+  pickupDeadline: Date | null;
 };
 
 /** The signature as stored (the evidence and the files' digests). */
@@ -102,6 +109,8 @@ export type ParcelFilter = {
   recipientName: string | null;
   carrier: string | null;
   trackingCode: string | null;
+  /** Only the perishable ones. */
+  perishable: boolean;
   /** Received on or after / before these instants. */
   from: Date | null;
   to: Date | null;
@@ -112,6 +121,9 @@ export type ParcelOverview = {
   byStatus: { status: ParcelStatus; count: number }[];
   /** Still at the gate past the reminder (PARCEL_REMINDER_DAYS). */
   waitingLong: number;
+  /** Perishable parcels waiting, and those past their deadline. */
+  perishableWaiting: number;
+  perishableOverdue: number;
   units: { id: string; label: string }[];
   /** The values used, for the filter lists (most recent first). */
   recipientNames: string[];
@@ -145,7 +157,11 @@ export interface ParcelRepositoryPort {
     statuses: ParcelStatus[] | null,
     page: PageRequest,
   ): Promise<Paginated<Parcel>>;
-  overview(condominiumId: string, waitingSince: Date): Promise<ParcelOverview>;
+  overview(
+    condominiumId: string,
+    waitingSince: Date,
+    now: Date,
+  ): Promise<ParcelOverview>;
   /**
    * Marks the parcel picked up and stores the signature, only while it is
    * still at the gate (null otherwise). Notices go with it.
@@ -167,7 +183,37 @@ export interface ParcelRepositoryPort {
     notices: (parcel: Parcel) => OutboxDraft[],
   ): Promise<Parcel | null>;
   findSignature(parcelId: string): Promise<ParcelSignature | null>;
-  /** Parcels at the gate since before `receivedBefore`, never reminded. */
+  /**
+   * Perishable parcels before their deadline whose last reminder (or
+   * arrival) is older than `remindedBefore`.
+   */
+  duePerishableReminders(
+    now: Date,
+    remindedBefore: Date,
+    limit: number,
+  ): Promise<Parcel[]>;
+  /**
+   * Marks the reminder, only while it waits and no other run reminded it
+   * since `previous` (false otherwise). Notices go with it.
+   */
+  markPerishableReminded(
+    id: string,
+    at: Date,
+    previous: Date | null,
+    notices: OutboxDraft[],
+  ): Promise<boolean>;
+  /** Perishable parcels past their deadline, not yet told so. */
+  dueOverdue(now: Date, limit: number): Promise<Parcel[]>;
+  /** Marks the overdue notice, once (false: already told or closed). */
+  markOverdueNotified(
+    id: string,
+    at: Date,
+    notices: OutboxDraft[],
+  ): Promise<boolean>;
+  /**
+   * Parcels at the gate since before `receivedBefore`, never reminded (not
+   * the perishable ones, reminded on their own schedule).
+   */
   dueReminders(receivedBefore: Date, limit: number): Promise<Parcel[]>;
   /**
    * Marks the parcel reminded with its notices, only while it is at the

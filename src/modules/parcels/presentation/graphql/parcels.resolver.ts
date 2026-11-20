@@ -81,6 +81,7 @@ export class ParcelsResolver {
         recipientName: filter?.recipientName?.trim() || null,
         carrier: filter?.carrier?.trim() || null,
         trackingCode: filter?.trackingCode?.trim() || null,
+        perishable: filter?.perishable ?? false,
         from: filter?.from ?? null,
         to: filter?.to ?? null,
       },

@@ -4,6 +4,7 @@ import {
   optionalText,
   PARCEL_CODE_LENGTH,
   parcelCode,
+  perishableDeadline,
 } from "@/modules/parcels/domain/parcel";
 import {
   canonicalJson,
@@ -205,5 +206,20 @@ describe("evidence", () => {
     expect(evidenceDigest({ ...evidence, signerName: "José" })).not.toBe(
       digest,
     );
+  });
+});
+
+describe("perishable deadline", () => {
+  const receivedAt = new Date("2026-11-20T12:00:00Z");
+
+  it("adds one of the offered numbers of hours", () => {
+    expect(perishableDeadline(receivedAt, 4)).toEqual(
+      new Date("2026-11-20T16:00:00Z"),
+    );
+  });
+
+  it("refuses any other number", () => {
+    expect(perishableDeadline(receivedAt, 3)).toBeNull();
+    expect(perishableDeadline(receivedAt, 0)).toBeNull();
   });
 });

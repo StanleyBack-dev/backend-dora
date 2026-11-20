@@ -119,4 +119,40 @@ describe("RegisterParcelUseCase", () => {
     ).rejects.toBeInstanceOf(AppException);
     expect(created).toHaveLength(0);
   });
+
+  it("sets the deadline of a perishable parcel", async () => {
+    const { useCase, created } = setup();
+    await useCase.execute(actor, {
+      unitId: "unit-1",
+      carrier: "iFood",
+      storageLocation: "Geladeira",
+      perishable: true,
+      perishableHours: 8,
+    });
+    expect(created[0].pickupDeadline).toEqual(new Date("2026-11-20T20:00:00Z"));
+  });
+
+  it("refuses a deadline that is not offered", async () => {
+    const { useCase, created } = setup();
+    await expect(
+      useCase.execute(actor, {
+        unitId: "unit-1",
+        carrier: "iFood",
+        storageLocation: "Geladeira",
+        perishable: true,
+        perishableHours: 5,
+      }),
+    ).rejects.toBeInstanceOf(AppException);
+    expect(created).toHaveLength(0);
+  });
+
+  it("is not perishable unless asked", async () => {
+    const { useCase, created } = setup();
+    await useCase.execute(actor, {
+      unitId: "unit-1",
+      carrier: "Correios",
+      storageLocation: "Portaria",
+    });
+    expect(created[0].pickupDeadline).toBeNull();
+  });
 });
