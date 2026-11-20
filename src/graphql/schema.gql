@@ -1316,6 +1316,7 @@ enum Permission {
   BOOKINGS_CREATE
   BOOKINGS_MANAGE
   GUESTS_CHECKIN
+  RESIDENTS_READ
   PARCELS_MANAGE
   EVENTS_MANAGE
   PAYMENTS_MANAGE
@@ -2084,6 +2085,49 @@ type PlatformMetrics {
   health: HealthMetrics!
 }
 
+"""Dependente aprovado de um morador."""
+type ResidentDependent {
+  id: ID!
+  name: String!
+  relationship: DependentRelationship!
+}
+
+"""
+Morador na consulta da portaria: nome, foto, unidade, telefone e dependentes aprovados (sem e-mail, documentos ou nascimento).
+"""
+type ResidentListing {
+  userId: ID!
+  name: String!
+
+  """Link temporário da foto de perfil."""
+  photoUrl: String
+  unitId: ID
+
+  """Ex.: Bloco A · 101."""
+  unitLabel: String
+
+  """Complemento."""
+  unitComplement: String
+
+  """Telefone para contato (só dígitos)."""
+  phone: String
+  dependents: [ResidentDependent!]!
+}
+
+type ResidentListingPage {
+  items: [ResidentListing!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+"""Um morador no filtro de nome da consulta."""
+type ResidentName {
+  id: ID!
+  name: String!
+}
+
 """Foto do espaço."""
 type SpacePhoto {
   id: ID!
@@ -2582,6 +2626,14 @@ type Query {
   platformMetrics(filter: PlatformMetricsFilterInput): PlatformMetrics!
 
   """
+  Moradores ativos do condomínio, por nome, com filtros e por página (somente leitura).
+  """
+  residentsDirectory(filter: ResidentsFilterInput, page: PageInput): ResidentListingPage!
+
+  """Os nomes dos moradores, para o filtro da consulta."""
+  residentNames: [ResidentName!]!
+
+  """
   Espaços do condomínio atual. Inativos só com includeInactive, para quem gerencia espaços.
   """
   spaces(includeInactive: Boolean! = false): [Space!]!
@@ -2827,6 +2879,15 @@ input PlatformMetricsFilterInput {
 
   """Um condomínio (vazio: todos)."""
   condominiumId: ID
+}
+
+"""Filtros da consulta de moradores."""
+input ResidentsFilterInput {
+  """Um morador (pelo nome)."""
+  userId: ID
+
+  """A unidade."""
+  unitId: ID
 }
 
 input SystemLogFilterInput {

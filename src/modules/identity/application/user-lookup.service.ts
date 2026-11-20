@@ -9,6 +9,8 @@ import {
   USER_REPOSITORY,
   type UserRepositoryPort,
 } from "@/modules/identity/application/ports/user-repository.port";
+import { MemberKind } from "@/modules/identity/domain/member-profile";
+import type { PageRequest, Paginated } from "@/shared/application/pagination";
 
 /** What other modules may know about a user. */
 export type UserSummary = {
@@ -20,6 +22,20 @@ export type UserSummary = {
   active: boolean;
 };
 
+/** A resident as the directory shows them (no e-mail or documents). */
+export type ResidentEntry = {
+  userId: string;
+  membershipId: string;
+  name: string;
+  phone: string | null;
+  avatarKey: string | null;
+  unitId: string | null;
+  unitStreet: string | null;
+  unitBlock: string | null;
+  unitNumber: string | null;
+  unitComplement: string | null;
+};
+
 // Identity's public read API for other modules (enrollment, broadcasts…), so they
 // never reach into identity's tables or repositories.
 @Injectable()
@@ -29,6 +45,51 @@ export class UserLookupService {
     @Inject(MEMBERSHIP_REPOSITORY)
     private readonly memberships: MembershipRepositoryPort,
   ) {}
+
+  /**
+   * The condominium's active residents (one page, by name), optionally one
+   * person or one unit: only what the residents' directory shows.
+   */
+  async residents(
+    condominiumId: string,
+    filter: { userId?: string; unitId?: string },
+    page: PageRequest,
+  ): Promise<Paginated<ResidentEntry>> {
+    const found = await this.users.listMembers(
+      condominiumId,
+      {
+        kind: MemberKind.RESIDENT,
+        active: true,
+        userId: filter.userId,
+        unitId: filter.unitId,
+      },
+      page,
+    );
+    return {
+      ...found,
+      items: found.items.map((member) => ({
+        userId: member.id,
+        membershipId: member.membershipId,
+        name: member.name,
+        phone: member.phone,
+        avatarKey: member.avatarKey,
+        unitId: member.unitId,
+        unitStreet: member.unitStreet,
+        unitBlock: member.unitBlock,
+        unitNumber: member.unitNumber,
+        unitComplement: member.unitComplement,
+      })),
+    };
+  }
+
+  /** The residents' names, for the directory's name filter. */
+  async residentNames(
+    condominiumId: string,
+  ): Promise<{ id: string; name: string }[]> {
+    return (
+      await this.users.memberFilterOptions(condominiumId, MemberKind.RESIDENT)
+    ).map(({ id, name }) => ({ id, name }));
+  }
 
   /**
    * Members of a condominium who can be reached (active membership, active

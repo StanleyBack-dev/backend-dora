@@ -18,14 +18,17 @@ const MANAGER_DEFAULTS: Permission[] = [
   Permission.SPACES_MANAGE,
   Permission.BOOKINGS_MANAGE,
   Permission.GUESTS_CHECKIN,
+  Permission.RESIDENTS_READ,
   Permission.EVENTS_MANAGE,
   Permission.PAYMENTS_MANAGE,
   Permission.PARCELS_MANAGE,
 ];
 
-// Portaria (gate staff): the day's guests and the parcels; they don't book.
+// Portaria (gate staff): the day's guests, the parcels and the residents'
+// directory (read only); they don't book.
 const CONCIERGE_DEFAULTS: Permission[] = [
   Permission.GUESTS_CHECKIN,
+  Permission.RESIDENTS_READ,
   Permission.PARCELS_MANAGE,
 ];
 
