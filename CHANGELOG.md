@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.16.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.15.0...v0.16.0) (2026-11-20)
+
+
+### Features
+
+* **parcels:** add parcels module with on-screen signature evidence ([dcd7bcc](https://github.com/StanleyBack-dev/backend-dora/commit/dcd7bccf333e257f2282614d5d85b7837e0ebf49))
+* **parcels:** Encomendas module ([579934a](https://github.com/StanleyBack-dev/backend-dora/commit/579934a1feab787606bafc52d68c090e2f03450b))
+* **parcels:** filter parcels by recipient, carrier and tracking code ([d06f5f2](https://github.com/StanleyBack-dev/backend-dora/commit/d06f5f2d9291c4f4c20d28590f7c16b564496c5e))
+* **parcels:** parcel indicators on the management and platform dashboards ([254b529](https://github.com/StanleyBack-dev/backend-dora/commit/254b5295eb1d4bb42775c7483431758525ff15cd))
+* **parcels:** parcel indicators on the management and platform dashboards ([81280bf](https://github.com/StanleyBack-dev/backend-dora/commit/81280bf8af43afb071be128eb1eb16d4f8f846e2))
+* **parcels:** parcels module with on-screen signature evidence ([32ab779](https://github.com/StanleyBack-dev/backend-dora/commit/32ab7795d84f43eb192d40ae8dc4469c7316a0ea))
+* **parcels:** perishable parcels with pickup deadline and reminders ([4de095a](https://github.com/StanleyBack-dev/backend-dora/commit/4de095aab53de1e9a37b6695a16e255d57fe6cda))
+* **parcels:** perishable parcels with pickup deadline and reminders ([1949985](https://github.com/StanleyBack-dev/backend-dora/commit/1949985bc300f21930896100c6d7ca25476abc29))
+* **parcels:** pickup by a person the resident authorizes ([5d20ecf](https://github.com/StanleyBack-dev/backend-dora/commit/5d20ecf4d9b9bc50e67bd1cb118b5d77231f9a19))
+* **parcels:** pickup by a person the resident authorizes ([baf41ef](https://github.com/StanleyBack-dev/backend-dora/commit/baf41ef8da0fd8b1b45c3455f6eedc14fd478c29))
+* **parcels:** pickup receipt as a PDF ([f227714](https://github.com/StanleyBack-dev/backend-dora/commit/f227714bb194dd1fb641375b8ce6323e919a8bb8))
+* **parcels:** pickup receipt as a PDF ([44b423d](https://github.com/StanleyBack-dev/backend-dora/commit/44b423d39b5799f5f76d2306e5eebb556358c5a4))
+* **parcels:** resident notice links and register insert fix ([92b14ca](https://github.com/StanleyBack-dev/backend-dora/commit/92b14caa22a2cfc80751b198083078f1847df3d7))
+* **parcels:** search recipients, require carrier and storage, notify by recipient ([18853f3](https://github.com/StanleyBack-dev/backend-dora/commit/18853f3ebcf1b32c96cbd5e6826694ce56eb0bd6))
+* **parcels:** search recipients, required fields, notify by recipient ([bccfc47](https://github.com/StanleyBack-dev/backend-dora/commit/bccfc4746551cdfec60bc9ff1fd97bd1e30104ee))
+* **parcels:** send parcel notices to the resident's page and fix register insert ([a9295e6](https://github.com/StanleyBack-dev/backend-dora/commit/a9295e65977ecf3112b537813e016258bf970b3a))
+
 ## [0.15.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.14.1...v0.15.0) (2026-11-19)
 
 
