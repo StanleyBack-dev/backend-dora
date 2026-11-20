@@ -197,6 +197,7 @@ describe("evidence", () => {
       collectedByName: "Porteiro",
       collectedByRole: "CONCIERGE",
       sessionId: null,
+      authorization: null,
     };
     const digest = evidenceDigest(evidence);
     expect(digest).toMatch(/^[0-9a-f]{64}$/);

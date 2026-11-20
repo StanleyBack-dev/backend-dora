@@ -1556,6 +1556,7 @@ enum NotificationType {
   PARCEL_PICKED_UP
   PARCEL_RETURNED
   PARCEL_CANCELLED
+  PARCEL_AUTHORIZED
 }
 
 type NotificationPage {
@@ -1664,6 +1665,21 @@ type Parcel {
   """Onde está guardada na portaria."""
   storageLocation: String
 
+  """Pessoa autorizada a retirar (nulo: nenhuma)."""
+  authorizedName: String
+
+  """Documento da pessoa autorizada, com o meio à mostra."""
+  authorizedDocumentMasked: String
+
+  """Tipo do documento da pessoa autorizada."""
+  authorizedDocumentType: DocumentType
+
+  """Quem autorizou."""
+  authorizedByName: String
+
+  """Quando autorizou."""
+  authorizedAt: DateTime
+
   """Perecível: retirar até pickupDeadline."""
   perishable: Boolean!
 
@@ -1689,6 +1705,11 @@ type Parcel {
 
   """Quem assinou a retirada."""
   signerName: String
+
+  """
+  Documento completo da pessoa autorizada, só para quem entrega (preenche a retirada).
+  """
+  authorizedDocument: String
 
   """Link temporário da foto da encomenda."""
   photoUrl: String
@@ -3044,6 +3065,14 @@ type Mutation {
   """
   pickUpParcel(input: PickUpParcelInput!): Parcel!
 
+  """
+  Autoriza outra pessoa a retirar a encomenda (quem vê a encomenda, enquanto ela aguarda). Substitui a anterior.
+  """
+  authorizeParcelPickup(input: AuthorizeParcelPickupInput!): Parcel!
+
+  """Remove a autorização de retirada por outra pessoa."""
+  revokeParcelPickupAuthorization(parcelId: ID!): Parcel!
+
   """Devolve ao remetente uma encomenda que está na portaria."""
   returnParcel(id: ID!, reason: String!): Parcel!
 
@@ -3703,6 +3732,18 @@ input SignatureDeviceInput {
   """touch, pen ou mouse: como a assinatura foi feita."""
   pointerType: String
   maxTouchPoints: Int
+}
+
+"""Pessoa autorizada a retirar uma encomenda."""
+input AuthorizeParcelPickupInput {
+  parcelId: ID!
+
+  """Nome completo de quem vai retirar."""
+  name: String!
+  documentType: DocumentType
+
+  """CPF ou RG (opcional)."""
+  document: String
 }
 
 """O formulário completo do espaço."""

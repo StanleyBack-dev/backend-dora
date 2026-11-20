@@ -16,11 +16,12 @@ import type {
 import {
   deviceFacts,
   LocationStatus,
+  maskDocument,
 } from "@/modules/parcels/domain/parcel-signature";
 import { formatDateTime } from "@/shared/domain/local-date";
 
 const A4 = { width: 595.28, height: 841.89 };
-const MARGIN = 48;
+const MARGIN = 40;
 const WIDTH = A4.width - MARGIN * 2;
 const INK = rgb(0.07, 0.07, 0.07);
 const MUTED = rgb(0.42, 0.42, 0.42);
@@ -119,7 +120,7 @@ class Writer {
   text(value: string, options: TextOptions = {}) {
     const size = options.size ?? 10;
     const font = options.bold ? this.bold : this.font;
-    const lineHeight = size * 1.35;
+    const lineHeight = size * 1.3;
     for (const line of this.wrap(value, font, size, options.width ?? WIDTH)) {
       this.ensure(lineHeight);
       this.y -= lineHeight;
@@ -176,7 +177,7 @@ class Writer {
         width: WIDTH - labelWidth,
         size: valueSize,
       });
-      this.y = Math.min(this.y, labelBottom) - 3;
+      this.y = Math.min(this.y, labelBottom) - 1.5;
     }
   }
 
@@ -210,7 +211,7 @@ class Writer {
 
   /** The QR beside a short text, the link and a note. */
   qr(image: PDFImage, caption: string, url: string, note: string) {
-    const size = 84;
+    const size = 72;
     this.ensure(size + 12);
     const top = this.y;
     this.page.drawImage(image, {
@@ -289,6 +290,12 @@ export class PdfLibParcelReceiptRenderer implements ParcelReceiptRendererPort {
         "Quem retirou",
         `${signature.signerName}${input.signerDocumentMasked ? ` · ${signature.signerDocumentType} ${input.signerDocumentMasked}` : ""}`,
       ],
+      [
+        "Autorização",
+        parcel.authorizedName && parcel.authorizedAt
+          ? `${parcel.authorizedName}${parcel.authorizedDocumentType && parcel.authorizedDocument ? ` (${parcel.authorizedDocumentType} ${maskDocument(parcel.authorizedDocumentType, parcel.authorizedDocument)})` : ""}, autorizada${parcel.authorizedByName ? ` por ${parcel.authorizedByName}` : ""} em ${when(parcel.authorizedAt)}`
+          : null,
+      ],
       ["Assinado em (servidor)", when(signature.signedAt)],
       [
         "Hora do aparelho",
@@ -321,7 +328,7 @@ export class PdfLibParcelReceiptRenderer implements ParcelReceiptRendererPort {
       ? await doc.embedPng(input.signaturePng).catch(() => null)
       : null;
     if (image) {
-      out.image(image, 90);
+      out.image(image, 72);
     } else {
       out.text(
         "A imagem da assinatura não pôde ser carregada; confira no app.",

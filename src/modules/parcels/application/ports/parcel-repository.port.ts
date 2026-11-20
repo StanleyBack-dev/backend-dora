@@ -42,8 +42,24 @@ export type Parcel = {
   pickupDeadline: Date | null;
   /** Perishable: the last reminder (every few hours until the deadline). */
   perishableRemindedAt: Date | null;
+  /** Someone a resident authorized to pick it up (null: none). */
+  authorizedName: string | null;
+  authorizedDocumentType: DocumentType | null;
+  authorizedDocument: string | null;
+  authorizedById: string | null;
+  authorizedByName: string | null;
+  authorizedAt: Date | null;
   /** Picked up: who signed (null otherwise). */
   signerName: string | null;
+};
+
+/** An authorization to pick up (null clears it). */
+export type ParcelAuthorization = {
+  name: string;
+  documentType: DocumentType | null;
+  document: string | null;
+  by: string;
+  at: Date;
 };
 
 export type NewParcel = {
@@ -183,6 +199,16 @@ export interface ParcelRepositoryPort {
     notices: (parcel: Parcel) => OutboxDraft[],
   ): Promise<Parcel | null>;
   findSignature(parcelId: string): Promise<ParcelSignature | null>;
+  /**
+   * Sets or clears who may pick it up, only while it waits (null
+   * otherwise). Notices go with it.
+   */
+  authorize(
+    id: string,
+    authorization: ParcelAuthorization | null,
+    by: string,
+    notices: (parcel: Parcel) => OutboxDraft[],
+  ): Promise<Parcel | null>;
   /**
    * Perishable parcels before their deadline whose last reminder (or
    * arrival) is older than `remindedBefore`.

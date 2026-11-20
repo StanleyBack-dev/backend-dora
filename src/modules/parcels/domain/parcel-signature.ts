@@ -295,6 +295,18 @@ export type SignatureEvidence = {
   /** The deliverer's role there (CONCIERGE: gate, ADMIN: administration). */
   collectedByRole: string;
   sessionId: string | null;
+  /** Picked up by someone a resident authorized (null: no authorization). */
+  authorization: AuthorizationEvidence | null;
+};
+
+/** The authorization in force when the parcel was picked up. */
+export type AuthorizationEvidence = {
+  name: string;
+  documentType: DocumentType | null;
+  document: string | null;
+  authorizedBy: string | null;
+  authorizedByName: string | null;
+  authorizedAt: Date;
 };
 
 /** The digest stored with the signature; recomputing it verifies the record. */

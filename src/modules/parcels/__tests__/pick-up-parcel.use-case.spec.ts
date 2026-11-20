@@ -59,6 +59,12 @@ const parcel: Parcel = {
   perishable: false,
   pickupDeadline: null,
   perishableRemindedAt: null,
+  authorizedName: null,
+  authorizedDocumentType: null,
+  authorizedDocument: null,
+  authorizedById: null,
+  authorizedByName: null,
+  authorizedAt: null,
   signerName: null,
 };
 

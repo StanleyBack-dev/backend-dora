@@ -17,6 +17,8 @@ import { FindParcelByCodeUseCase } from "@/modules/parcels/application/use-cases
 import { ListParcelsUseCase } from "@/modules/parcels/application/use-cases/list-parcels.use-case";
 import { PickUpParcelUseCase } from "@/modules/parcels/application/use-cases/pick-up-parcel.use-case";
 import { RegisterParcelUseCase } from "@/modules/parcels/application/use-cases/register-parcel.use-case";
+import { AuthorizeParcelPickupUseCase } from "@/modules/parcels/application/use-cases/authorize-parcel-pickup.use-case";
+import { AuthorizeParcelPickupInput } from "@/modules/parcels/presentation/graphql/dto/inputs/authorize-parcel-pickup.input";
 import { GetParcelReceiptPdfUseCase } from "@/modules/parcels/application/use-cases/get-parcel-receipt-pdf.use-case";
 import { ParcelReceiptFileType } from "@/modules/parcels/presentation/graphql/dto/outputs/parcel-receipt-file.output";
 import { SearchParcelRecipientsUseCase } from "@/modules/parcels/application/use-cases/search-parcel-recipients.use-case";
@@ -49,6 +51,7 @@ export class ParcelsResolver {
     private readonly closing: CloseParcelUseCase,
     private readonly recipients: SearchParcelRecipientsUseCase,
     private readonly receipts: GetParcelReceiptPdfUseCase,
+    private readonly authorizing: AuthorizeParcelPickupUseCase,
   ) {}
 
   @Query(() => ParcelReceiptFileType, {
@@ -177,6 +180,29 @@ export class ParcelsResolver {
         meta,
       ),
     );
+  }
+
+  @Mutation(() => ParcelType, {
+    description:
+      "Autoriza outra pessoa a retirar a encomenda (quem vê a encomenda, enquanto ela aguarda). Substitui a anterior.",
+  })
+  async authorizeParcelPickup(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Args("input") input: AuthorizeParcelPickupInput,
+  ): Promise<ParcelType> {
+    return toParcelType(
+      await this.authorizing.authorize(actor, input.parcelId, input),
+    );
+  }
+
+  @Mutation(() => ParcelType, {
+    description: "Remove a autorização de retirada por outra pessoa.",
+  })
+  async revokeParcelPickupAuthorization(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Args("parcelId", { type: () => ID }, UuidArg()) parcelId: string,
+  ): Promise<ParcelType> {
+    return toParcelType(await this.authorizing.revoke(actor, parcelId));
   }
 
   @RequirePermissions(Permission.PARCELS_MANAGE)

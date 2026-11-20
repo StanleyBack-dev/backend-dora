@@ -47,6 +47,8 @@ export enum NotificationType {
   PARCEL_RETURNED = "PARCEL_RETURNED",
   /** A parcel registered for your unit by mistake was cancelled. */
   PARCEL_CANCELLED = "PARCEL_CANCELLED",
+  /** Someone authorized another person to pick up a parcel you see. */
+  PARCEL_AUTHORIZED = "PARCEL_AUTHORIZED",
 }
 
 export const ALL_NOTIFICATION_TYPES: readonly NotificationType[] =

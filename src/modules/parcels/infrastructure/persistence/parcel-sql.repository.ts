@@ -12,6 +12,7 @@ import type {
   NewParcel,
   NewParcelSignature,
   Parcel,
+  ParcelAuthorization,
   ParcelFilter,
   ParcelOverview,
   ParcelRepositoryPort,
@@ -62,11 +63,17 @@ const SELECT = `
          p.close_reason AS "closeReason", p.reminded_at AS "remindedAt",
          p.perishable, p.pickup_deadline AS "pickupDeadline",
          p.perishable_reminded_at AS "perishableRemindedAt",
+         p.authorized_name AS "authorizedName",
+         p.authorized_document_type AS "authorizedDocumentType",
+         p.authorized_document AS "authorizedDocument",
+         p.authorized_by AS "authorizedById", ab.name AS "authorizedByName",
+         p.authorized_at AS "authorizedAt",
          s.signer_name AS "signerName"
     FROM tb_parcels p
     LEFT JOIN tb_units un ON un.idtb_units = p.idtb_units
     LEFT JOIN tb_users rb ON rb.idtb_users = p.received_by
     LEFT JOIN tb_users cb ON cb.idtb_users = p.closed_by
+    LEFT JOIN tb_users ab ON ab.idtb_users = p.authorized_by
     LEFT JOIN tb_parcel_signatures s ON s.idtb_parcels = p.idtb_parcels`;
 
 /**
@@ -514,6 +521,37 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
         ORDER BY p.pickup_deadline LIMIT ${Number(limit)}`,
       [now],
     );
+  }
+
+  authorize(
+    id: string,
+    authorization: ParcelAuthorization | null,
+    by: string,
+    notices: (parcel: Parcel) => OutboxDraft[],
+  ): Promise<Parcel | null> {
+    return this.dataSource.transaction(async (manager) => {
+      const updated = await manager.query<{ id: string }[]>(
+        `UPDATE tb_parcels
+          SET authorized_name = $2, authorized_document_type = $3,
+              authorized_document = $4, authorized_by = $5,
+              authorized_at = $6, updated_by = $7, updated_at = now()
+        WHERE idtb_parcels = $1 AND status = '${ParcelStatus.RECEIVED}'
+        RETURNING idtb_parcels AS id`,
+        [
+          id,
+          authorization?.name ?? null,
+          authorization?.documentType ?? null,
+          authorization?.document ?? null,
+          authorization?.by ?? null,
+          authorization?.at ?? null,
+          by,
+        ],
+      );
+      if (updated.length === 0) return null;
+      const saved = await this.get(manager, id);
+      await this.outbox.write(manager, notices(saved));
+      return saved;
+    });
   }
 
   markOverdueNotified(
