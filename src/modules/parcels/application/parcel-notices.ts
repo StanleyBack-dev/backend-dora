@@ -6,7 +6,8 @@ import { formatDateTime } from "@/shared/domain/local-date";
 
 // What the residents of a unit are told about its parcels, as outbox drafts
 // stored with the change: it arrived (with the pickup code), it is still
-// waiting, who picked it up, it was returned or cancelled.
+// waiting (perishable: every few hours, and when the deadline passes), who
+// picked it up, it was returned or cancelled.
 
 const LINK = "/encomendas/minhas";
 
@@ -30,7 +31,19 @@ const details = (parcel: Parcel, timeZone: string) => [
     label: "Recebida em",
     value: formatDateTime(parcel.receivedAt, timeZone),
   },
+  ...(parcel.pickupDeadline
+    ? [
+        {
+          label: "Retirar até",
+          value: formatDateTime(parcel.pickupDeadline, timeZone),
+        },
+      ]
+    : []),
 ];
+
+/** "até 20/11 às 14:30" for a perishable parcel. */
+const deadline = (parcel: Parcel, timeZone: string) =>
+  parcel.pickupDeadline ? formatDateTime(parcel.pickupDeadline, timeZone) : "";
 
 /** To each resident of the unit: a parcel arrived, with the pickup code. */
 export function receivedNotices(
@@ -43,13 +56,20 @@ export function receivedNotices(
       {
         userId,
         type: NotificationType.PARCEL_RECEIVED,
-        title: "Chegou uma encomenda para você",
-        body: `${what(parcel)} · código de retirada ${parcel.pickupCode}`,
+        title: parcel.perishable
+          ? "Chegou uma encomenda perecível para você"
+          : "Chegou uma encomenda para você",
+        body: parcel.perishable
+          ? `${what(parcel)} · retire até ${deadline(parcel, timeZone)} · código ${parcel.pickupCode}`
+          : `${what(parcel)} · código de retirada ${parcel.pickupCode}`,
         link: LINK,
         email: {
-          subject: `Chegou uma encomenda para você (código ${parcel.pickupCode})`,
-          intro:
-            "O condomínio recebeu uma encomenda para a sua unidade. Para retirar, mostre o QR code do app ou informe o código de retirada e assine na tela de quem entregar (portaria ou administração).",
+          subject: parcel.perishable
+            ? `Encomenda perecível: retire até ${deadline(parcel, timeZone)} (código ${parcel.pickupCode})`
+            : `Chegou uma encomenda para você (código ${parcel.pickupCode})`,
+          intro: parcel.perishable
+            ? "O condomínio recebeu uma encomenda perecível (alimento, remédio, flores…) para você. Retire dentro do prazo: mostre o QR code do app ou informe o código de retirada e assine na tela de quem entregar (portaria ou administração)."
+            : "O condomínio recebeu uma encomenda para a sua unidade. Para retirar, mostre o QR code do app ou informe o código de retirada e assine na tela de quem entregar (portaria ou administração).",
           details: [
             { label: "Código de retirada", value: parcel.pickupCode },
             ...details(parcel, timeZone),
@@ -90,6 +110,72 @@ export function reminderNotices(
         calendar: null,
       },
       `parcel:${parcel.id}:reminder:${userId}`,
+    ),
+  );
+}
+
+/**
+ * Perishable, still waiting: reminded every few hours until the deadline
+ * (each reminder is its own notice).
+ */
+export function perishableReminderNotices(
+  parcel: Parcel,
+  userIds: readonly string[],
+  timeZone: string,
+  at: Date,
+): OutboxDraft[] {
+  return userIds.map((userId) =>
+    deliveryDraft(
+      {
+        userId,
+        type: NotificationType.PARCEL_REMINDER,
+        title: "Encomenda perecível esperando você",
+        body: `${what(parcel)} · retire até ${deadline(parcel, timeZone)} · código ${parcel.pickupCode}`,
+        link: LINK,
+        email: {
+          subject: `Retire sua encomenda perecível até ${deadline(parcel, timeZone)} (código ${parcel.pickupCode})`,
+          intro:
+            "Uma encomenda perecível sua ainda espera retirada no condomínio. Retire dentro do prazo para ela não estragar: mostre o QR code do app ou informe o código de retirada.",
+          details: [
+            { label: "Código de retirada", value: parcel.pickupCode },
+            ...details(parcel, timeZone),
+          ],
+          ctaLabel: "Ver no app",
+        },
+        calendar: null,
+      },
+      `parcel:${parcel.id}:perishable:${at.getTime()}:${userId}`,
+    ),
+  );
+}
+
+/** Perishable, past its deadline: told once (the desk decides what to do). */
+export function overdueNotices(
+  parcel: Parcel,
+  userIds: readonly string[],
+  timeZone: string,
+): OutboxDraft[] {
+  return userIds.map((userId) =>
+    deliveryDraft(
+      {
+        userId,
+        type: NotificationType.PARCEL_REMINDER,
+        title: "Prazo da encomenda perecível venceu",
+        body: `${what(parcel)} · o prazo era ${deadline(parcel, timeZone)} · código ${parcel.pickupCode}`,
+        link: LINK,
+        email: {
+          subject: `Prazo da encomenda perecível venceu (código ${parcel.pickupCode})`,
+          intro:
+            "O prazo de retirada da sua encomenda perecível venceu. Ela continua no condomínio por enquanto: retire o quanto antes ou fale com a portaria ou a administração.",
+          details: [
+            { label: "Código de retirada", value: parcel.pickupCode },
+            ...details(parcel, timeZone),
+          ],
+          ctaLabel: "Ver no app",
+        },
+        calendar: null,
+      },
+      `parcel:${parcel.id}:overdue:${userId}`,
     ),
   );
 }

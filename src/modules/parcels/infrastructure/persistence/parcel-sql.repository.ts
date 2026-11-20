@@ -60,6 +60,8 @@ const SELECT = `
          rb.name AS "receivedByName", p.closed_at AS "closedAt",
          p.closed_by AS "closedById", cb.name AS "closedByName",
          p.close_reason AS "closeReason", p.reminded_at AS "remindedAt",
+         p.perishable, p.pickup_deadline AS "pickupDeadline",
+         p.perishable_reminded_at AS "perishableRemindedAt",
          s.signer_name AS "signerName"
     FROM tb_parcels p
     LEFT JOIN tb_units un ON un.idtb_units = p.idtb_units
@@ -67,8 +69,13 @@ const SELECT = `
     LEFT JOIN tb_users cb ON cb.idtb_users = p.closed_by
     LEFT JOIN tb_parcel_signatures s ON s.idtb_parcels = p.idtb_parcels`;
 
-/** Waiting at the gate first, then the newest. */
+/**
+ * Waiting at the gate first (perishable ones on top, nearest deadline
+ * first), then the newest.
+ */
 const ORDER = `ORDER BY (p.status = '${ParcelStatus.RECEIVED}') DESC,
+                        (p.status = '${ParcelStatus.RECEIVED}' AND p.perishable) DESC,
+                        p.pickup_deadline ASC NULLS LAST,
                         p.received_at DESC, p.idtb_parcels`;
 
 const toParcel = (row: ParcelRow): Parcel => {
@@ -132,8 +139,10 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
         `INSERT INTO tb_parcels
            (idtb_condominiums, idtb_units, recipient_name, recipient_user_id,
             carrier, tracking_code, notes, storage_location, photo_key,
-            pickup_code, received_at, received_by, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12, $12)
+            pickup_code, received_at, received_by, created_by, updated_by,
+            perishable, pickup_deadline)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12, $12,
+                 $13, $14)
          RETURNING idtb_parcels AS id`,
         [
           parcel.condominiumId,
@@ -148,6 +157,8 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
           parcel.pickupCode,
           parcel.receivedAt,
           parcel.receivedBy,
+          parcel.pickupDeadline !== null,
+          parcel.pickupDeadline,
         ],
       );
       const created = await this.get(manager, row.id);
@@ -209,6 +220,7 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
         `lower(unaccent(p.${column})) = lower(unaccent($${params.length}))`,
       );
     }
+    if (filter.perishable) where.push("p.perishable");
     if (filter.from) {
       params.push(filter.from);
       where.push(`p.received_at >= $${params.length}`);
@@ -241,6 +253,7 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
   async overview(
     condominiumId: string,
     waitingSince: Date,
+    now: Date,
   ): Promise<ParcelOverview> {
     const [
       byStatus,
@@ -256,12 +269,15 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
           GROUP BY status`,
         [condominiumId],
       ),
-      this.dataSource.query<{ count: number }[]>(
-        `SELECT count(*)::int AS count
+      this.dataSource.query<
+        { count: number; perishable: number; overdue: number }[]
+      >(
+        `SELECT count(*) FILTER (WHERE received_at < $2)::int AS count,
+                count(*) FILTER (WHERE perishable)::int AS perishable,
+                count(*) FILTER (WHERE pickup_deadline <= $3)::int AS overdue
            FROM tb_parcels
-          WHERE idtb_condominiums = $1 AND status = '${ParcelStatus.RECEIVED}'
-            AND received_at < $2`,
-        [condominiumId, waitingSince],
+          WHERE idtb_condominiums = $1 AND status = '${ParcelStatus.RECEIVED}'`,
+        [condominiumId, waitingSince, now],
       ),
       this.dataSource.query<UnitRow[]>(
         `SELECT DISTINCT un.idtb_units AS id, un.street, un.block, un.number
@@ -276,6 +292,8 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
     return {
       byStatus,
       waitingLong: waiting?.count ?? 0,
+      perishableWaiting: waiting?.perishable ?? 0,
+      perishableOverdue: waiting?.overdue ?? 0,
       units: toUnitOptions(units),
       recipientNames,
       carriers,
@@ -426,6 +444,7 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
       this.dataSource.manager,
       `${SELECT}
         WHERE p.status = '${ParcelStatus.RECEIVED}' AND p.reminded_at IS NULL
+          AND NOT p.perishable
           AND p.received_at < $1 AND p.idtb_units IS NOT NULL
         ORDER BY p.received_at LIMIT ${Number(limit)}`,
       [receivedBefore],
@@ -438,6 +457,75 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
         `UPDATE tb_parcels SET reminded_at = $2
           WHERE idtb_parcels = $1 AND status = '${ParcelStatus.RECEIVED}'
             AND reminded_at IS NULL
+          RETURNING idtb_parcels AS id`,
+        [id, at],
+      );
+      if (updated.length === 0) return false;
+      await this.outbox.write(manager, notices);
+      return true;
+    });
+  }
+
+  duePerishableReminders(
+    now: Date,
+    remindedBefore: Date,
+    limit: number,
+  ): Promise<Parcel[]> {
+    return this.query(
+      this.dataSource.manager,
+      `${SELECT}
+        WHERE p.status = '${ParcelStatus.RECEIVED}' AND p.perishable
+          AND p.pickup_deadline > $1 AND p.received_at <= $2
+          AND (p.perishable_reminded_at IS NULL
+               OR p.perishable_reminded_at <= $2)
+          AND p.idtb_units IS NOT NULL
+        ORDER BY p.pickup_deadline LIMIT ${Number(limit)}`,
+      [now, remindedBefore],
+    );
+  }
+
+  markPerishableReminded(
+    id: string,
+    at: Date,
+    previous: Date | null,
+    notices: OutboxDraft[],
+  ): Promise<boolean> {
+    return this.dataSource.transaction(async (manager) => {
+      const updated = await manager.query<{ id: string }[]>(
+        `UPDATE tb_parcels SET perishable_reminded_at = $2
+          WHERE idtb_parcels = $1 AND status = '${ParcelStatus.RECEIVED}'
+            AND perishable_reminded_at IS NOT DISTINCT FROM $3::timestamptz
+          RETURNING idtb_parcels AS id`,
+        [id, at, previous],
+      );
+      if (updated.length === 0) return false;
+      await this.outbox.write(manager, notices);
+      return true;
+    });
+  }
+
+  dueOverdue(now: Date, limit: number): Promise<Parcel[]> {
+    return this.query(
+      this.dataSource.manager,
+      `${SELECT}
+        WHERE p.status = '${ParcelStatus.RECEIVED}' AND p.perishable
+          AND p.pickup_deadline <= $1 AND p.overdue_notified_at IS NULL
+          AND p.idtb_units IS NOT NULL
+        ORDER BY p.pickup_deadline LIMIT ${Number(limit)}`,
+      [now],
+    );
+  }
+
+  markOverdueNotified(
+    id: string,
+    at: Date,
+    notices: OutboxDraft[],
+  ): Promise<boolean> {
+    return this.dataSource.transaction(async (manager) => {
+      const updated = await manager.query<{ id: string }[]>(
+        `UPDATE tb_parcels SET overdue_notified_at = $2
+          WHERE idtb_parcels = $1 AND status = '${ParcelStatus.RECEIVED}'
+            AND overdue_notified_at IS NULL
           RETURNING idtb_parcels AS id`,
         [id, at],
       );

@@ -5,6 +5,7 @@ name: Routines
 # secrets API_URL / CRON_SECRET exist, every run is skipped.
 #   - outbox: retries notifications the best-effort delivery after each
 #     change could not send (e-mail provider down, function frozen…);
+#   - perishable parcels: reminders every few hours until the deadline;
 #   - maintenance: deletes ended sessions, used codes, delivered messages and
 #     other data past its retention.
 on:
@@ -46,6 +47,11 @@ jobs:
           curl --fail-with-body --silent --show-error --max-time 300 \
             -X POST -H "Authorization: Bearer $CRON_SECRET" \
             "$API_URL/internal/outbox/process"
+
+      - name: Remind perishable parcels
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 120             -X POST -H "Authorization: Bearer $CRON_SECRET"             "$API_URL/internal/maintenance/perishable-parcels"
 
       - name: Clean up old data
         if: steps.ready.outputs.ready == 'true' && (github.event.schedule == '30 6 * * *' || github.event_name == 'workflow_dispatch')

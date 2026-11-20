@@ -42,10 +42,11 @@ export class ListParcelsUseCase {
 
   async overview(actor: AuthenticatedUser): Promise<ParcelOverview> {
     const condominiumId = await this.access.condominiumOf(actor);
+    const now = this.clock.now();
     const waitingSince = new Date(
-      this.clock.now().getTime() - PARCEL_REMINDER_DAYS * DAY_MS,
+      now.getTime() - PARCEL_REMINDER_DAYS * DAY_MS,
     );
-    return this.parcels.overview(condominiumId, waitingSince);
+    return this.parcels.overview(condominiumId, waitingSince, now);
   }
 
   /**

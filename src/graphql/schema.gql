@@ -1626,6 +1626,12 @@ type Parcel {
   """Onde está guardada na portaria."""
   storageLocation: String
 
+  """Perecível: retirar até pickupDeadline."""
+  perishable: Boolean!
+
+  """Perecível: prazo de retirada."""
+  pickupDeadline: DateTime
+
   """Código de retirada (também no QR)."""
   pickupCode: String!
   status: ParcelStatus!
@@ -1679,6 +1685,12 @@ type ParcelOverview {
 
   """Aguardando retirada há mais dias que o lembrete (3 dias)."""
   waitingLong: Int!
+
+  """Perecíveis aguardando retirada."""
+  perishableWaiting: Int!
+
+  """Perecíveis com o prazo vencido."""
+  perishableOverdue: Int!
   units: [UnitOption!]!
 
   """Destinatários já usados (filtro), os mais recentes primeiro."""
@@ -2650,6 +2662,9 @@ input ParcelFilterInput {
   """O código de rastreio (exato)."""
   trackingCode: String
 
+  """Só as perecíveis."""
+  perishable: Boolean
+
   """Recebidas a partir deste instante."""
   from: DateTime
 
@@ -3507,6 +3522,14 @@ input RegisterParcelInput {
 
   """Foto da encomenda (JPEG, PNG ou WebP em base64, até 1 MB)."""
   photo: String
+
+  """
+  Perecível (alimento, remédio, flores…): retirar dentro do prazo, com lembretes a cada 2 horas.
+  """
+  perishable: Boolean
+
+  """Perecível: prazo em horas (2, 4, 8, 12, 24 ou 48; padrão 4)."""
+  perishableHours: Int
 }
 
 """

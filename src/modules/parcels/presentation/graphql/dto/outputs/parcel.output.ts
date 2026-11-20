@@ -40,6 +40,15 @@ export class ParcelType {
   })
   storageLocation!: string | null;
 
+  @Field({ description: "Perecível: retirar até pickupDeadline." })
+  perishable!: boolean;
+
+  @Field(() => Date, {
+    nullable: true,
+    description: "Perecível: prazo de retirada.",
+  })
+  pickupDeadline!: Date | null;
+
   @Field({ description: "Código de retirada (também no QR)." })
   pickupCode!: string;
 

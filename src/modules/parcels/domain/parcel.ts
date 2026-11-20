@@ -26,6 +26,22 @@ export const PARCEL_REMINDER_DAYS = 3;
 /** The photo is kept this long after the parcel left the gate. */
 export const PARCEL_PHOTO_RETENTION_DAYS = 90;
 
+/** Perishable: the deadlines the desk can pick (hours after arrival). */
+export const PERISHABLE_DEADLINE_HOURS = [2, 4, 8, 12, 24, 48] as const;
+export const PERISHABLE_DEFAULT_DEADLINE_HOURS = 4;
+/** Perishable: residents are reminded this often until the deadline. */
+export const PERISHABLE_REMINDER_HOURS = 2;
+
+/** The deadline of a perishable parcel (null: an invalid number of hours). */
+export function perishableDeadline(
+  receivedAt: Date,
+  hours: number,
+): Date | null {
+  return (PERISHABLE_DEADLINE_HOURS as readonly number[]).includes(hours)
+    ? new Date(receivedAt.getTime() + hours * 3_600_000)
+    : null;
+}
+
 /** A pickup code from `random(n)` (an integer in [0, n)). */
 export function parcelCode(random: (max: number) => number): string {
   let code = "";

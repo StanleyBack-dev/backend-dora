@@ -2,7 +2,11 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { ModuleAccessService } from "@/modules/condominiums/application/module-access.service";
 import { AppModule } from "@/modules/condominiums/domain/app-module";
 import { ParcelAccessService } from "@/modules/parcels/application/parcel-access.service";
-import { reminderNotices } from "@/modules/parcels/application/parcel-notices";
+import {
+  overdueNotices,
+  perishableReminderNotices,
+  reminderNotices,
+} from "@/modules/parcels/application/parcel-notices";
 import {
   PARCEL_REPOSITORY,
   type ParcelRepositoryPort,
@@ -10,6 +14,7 @@ import {
 import {
   PARCEL_PHOTO_RETENTION_DAYS,
   PARCEL_REMINDER_DAYS,
+  PERISHABLE_REMINDER_HOURS,
 } from "@/modules/parcels/domain/parcel";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
 import {
@@ -20,6 +25,7 @@ import {
 const DAY_MS = 86_400_000;
 /** Most reminders sent in one run (the next run takes the rest). */
 const REMINDERS_PER_RUN = 500;
+const HOUR_MS = 3_600_000;
 
 // Daily housekeeping of the parcels module: residents are reminded once of
 // a parcel waiting at the gate for days (only where the module is on), and
@@ -71,6 +77,61 @@ export class ParcelsMaintenanceService {
       if (marked) sent += 1;
     }
     return sent;
+  }
+
+  /**
+   * Perishable parcels (run every few minutes with the outbox): residents
+   * are reminded every PERISHABLE_REMINDER_HOURS until the deadline, and
+   * told once when it passes.
+   */
+  async runPerishable(
+    now: Date,
+  ): Promise<{ reminders: number; overdue: number }> {
+    const enabled = new Map<string, boolean>();
+    const on = async (condominiumId: string) => {
+      let value = enabled.get(condominiumId);
+      if (value === undefined) {
+        value = (await this.modules.enabled(condominiumId)).includes(
+          AppModule.PARCELS,
+        );
+        enabled.set(condominiumId, value);
+      }
+      return value;
+    };
+
+    let reminders = 0;
+    const due = await this.parcels.duePerishableReminders(
+      now,
+      new Date(now.getTime() - PERISHABLE_REMINDER_HOURS * HOUR_MS),
+      REMINDERS_PER_RUN,
+    );
+    for (const parcel of due) {
+      if (!(await on(parcel.condominiumId))) continue;
+      const residents = await this.access.audience(parcel);
+      const marked = await this.parcels.markPerishableReminded(
+        parcel.id,
+        now,
+        parcel.perishableRemindedAt,
+        perishableReminderNotices(parcel, residents, this.clock.timeZone, now),
+      );
+      if (marked) reminders += 1;
+    }
+
+    let overdue = 0;
+    for (const parcel of await this.parcels.dueOverdue(
+      now,
+      REMINDERS_PER_RUN,
+    )) {
+      if (!(await on(parcel.condominiumId))) continue;
+      const residents = await this.access.audience(parcel);
+      const marked = await this.parcels.markOverdueNotified(
+        parcel.id,
+        now,
+        overdueNotices(parcel, residents, this.clock.timeZone),
+      );
+      if (marked) overdue += 1;
+    }
+    return { reminders, overdue };
   }
 
   private async releasePhotos(now: Date): Promise<number> {

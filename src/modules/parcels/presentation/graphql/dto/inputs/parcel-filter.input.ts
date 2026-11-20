@@ -2,6 +2,7 @@ import { Field, ID, InputType } from "@nestjs/graphql";
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsDate,
   IsEnum,
   IsOptional,
@@ -59,6 +60,14 @@ export class ParcelFilterInput {
   @IsString()
   @MaxLength(60)
   trackingCode?: string;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description: "Só as perecíveis.",
+  })
+  @IsOptional()
+  @IsBoolean()
+  perishable?: boolean;
 
   @Field({ nullable: true, description: "Recebidas a partir deste instante." })
   @IsOptional()

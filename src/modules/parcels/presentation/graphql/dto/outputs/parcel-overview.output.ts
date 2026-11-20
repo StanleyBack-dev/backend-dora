@@ -25,6 +25,12 @@ export class ParcelOverviewType {
   })
   waitingLong!: number;
 
+  @Field(() => Int, { description: "Perecíveis aguardando retirada." })
+  perishableWaiting!: number;
+
+  @Field(() => Int, { description: "Perecíveis com o prazo vencido." })
+  perishableOverdue!: number;
+
   @Field(() => [UnitOptionType])
   units!: UnitOptionType[];
 
