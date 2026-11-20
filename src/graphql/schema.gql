@@ -525,6 +525,41 @@ type UnitWithResidentsPage {
   totalPages: Int!
 }
 
+"""Encomendas de um mês."""
+type ParcelMonth {
+  """AAAA-MM, no fuso do condomínio."""
+  month: String!
+
+  """Recebidas no mês."""
+  received: Int!
+
+  """Dessas, as já retiradas."""
+  pickedUp: Int!
+}
+
+"""Indicadores das encomendas do condomínio."""
+type ParcelIndicators {
+  """Aguardando retirada agora."""
+  waiting: Int!
+
+  """Aguardando há mais de 3 dias."""
+  stuck: Int!
+
+  """Perecíveis com o prazo vencido."""
+  perishableOverdue: Int!
+
+  """Retiradas nos últimos 30 dias."""
+  pickedUpLast30Days: Int!
+
+  """
+  Tempo médio até a retirada (horas), nos últimos 30 dias (nulo: nenhuma retirada).
+  """
+  averagePickupHours: Float
+
+  """Os últimos 6 meses, do mais antigo ao atual."""
+  monthly: [ParcelMonth!]!
+}
+
 """Painel do gestor do condomínio."""
 type Dashboard {
   """Moradores com acesso ativo (sem a equipe)."""
@@ -550,6 +585,9 @@ type Dashboard {
 
   """Notificações que falharam de vez (só a plataforma vê)."""
   failedNotifications: Int
+
+  """Encomendas (nulo: módulo desligado)."""
+  parcels: ParcelIndicators
 }
 
 """Dependente de um morador (aprovado pela administração)."""
@@ -1838,6 +1876,66 @@ enum MetricsGranularity {
   MONTH
 }
 
+"""Encomendas recebidas por um condomínio no período."""
+type CondominiumParcels {
+  condominiumId: ID!
+  name: String!
+  received: Int!
+  pickedUp: Int!
+}
+
+"""Encomendas recebidas em um intervalo da série."""
+type ParcelsPoint {
+  """Primeiro dia do intervalo (YYYY-MM-DD)."""
+  bucket: String!
+
+  """Recebidas no intervalo."""
+  received: Int!
+
+  """Delas, já retiradas."""
+  pickedUp: Int!
+}
+
+"""Encomendas recebidas no período e as que aguardam agora."""
+type ParcelMetrics {
+  """Condomínios com o módulo ligado."""
+  condominiumsWithModule: Int!
+
+  """Recebidas no período."""
+  received: Int!
+
+  """Delas, retiradas."""
+  pickedUp: Int!
+
+  """Delas, devolvidas ao remetente."""
+  returned: Int!
+
+  """Delas, canceladas (registro por engano)."""
+  cancelled: Int!
+
+  """Delas, perecíveis."""
+  perishable: Int!
+
+  """
+  Tempo médio até a retirada (horas), das retiradas no período (nulo: nenhuma).
+  """
+  averagePickupHours: Float
+
+  """Aguardando retirada agora."""
+  waitingNow: Int!
+
+  """Aguardando há mais de 3 dias, agora."""
+  stuckNow: Int!
+
+  """Perecíveis com o prazo vencido, agora."""
+  perishableOverdueNow: Int!
+  granularity: MetricsGranularity!
+  series: [ParcelsPoint!]!
+
+  """Os 10 condomínios que mais recebem."""
+  byCondominium: [CondominiumParcels!]!
+}
+
 """Uso de um espaço no período."""
 type SpaceUsage {
   spaceId: ID!
@@ -1947,6 +2045,7 @@ type PlatformMetrics {
   """Filtro de condomínio (null: todos)."""
   condominiumId: ID
   bookings: BookingMetrics!
+  parcels: ParcelMetrics!
   spaces: SpaceMetrics!
   engagement: EngagementMetrics!
   health: HealthMetrics!

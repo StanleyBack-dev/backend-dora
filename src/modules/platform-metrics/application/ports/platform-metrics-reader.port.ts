@@ -107,8 +107,46 @@ export type HealthMetrics = {
   openSupport: number;
 };
 
+/** Parcels received inside one bucket of the series. */
+export type ParcelsPoint = {
+  /** First day of the bucket (YYYY-MM-DD). */
+  bucket: string;
+  received: number;
+  /** Of those, already picked up. */
+  pickedUp: number;
+};
+
+export type CondominiumParcels = {
+  condominiumId: string;
+  name: string;
+  received: number;
+  pickedUp: number;
+};
+
+export type ParcelMetrics = {
+  /** Condominiums with the module on (in the scope). */
+  condominiumsWithModule: number;
+  /** Received in the period, and how those ended so far. */
+  received: number;
+  pickedUp: number;
+  returned: number;
+  cancelled: number;
+  perishable: number;
+  /** Average hours from arrival to pickup, of those picked up in the period. */
+  averagePickupHours: number | null;
+  /** Now (not the period): waiting, for more than 3 days, perishable overdue. */
+  waitingNow: number;
+  stuckNow: number;
+  perishableOverdueNow: number;
+  granularity: MetricsGranularity;
+  series: ParcelsPoint[];
+  /** The condominiums that receive the most (top 10). */
+  byCondominium: CondominiumParcels[];
+};
+
 export type PlatformMetrics = {
   bookings: BookingMetrics;
+  parcels: ParcelMetrics;
   spaces: SpaceMetrics;
   engagement: EngagementMetrics;
   health: HealthMetrics;

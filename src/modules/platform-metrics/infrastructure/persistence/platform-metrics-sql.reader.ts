@@ -6,6 +6,7 @@ import type {
   EngagementMetrics,
   HealthMetrics,
   MetricsQuery,
+  ParcelMetrics,
   PlatformMetrics,
   PlatformMetricsReaderPort,
   SpaceMetrics,
@@ -34,20 +35,126 @@ type Raw = Record<string, unknown>;
 const int = (value: unknown) => Number(value ?? 0);
 
 // Reporting queries for the platform panel: read-only, across the tables of
-// condominiums, identity, enrollment, spaces, bookings, support and outbox.
+// condominiums, identity, enrollment, spaces, bookings, parcels, support
+// and outbox.
 // Every value is a bound parameter (time zone and bucket size included).
 @Injectable()
 export class PlatformMetricsSqlReader implements PlatformMetricsReaderPort {
   constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
   async read(query: MetricsQuery): Promise<PlatformMetrics> {
-    const [bookings, spaces, engagement, health] = await Promise.all([
+    const [bookings, parcels, spaces, engagement, health] = await Promise.all([
       this.bookings(query),
+      this.parcels(query),
       this.spaces(query),
       this.engagement(query),
       this.health(query),
     ]);
-    return { bookings, spaces, engagement, health };
+    return { bookings, parcels, spaces, engagement, health };
+  }
+
+  private async parcels(query: MetricsQuery): Promise<ParcelMetrics> {
+    const { start, end, condominiumId, timeZone, now, period } = query;
+    const [totals, series, byCondominium] = await Promise.all([
+      this.dataSource.query<Raw[]>(
+        `SELECT
+           (SELECT count(*) FROM tb_condominium_modules cm
+             WHERE cm.module = 'PARCELS' AND ${scope("cm", "$3")})
+             AS "condominiumsWithModule",
+           count(*) FILTER (WHERE p.received_at >= $1 AND p.received_at < $2)
+             AS received,
+           count(*) FILTER (WHERE p.received_at >= $1 AND p.received_at < $2
+                              AND p.status = 'PICKED_UP') AS "pickedUp",
+           count(*) FILTER (WHERE p.received_at >= $1 AND p.received_at < $2
+                              AND p.status = 'RETURNED') AS returned,
+           count(*) FILTER (WHERE p.received_at >= $1 AND p.received_at < $2
+                              AND p.status = 'CANCELLED') AS cancelled,
+           count(*) FILTER (WHERE p.received_at >= $1 AND p.received_at < $2
+                              AND p.perishable) AS perishable,
+           round((avg(extract(epoch FROM p.closed_at - p.received_at) / 3600)
+             FILTER (WHERE p.status = 'PICKED_UP'
+                       AND p.closed_at >= $1 AND p.closed_at < $2))::numeric, 1)
+             AS "averagePickupHours",
+           count(*) FILTER (WHERE p.status = 'RECEIVED') AS "waitingNow",
+           count(*) FILTER (WHERE p.status = 'RECEIVED'
+                              AND p.received_at < $4::timestamptz - interval '3 days')
+             AS "stuckNow",
+           count(*) FILTER (WHERE p.status = 'RECEIVED'
+                              AND p.pickup_deadline <= $4::timestamptz)
+             AS "perishableOverdueNow"
+         FROM tb_parcels p
+        WHERE ${scope("p", "$3")}`,
+        [start, end, condominiumId, now],
+      ),
+      // Every bucket of the period, empty ones included (as the bookings).
+      this.dataSource.query<Raw[]>(
+        `WITH buckets AS (
+           SELECT gs::date AS bucket
+             FROM generate_series(
+               date_trunc($5, $6::date::timestamp),
+               $7::date::timestamp,
+               ('1 ' || $5)::interval) gs)
+         SELECT to_char(greatest(k.bucket, $6::date), 'YYYY-MM-DD') AS bucket,
+                count(p.idtb_parcels) AS received,
+                count(p.idtb_parcels) FILTER (WHERE p.status = 'PICKED_UP')
+                  AS "pickedUp"
+           FROM buckets k
+           LEFT JOIN tb_parcels p
+             ON date_trunc($5, p.received_at AT TIME ZONE $4)::date = k.bucket
+            AND p.received_at >= $1 AND p.received_at < $2
+            AND ${scope("p", "$3")}
+          GROUP BY k.bucket
+          ORDER BY k.bucket`,
+        [
+          start,
+          end,
+          condominiumId,
+          timeZone,
+          TRUNC[period.granularity],
+          period.from,
+          period.to,
+        ],
+      ),
+      this.dataSource.query<Raw[]>(
+        `SELECT c.idtb_condominiums AS "condominiumId", c.name,
+                count(*) AS received,
+                count(*) FILTER (WHERE p.status = 'PICKED_UP') AS "pickedUp"
+           FROM tb_parcels p
+           JOIN tb_condominiums c ON c.idtb_condominiums = p.idtb_condominiums
+          WHERE p.received_at >= $1 AND p.received_at < $2
+            AND ${scope("p", "$3")}
+          GROUP BY c.idtb_condominiums, c.name
+          ORDER BY received DESC, unaccent(c.name)
+          LIMIT ${LIST_LIMIT}`,
+        [start, end, condominiumId],
+      ),
+    ]);
+    const row = totals[0] ?? {};
+    return {
+      condominiumsWithModule: int(row.condominiumsWithModule),
+      received: int(row.received),
+      pickedUp: int(row.pickedUp),
+      returned: int(row.returned),
+      cancelled: int(row.cancelled),
+      perishable: int(row.perishable),
+      averagePickupHours:
+        row.averagePickupHours != null ? Number(row.averagePickupHours) : null,
+      waitingNow: int(row.waitingNow),
+      stuckNow: int(row.stuckNow),
+      perishableOverdueNow: int(row.perishableOverdueNow),
+      granularity: period.granularity,
+      series: series.map((point) => ({
+        bucket: String(point.bucket),
+        received: int(point.received),
+        pickedUp: int(point.pickedUp),
+      })),
+      byCondominium: byCondominium.map((item) => ({
+        condominiumId: String(item.condominiumId),
+        name: String(item.name),
+        received: int(item.received),
+        pickedUp: int(item.pickedUp),
+      })),
+    };
   }
 
   private async bookings(query: MetricsQuery): Promise<BookingMetrics> {
