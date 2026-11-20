@@ -6,7 +6,12 @@ import {
   type Dashboard,
   type DashboardReaderPort,
 } from "@/modules/dashboard/application/ports/dashboard-reader.port";
+import { ModuleAccessService } from "@/modules/condominiums/application/module-access.service";
+import { AppModule } from "@/modules/condominiums/domain/app-module";
+import { PARCEL_REMINDER_DAYS } from "@/modules/parcels/domain/parcel";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
+
+const DAY_MS = 86_400_000;
 
 // Read-only aggregates across modules (one round trip). Writes and rules
 // stay in each module; this only counts. Each new module adds its own
@@ -16,15 +21,30 @@ export class DashboardUseCase {
   constructor(
     @Inject(DASHBOARD_READER) private readonly reader: DashboardReaderPort,
     @Inject(CLOCK) private readonly clock: ClockPort,
+    private readonly modules: ModuleAccessService,
   ) {}
 
-  get(actor: AuthenticatedUser): Promise<Dashboard> {
+  async get(actor: AuthenticatedUser): Promise<Dashboard> {
     const now = this.clock.now();
+    const condominiumId = tenantOf(actor);
     // "Today" is the condominium's calendar day, not UTC's.
     const today = {
       from: this.clock.startOfLocalDate(this.clock.localDate(now)),
       to: this.clock.startOfNextLocalDay(now),
     };
-    return this.reader.read(tenantOf(actor), actor.platformAdmin, today);
+    const [counts, modules] = await Promise.all([
+      this.reader.read(condominiumId, actor.platformAdmin, today),
+      this.modules.enabled(condominiumId),
+    ]);
+    // Parcels only where the module is on.
+    const parcels = modules.includes(AppModule.PARCELS)
+      ? await this.reader.parcels(condominiumId, {
+          now,
+          stuckBefore: new Date(now.getTime() - PARCEL_REMINDER_DAYS * DAY_MS),
+          since30Days: new Date(now.getTime() - 30 * DAY_MS),
+          timeZone: this.clock.timeZone,
+        })
+      : null;
+    return { ...counts, parcels };
   }
 }
