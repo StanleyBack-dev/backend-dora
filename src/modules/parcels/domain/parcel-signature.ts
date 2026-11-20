@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
-import type { DocumentType } from "@/shared/domain/identity-document";
+import {
+  DocumentType,
+  formatDocument,
+} from "@/shared/domain/identity-document";
 
 // The handwritten electronic signature of whoever picks up a parcel, drawn
 // with a finger or a stylus on the gate's screen. It is backed by evidence
@@ -297,3 +300,33 @@ export type SignatureEvidence = {
 /** The digest stored with the signature; recomputing it verifies the record. */
 export const evidenceDigest = (evidence: SignatureEvidence): string =>
   sha256(canonicalJson(evidence));
+
+/** Only the middle of the document shows: enough to recognise, not to reuse. */
+export function maskDocument(type: DocumentType, value: string): string {
+  const formatted = formatDocument(type, value);
+  if (type === DocumentType.CPF) {
+    return `***.${formatted.slice(4, 11)}-**`;
+  }
+  return `${value.slice(0, 2)}${"*".repeat(value.length - 3)}${value.slice(-1)}`;
+}
+
+const POINTER_LABELS: Record<string, string> = {
+  touch: "o dedo",
+  pen: "caneta",
+  mouse: "mouse",
+};
+
+/** The device facts worth reading ("iPhone · assinado com o dedo · …"). */
+export function deviceFacts(device: SignatureDevice): string | null {
+  const parts = [
+    device.platform ?? null,
+    device.pointerType
+      ? `assinado com ${POINTER_LABELS[device.pointerType] ?? device.pointerType}`
+      : null,
+    device.screenWidth && device.screenHeight
+      ? `tela ${device.screenWidth}×${device.screenHeight}`
+      : null,
+    device.language ?? null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}

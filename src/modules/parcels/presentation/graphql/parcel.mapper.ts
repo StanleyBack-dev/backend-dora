@@ -2,10 +2,7 @@ import type { Parcel } from "@/modules/parcels/application/ports/parcel-reposito
 import type { CheckedSignature } from "@/modules/parcels/application/use-cases/get-parcel-signature.use-case";
 import type { ParcelSignatureType } from "@/modules/parcels/presentation/graphql/dto/outputs/parcel-signature.output";
 import type { ParcelType } from "@/modules/parcels/presentation/graphql/dto/outputs/parcel.output";
-import {
-  DocumentType,
-  formatDocument,
-} from "@/shared/domain/identity-document";
+import { maskDocument } from "@/modules/parcels/domain/parcel-signature";
 
 export function toParcelType(parcel: Parcel): ParcelType {
   return {
@@ -31,15 +28,6 @@ export function toParcelType(parcel: Parcel): ParcelType {
     signerName: parcel.signerName,
     photoKey: parcel.photoKey,
   };
-}
-
-/** Only the middle of the document shows: enough to recognise, not to reuse. */
-export function maskDocument(type: DocumentType, value: string): string {
-  const formatted = formatDocument(type, value);
-  if (type === DocumentType.CPF) {
-    return `***.${formatted.slice(4, 11)}-**`;
-  }
-  return `${value.slice(0, 2)}${"*".repeat(value.length - 3)}${value.slice(-1)}`;
 }
 
 export function toSignatureType(

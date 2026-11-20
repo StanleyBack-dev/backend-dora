@@ -32,6 +32,11 @@ export const parcelsErrors = {
     status: HttpStatus.UNPROCESSABLE_ENTITY,
     message: "Envie uma foto JPEG, PNG ou WebP de até 1 MB.",
   },
+  noReceipt: {
+    code: "PARCEL_NO_RECEIPT",
+    status: HttpStatus.CONFLICT,
+    message: "Esta encomenda ainda não foi retirada: não há comprovante.",
+  },
   invalidSignature: {
     code: "PARCEL_INVALID_SIGNATURE",
     status: HttpStatus.UNPROCESSABLE_ENTITY,

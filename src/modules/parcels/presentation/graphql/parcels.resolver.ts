@@ -17,6 +17,8 @@ import { FindParcelByCodeUseCase } from "@/modules/parcels/application/use-cases
 import { ListParcelsUseCase } from "@/modules/parcels/application/use-cases/list-parcels.use-case";
 import { PickUpParcelUseCase } from "@/modules/parcels/application/use-cases/pick-up-parcel.use-case";
 import { RegisterParcelUseCase } from "@/modules/parcels/application/use-cases/register-parcel.use-case";
+import { GetParcelReceiptPdfUseCase } from "@/modules/parcels/application/use-cases/get-parcel-receipt-pdf.use-case";
+import { ParcelReceiptFileType } from "@/modules/parcels/presentation/graphql/dto/outputs/parcel-receipt-file.output";
 import { SearchParcelRecipientsUseCase } from "@/modules/parcels/application/use-cases/search-parcel-recipients.use-case";
 import { ParcelStatus } from "@/modules/parcels/domain/parcel";
 import { ParcelFilterInput } from "@/modules/parcels/presentation/graphql/dto/inputs/parcel-filter.input";
@@ -46,7 +48,19 @@ export class ParcelsResolver {
     private readonly pickingUp: PickUpParcelUseCase,
     private readonly closing: CloseParcelUseCase,
     private readonly recipients: SearchParcelRecipientsUseCase,
+    private readonly receipts: GetParcelReceiptPdfUseCase,
   ) {}
+
+  @Query(() => ParcelReceiptFileType, {
+    description:
+      "Comprovante de retirada em PDF (portaria e gestores, ou o morador que vê a encomenda).",
+  })
+  parcelReceiptPdf(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Args("id", { type: () => ID }, UuidArg()) id: string,
+  ): Promise<ParcelReceiptFileType> {
+    return this.receipts.execute(actor, id);
+  }
 
   @Query(() => ParcelPage, { description: "Encomendas da minha unidade." })
   async myParcels(
