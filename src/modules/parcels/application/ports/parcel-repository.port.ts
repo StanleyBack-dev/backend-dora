@@ -98,6 +98,10 @@ export type ParcelFilter = {
   unitId: string | null;
   /** Part of the pickup code, tracking code, recipient or carrier. */
   search: string | null;
+  /** Exactly these (case and accents ignored), from the filter lists. */
+  recipientName: string | null;
+  carrier: string | null;
+  trackingCode: string | null;
   /** Received on or after / before these instants. */
   from: Date | null;
   to: Date | null;
@@ -109,6 +113,10 @@ export type ParcelOverview = {
   /** Still at the gate past the reminder (PARCEL_REMINDER_DAYS). */
   waitingLong: number;
   units: { id: string; label: string }[];
+  /** The values used, for the filter lists (most recent first). */
+  recipientNames: string[];
+  carriers: string[];
+  trackingCodes: string[];
 };
 
 export interface ParcelRepositoryPort {

@@ -39,6 +39,27 @@ export class ParcelFilterInput {
   @MaxLength(60)
   search?: string;
 
+  @Field({
+    nullable: true,
+    description: "O destinatário (exato, sem diferenciar acentos).",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  recipientName?: string;
+
+  @Field({ nullable: true, description: "A transportadora (exata)." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  carrier?: string;
+
+  @Field({ nullable: true, description: "O código de rastreio (exato)." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  trackingCode?: string;
+
   @Field({ nullable: true, description: "Recebidas a partir deste instante." })
   @IsOptional()
   @IsDate()

@@ -27,4 +27,15 @@ export class ParcelOverviewType {
 
   @Field(() => [UnitOptionType])
   units!: UnitOptionType[];
+
+  @Field(() => [String], {
+    description: "Destinatários já usados (filtro), os mais recentes primeiro.",
+  })
+  recipientNames!: string[];
+
+  @Field(() => [String], { description: "Transportadoras já usadas (filtro)." })
+  carriers!: string[];
+
+  @Field(() => [String], { description: "Códigos de rastreio (filtro)." })
+  trackingCodes!: string[];
 }

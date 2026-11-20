@@ -1680,6 +1680,15 @@ type ParcelOverview {
   """Aguardando retirada há mais dias que o lembrete (3 dias)."""
   waitingLong: Int!
   units: [UnitOption!]!
+
+  """Destinatários já usados (filtro), os mais recentes primeiro."""
+  recipientNames: [String!]!
+
+  """Transportadoras já usadas (filtro)."""
+  carriers: [String!]!
+
+  """Códigos de rastreio (filtro)."""
+  trackingCodes: [String!]!
 }
 
 type ParcelPage {
@@ -2631,6 +2640,15 @@ input ParcelFilterInput {
   Parte do código de retirada, do rastreio, do destinatário ou da transportadora.
   """
   search: String
+
+  """O destinatário (exato, sem diferenciar acentos)."""
+  recipientName: String
+
+  """A transportadora (exata)."""
+  carrier: String
+
+  """O código de rastreio (exato)."""
+  trackingCode: String
 
   """Recebidas a partir deste instante."""
   from: DateTime
