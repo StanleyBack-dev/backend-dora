@@ -34,12 +34,14 @@ describe("group defaults", () => {
       Permission.GUESTS_CHECKIN,
       Permission.EVENTS_MANAGE,
       Permission.PAYMENTS_MANAGE,
+      Permission.PARCELS_MANAGE,
     ]);
   });
 
-  it("gives the gate (Portaria) only the day's guests", () => {
+  it("gives the gate (Portaria) the day's guests and the parcels", () => {
     expect(GROUP_DEFAULT_PERMISSIONS[UserGroup.CONCIERGE]).toEqual([
       Permission.GUESTS_CHECKIN,
+      Permission.PARCELS_MANAGE,
     ]);
   });
 

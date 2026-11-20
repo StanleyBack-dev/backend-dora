@@ -37,6 +37,16 @@ export enum NotificationType {
   DEPENDENT_APPROVED = "DEPENDENT_APPROVED",
   /** Your dependent was not approved (with the reason). */
   DEPENDENT_REJECTED = "DEPENDENT_REJECTED",
+  /** A parcel for your unit arrived at the gate (with the pickup code). */
+  PARCEL_RECEIVED = "PARCEL_RECEIVED",
+  /** A parcel for your unit is still waiting at the gate. */
+  PARCEL_REMINDER = "PARCEL_REMINDER",
+  /** A parcel for your unit was picked up (who signed). */
+  PARCEL_PICKED_UP = "PARCEL_PICKED_UP",
+  /** A parcel for your unit was sent back to the sender. */
+  PARCEL_RETURNED = "PARCEL_RETURNED",
+  /** A parcel registered for your unit by mistake was cancelled. */
+  PARCEL_CANCELLED = "PARCEL_CANCELLED",
 }
 
 export const ALL_NOTIFICATION_TYPES: readonly NotificationType[] =

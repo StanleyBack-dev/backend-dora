@@ -4,6 +4,7 @@ import { EventsMaintenanceService } from "@/modules/events/application/events-ma
 import { IdentityMaintenanceService } from "@/modules/identity/application/identity-maintenance.service";
 import { NotificationsUseCase } from "@/modules/notifications/application/use-cases/notifications.use-case";
 import { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
+import { ParcelsMaintenanceService } from "@/modules/parcels/application/parcels-maintenance.service";
 import { SystemLogsService } from "@/modules/system-logs/application/system-logs.service";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
 import {
@@ -20,6 +21,8 @@ export type CleanupReport = {
   systemLogs: number;
   waitlistEntries: number;
   expiredEventOrders: number;
+  parcelReminders: number;
+  parcelPhotos: number;
 };
 
 const DELIVERED_RETENTION_DAYS = 30;
@@ -27,7 +30,9 @@ const DELIVERED_RETENTION_DAYS = 30;
 // Daily housekeeping: drops data the app no longer needs (ended sessions with
 // IP/browser, used recovery codes, delivered outbox messages, notifications
 // read a year ago, old rate-limit windows, waiting lists of past slots) and
-// expires unpaid event orders past their 48 h. Each module purges its own data.
+// expires unpaid event orders past their 48 h, reminds residents of parcels
+// waiting at the gate and drops old parcel photos. Each module purges its own
+// data.
 @Injectable()
 export class CleanupUseCase {
   private readonly logger = new Logger(CleanupUseCase.name);
@@ -41,6 +46,7 @@ export class CleanupUseCase {
     private readonly systemLogs: SystemLogsService,
     private readonly bookings: BookingsMaintenanceService,
     private readonly events: EventsMaintenanceService,
+    private readonly parcels: ParcelsMaintenanceService,
   ) {}
 
   async run(): Promise<CleanupReport> {
@@ -53,6 +59,7 @@ export class CleanupUseCase {
       systemLogs,
       waitlistEntries,
       expiredEventOrders,
+      parcels,
     ] = await Promise.all([
       this.identity.purge(now),
       this.outbox.purgeDelivered(
@@ -63,6 +70,7 @@ export class CleanupUseCase {
       this.systemLogs.purgeOld(now),
       this.bookings.purge(now),
       this.events.expireOrders(now),
+      this.parcels.run(now),
     ]);
     const report = {
       sessions: identity.sessions,
@@ -73,6 +81,8 @@ export class CleanupUseCase {
       systemLogs,
       waitlistEntries,
       expiredEventOrders,
+      parcelReminders: parcels.reminders,
+      parcelPhotos: parcels.photos,
     };
     this.logger.log(`Limpeza diária: ${JSON.stringify(report)}`);
     return report;

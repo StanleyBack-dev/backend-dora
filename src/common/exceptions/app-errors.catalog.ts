@@ -13,6 +13,7 @@ import { landingErrors } from "@/common/exceptions/catalogs/landing-errors.catal
 import { mailsErrors } from "@/common/exceptions/catalogs/mails-errors.catalog";
 import { platformMetricsErrors } from "@/common/exceptions/catalogs/platform-metrics-errors.catalog";
 import { notificationsErrors } from "@/common/exceptions/catalogs/notifications-errors.catalog";
+import { parcelsErrors } from "@/common/exceptions/catalogs/parcels-errors.catalog";
 import { spacesErrors } from "@/common/exceptions/catalogs/spaces-errors.catalog";
 import { storageErrors } from "@/common/exceptions/catalogs/storage-errors.catalog";
 import { supportErrors } from "@/common/exceptions/catalogs/support-errors.catalog";
@@ -33,6 +34,7 @@ export const APP_ERRORS = {
   landing: landingErrors,
   mails: mailsErrors,
   notifications: notificationsErrors,
+  parcels: parcelsErrors,
   platformMetrics: platformMetricsErrors,
   spaces: spacesErrors,
   storage: storageErrors,

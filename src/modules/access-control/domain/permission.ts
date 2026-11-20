@@ -21,6 +21,8 @@ export enum Permission {
   BOOKINGS_MANAGE = "BOOKINGS_MANAGE",
   /** The day's guests at the gate: list and check in (Portaria). */
   GUESTS_CHECKIN = "GUESTS_CHECKIN",
+  /** Parcels: register, hand over (with signature), return; gate and administration (module contracted apart). */
+  PARCELS_MANAGE = "PARCELS_MANAGE",
   /** Create, publish and cancel events (module contracted apart). */
   EVENTS_MANAGE = "EVENTS_MANAGE",
   /** The condominium's PIX and the review of payment receipts (e.g. event tickets). */
