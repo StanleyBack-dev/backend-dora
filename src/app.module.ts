@@ -35,6 +35,7 @@ import { MaintenanceModule } from "@/modules/maintenance/maintenance.module";
 import { NotificationsModule } from "@/modules/notifications/notifications.module";
 import { ProfilePhotosModule } from "@/modules/profile-photos/profile-photos.module";
 import { OutboxModule } from "@/modules/outbox/outbox.module";
+import { ParcelsModule } from "@/modules/parcels/parcels.module";
 import { SpacesModule } from "@/modules/spaces/spaces.module";
 import { SharedModule } from "@/shared/shared.module";
 
@@ -53,6 +54,7 @@ import { SharedModule } from "@/shared/shared.module";
     EnrollmentModule,
     SpacesModule,
     BookingsModule,
+    ParcelsModule,
     ProfilePhotosModule,
     OutboxModule,
     NotificationsModule,

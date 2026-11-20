@@ -1,5 +1,6 @@
 import { Field, ID, Int, ObjectType } from "@nestjs/graphql";
 import { BookingMetricsType } from "@/modules/platform-metrics/presentation/graphql/dto/outputs/booking-metrics.output";
+import { ParcelMetricsType } from "@/modules/platform-metrics/presentation/graphql/dto/outputs/parcel-metrics.output";
 import { SpaceMetricsType } from "@/modules/platform-metrics/presentation/graphql/dto/outputs/space-metrics.output";
 import { EngagementMetricsType } from "@/modules/platform-metrics/presentation/graphql/dto/outputs/engagement-metrics.output";
 import { HealthMetricsType } from "@/modules/platform-metrics/presentation/graphql/dto/outputs/health-metrics.output";
@@ -25,6 +26,9 @@ export class PlatformMetricsType {
 
   @Field(() => BookingMetricsType)
   bookings!: BookingMetricsType;
+
+  @Field(() => ParcelMetricsType)
+  parcels!: ParcelMetricsType;
 
   @Field(() => SpaceMetricsType)
   spaces!: SpaceMetricsType;

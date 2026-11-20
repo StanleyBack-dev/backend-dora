@@ -7,6 +7,8 @@ export enum AppModule {
   BOOKINGS = "BOOKINGS",
   /** Condominium events: tickets (free or paid by PIX) and entry by QR. */
   EVENTS = "EVENTS",
+  /** Parcels received at the gate, picked up with a signature on the screen. */
+  PARCELS = "PARCELS",
 }
 
 export const ALL_APP_MODULES: readonly AppModule[] = Object.values(AppModule);

@@ -438,6 +438,7 @@ enum AddressFormat {
 enum AppModule {
   BOOKINGS
   EVENTS
+  PARCELS
 }
 
 """Quem recebe um PIX: chave, nome e cidade (como no banco)."""
@@ -524,6 +525,41 @@ type UnitWithResidentsPage {
   totalPages: Int!
 }
 
+"""Encomendas de um mês."""
+type ParcelMonth {
+  """AAAA-MM, no fuso do condomínio."""
+  month: String!
+
+  """Recebidas no mês."""
+  received: Int!
+
+  """Dessas, as já retiradas."""
+  pickedUp: Int!
+}
+
+"""Indicadores das encomendas do condomínio."""
+type ParcelIndicators {
+  """Aguardando retirada agora."""
+  waiting: Int!
+
+  """Aguardando há mais de 3 dias."""
+  stuck: Int!
+
+  """Perecíveis com o prazo vencido."""
+  perishableOverdue: Int!
+
+  """Retiradas nos últimos 30 dias."""
+  pickedUpLast30Days: Int!
+
+  """
+  Tempo médio até a retirada (horas), nos últimos 30 dias (nulo: nenhuma retirada).
+  """
+  averagePickupHours: Float
+
+  """Os últimos 6 meses, do mais antigo ao atual."""
+  monthly: [ParcelMonth!]!
+}
+
 """Painel do gestor do condomínio."""
 type Dashboard {
   """Moradores com acesso ativo (sem a equipe)."""
@@ -549,6 +585,9 @@ type Dashboard {
 
   """Notificações que falharam de vez (só a plataforma vê)."""
   failedNotifications: Int
+
+  """Encomendas (nulo: módulo desligado)."""
+  parcels: ParcelIndicators
 }
 
 """Dependente de um morador (aprovado pela administração)."""
@@ -1277,6 +1316,7 @@ enum Permission {
   BOOKINGS_CREATE
   BOOKINGS_MANAGE
   GUESTS_CHECKIN
+  PARCELS_MANAGE
   EVENTS_MANAGE
   PAYMENTS_MANAGE
   AUDIT_READ
@@ -1511,6 +1551,12 @@ enum NotificationType {
   DEPENDENT_SUBMITTED
   DEPENDENT_APPROVED
   DEPENDENT_REJECTED
+  PARCEL_RECEIVED
+  PARCEL_REMINDER
+  PARCEL_PICKED_UP
+  PARCEL_RETURNED
+  PARCEL_CANCELLED
+  PARCEL_AUTHORIZED
 }
 
 type NotificationPage {
@@ -1526,6 +1572,224 @@ type NotificationPreference {
 
   """Também recebe por e-mail."""
   emailEnabled: Boolean!
+}
+
+"""
+Comprovante da retirada: a assinatura eletrônica e as provas que a sustentam.
+"""
+type ParcelSignature {
+  signerName: String!
+  signerDocumentType: DocumentType
+
+  """Documento informado, mascarado (ex.: ***.456.789-**)."""
+  signerDocumentMasked: String
+
+  """A declaração assinada, como foi exibida."""
+  declaration: String!
+
+  """Link temporário da imagem da assinatura."""
+  imageUrl: String!
+
+  """SHA-256 da imagem guardada."""
+  imageSha256: String!
+
+  """Traços da assinatura (JSON), para reproduzi-la."""
+  drawing: String!
+
+  """SHA-256 dos traços."""
+  strokesSha256: String!
+
+  """Data e hora do servidor na assinatura."""
+  signedAt: DateTime!
+
+  """Hora do aparelho."""
+  clientSignedAt: DateTime
+  clientTimeZone: String
+  ipAddress: String
+
+  """Navegador."""
+  userAgent: String
+
+  """O aparelho (JSON: tela, toque/caneta, idioma…)."""
+  device: String!
+  locationStatus: SignatureLocationStatus!
+  latitude: Float
+  longitude: Float
+
+  """Precisão em metros."""
+  locationAccuracyMeters: Float
+
+  """Quem entregou e colheu a assinatura."""
+  collectedByName: String!
+
+  """
+  Perfil de quem entregou: CONCIERGE (portaria), ADMIN (administração) ou ADMIN_MASTER.
+  """
+  collectedByRole: String!
+
+  """SHA-256 de todas as provas, gravado na assinatura."""
+  evidenceSha256: String!
+
+  """
+  As provas guardadas ainda conferem com o SHA-256 gravado (registro íntegro).
+  """
+  intact: Boolean!
+}
+
+"""
+Localização do aparelho na assinatura: obtida, recusada ou indisponível.
+"""
+enum SignatureLocationStatus {
+  GRANTED
+  DENIED
+  UNAVAILABLE
+}
+
+"""Encomenda recebida na portaria."""
+type Parcel {
+  id: ID!
+  unitId: ID
+
+  """A unidade (nulo: removida)."""
+  unitLabel: String
+  recipientName: String
+
+  """
+  Registrada para um morador pelo nome: só ele é avisado e a vê (os outros da unidade, não).
+  """
+  recipientOnly: Boolean!
+  carrier: String
+  trackingCode: String
+  notes: String
+
+  """Onde está guardada na portaria."""
+  storageLocation: String
+
+  """Pessoa autorizada a retirar (nulo: nenhuma)."""
+  authorizedName: String
+
+  """Documento da pessoa autorizada, com o meio à mostra."""
+  authorizedDocumentMasked: String
+
+  """Tipo do documento da pessoa autorizada."""
+  authorizedDocumentType: DocumentType
+
+  """Quem autorizou."""
+  authorizedByName: String
+
+  """Quando autorizou."""
+  authorizedAt: DateTime
+
+  """Perecível: retirar até pickupDeadline."""
+  perishable: Boolean!
+
+  """Perecível: prazo de retirada."""
+  pickupDeadline: DateTime
+
+  """Código de retirada (também no QR)."""
+  pickupCode: String!
+  status: ParcelStatus!
+  receivedAt: DateTime!
+
+  """Quem recebeu."""
+  receivedByName: String
+
+  """Quando foi retirada, devolvida ou cancelada."""
+  closedAt: DateTime
+
+  """Quem entregou, devolveu ou cancelou."""
+  closedByName: String
+
+  """Motivo da devolução ou do cancelamento."""
+  closeReason: String
+
+  """Quem assinou a retirada."""
+  signerName: String
+
+  """
+  Documento completo da pessoa autorizada, só para quem entrega (preenche a retirada).
+  """
+  authorizedDocument: String
+
+  """Link temporário da foto da encomenda."""
+  photoUrl: String
+
+  """Comprovante da retirada (só encomendas retiradas)."""
+  signature: ParcelSignature
+
+  """
+  A declaração que quem retira assina, sem o começo "Eu, <nome>, ". Só enquanto está na portaria.
+  """
+  pickupDeclaration: String
+}
+
+"""
+Na portaria, retirada, devolvida ao remetente ou cancelada (registrada por engano).
+"""
+enum ParcelStatus {
+  RECEIVED
+  PICKED_UP
+  RETURNED
+  CANCELLED
+}
+
+"""Comprovante de retirada em PDF."""
+type ParcelReceiptFile {
+  """Nome sugerido do arquivo."""
+  fileName: String!
+
+  """application/pdf"""
+  mimeType: String!
+
+  """O PDF em base64."""
+  base64Content: String!
+}
+
+type ParcelStatusCount {
+  status: ParcelStatus!
+  count: Int!
+}
+
+"""As encomendas do condomínio em números e as unidades do filtro."""
+type ParcelOverview {
+  byStatus: [ParcelStatusCount!]!
+
+  """Aguardando retirada há mais dias que o lembrete (3 dias)."""
+  waitingLong: Int!
+
+  """Perecíveis aguardando retirada."""
+  perishableWaiting: Int!
+
+  """Perecíveis com o prazo vencido."""
+  perishableOverdue: Int!
+  units: [UnitOption!]!
+
+  """Destinatários já usados (filtro), os mais recentes primeiro."""
+  recipientNames: [String!]!
+
+  """Transportadoras já usadas (filtro)."""
+  carriers: [String!]!
+
+  """Códigos de rastreio (filtro)."""
+  trackingCodes: [String!]!
+}
+
+type ParcelPage {
+  items: [Parcel!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+"""Um morador (com a unidade) para registrar uma encomenda."""
+type ParcelRecipient {
+  userId: ID!
+  name: String!
+  unitId: ID!
+
+  """Ex.: Bloco A · 101."""
+  unitLabel: String!
 }
 
 """Uma pessoa de um condomínio, vista pela plataforma."""
@@ -1645,6 +1909,66 @@ enum MetricsGranularity {
   MONTH
 }
 
+"""Encomendas recebidas por um condomínio no período."""
+type CondominiumParcels {
+  condominiumId: ID!
+  name: String!
+  received: Int!
+  pickedUp: Int!
+}
+
+"""Encomendas recebidas em um intervalo da série."""
+type ParcelsPoint {
+  """Primeiro dia do intervalo (YYYY-MM-DD)."""
+  bucket: String!
+
+  """Recebidas no intervalo."""
+  received: Int!
+
+  """Delas, já retiradas."""
+  pickedUp: Int!
+}
+
+"""Encomendas recebidas no período e as que aguardam agora."""
+type ParcelMetrics {
+  """Condomínios com o módulo ligado."""
+  condominiumsWithModule: Int!
+
+  """Recebidas no período."""
+  received: Int!
+
+  """Delas, retiradas."""
+  pickedUp: Int!
+
+  """Delas, devolvidas ao remetente."""
+  returned: Int!
+
+  """Delas, canceladas (registro por engano)."""
+  cancelled: Int!
+
+  """Delas, perecíveis."""
+  perishable: Int!
+
+  """
+  Tempo médio até a retirada (horas), das retiradas no período (nulo: nenhuma).
+  """
+  averagePickupHours: Float
+
+  """Aguardando retirada agora."""
+  waitingNow: Int!
+
+  """Aguardando há mais de 3 dias, agora."""
+  stuckNow: Int!
+
+  """Perecíveis com o prazo vencido, agora."""
+  perishableOverdueNow: Int!
+  granularity: MetricsGranularity!
+  series: [ParcelsPoint!]!
+
+  """Os 10 condomínios que mais recebem."""
+  byCondominium: [CondominiumParcels!]!
+}
+
 """Uso de um espaço no período."""
 type SpaceUsage {
   spaceId: ID!
@@ -1754,6 +2078,7 @@ type PlatformMetrics {
   """Filtro de condomínio (null: todos)."""
   condominiumId: ID
   bookings: BookingMetrics!
+  parcels: ParcelMetrics!
   spaces: SpaceMetrics!
   engagement: EngagementMetrics!
   health: HealthMetrics!
@@ -2218,6 +2543,33 @@ type Query {
   """Chave VAPID para o navegador assinar o push (null = desligado)."""
   pushPublicKey: String
 
+  """
+  Comprovante de retirada em PDF (portaria e gestores, ou o morador que vê a encomenda).
+  """
+  parcelReceiptPdf(id: ID!): ParcelReceiptFile!
+
+  """Encomendas da minha unidade."""
+  myParcels(statuses: [ParcelStatus!], page: PageInput): ParcelPage!
+
+  """Encomendas do condomínio, com filtros, por página."""
+  parcels(filter: ParcelFilterInput, page: PageInput): ParcelPage!
+
+  """As encomendas do condomínio em números."""
+  parcelOverview: ParcelOverview!
+
+  """
+  Uma encomenda (portaria e gestores: qualquer uma; morador: as da sua unidade).
+  """
+  parcel(id: ID!): Parcel!
+
+  """A encomenda de um código de retirada (digitado ou do QR)."""
+  parcelByCode(code: String!): Parcel!
+
+  """
+  Moradores (com unidade) pelo nome, para registrar uma encomenda (até 20; mínimo de 2 letras).
+  """
+  parcelRecipients(search: String!): [ParcelRecipient!]!
+
   """Todas as pessoas com conta no Dora, com os condomínios."""
   platformPeople(filter: PlatformPeopleFilterInput, page: PageInput): PlatformPersonPage!
 
@@ -2423,6 +2775,38 @@ input UserFilterInput {
   """Só moradores ou só funcionários."""
   kind: MemberKind
   unitId: ID
+}
+
+"""Filtros das encomendas do condomínio."""
+input ParcelFilterInput {
+  """Só estas situações (vazio: todas)."""
+  statuses: [ParcelStatus!]
+
+  """A unidade."""
+  unitId: ID
+
+  """
+  Parte do código de retirada, do rastreio, do destinatário ou da transportadora.
+  """
+  search: String
+
+  """O destinatário (exato, sem diferenciar acentos)."""
+  recipientName: String
+
+  """A transportadora (exata)."""
+  carrier: String
+
+  """O código de rastreio (exato)."""
+  trackingCode: String
+
+  """Só as perecíveis."""
+  perishable: Boolean
+
+  """Recebidas a partir deste instante."""
+  from: DateTime
+
+  """Recebidas antes deste instante."""
+  to: DateTime
 }
 
 input PlatformPeopleFilterInput {
@@ -2670,6 +3054,30 @@ type Mutation {
 
   """Envia um push de teste; devolve quantos aparelhos receberam."""
   sendTestPush: Int!
+
+  """
+  Registra uma encomenda recebida; os moradores da unidade recebem o código de retirada.
+  """
+  registerParcel(input: RegisterParcelInput!): Parcel!
+
+  """
+  Entrega a encomenda pelo código, com a assinatura de quem retira feita na tela.
+  """
+  pickUpParcel(input: PickUpParcelInput!): Parcel!
+
+  """
+  Autoriza outra pessoa a retirar a encomenda (quem vê a encomenda, enquanto ela aguarda). Substitui a anterior.
+  """
+  authorizeParcelPickup(input: AuthorizeParcelPickupInput!): Parcel!
+
+  """Remove a autorização de retirada por outra pessoa."""
+  revokeParcelPickupAuthorization(parcelId: ID!): Parcel!
+
+  """Devolve ao remetente uma encomenda que está na portaria."""
+  returnParcel(id: ID!, reason: String!): Parcel!
+
+  """Cancela uma encomenda registrada por engano."""
+  cancelParcel(id: ID!, reason: String!): Parcel!
 
   """
   Troca a própria foto de perfil (base64, já reduzida pelo navegador). Devolve o link temporário.
@@ -3226,6 +3634,116 @@ input PushSubscriptionInput {
 
   """Segredo de autenticação (base64url)."""
   auth: String!
+}
+
+"""Encomenda recebida na portaria."""
+input RegisterParcelInput {
+  """A unidade de destino."""
+  unitId: ID!
+
+  """Nome na etiqueta."""
+  recipientName: String
+
+  """
+  Escolhido pelo nome: só este morador (da unidade) é avisado e vê a encomenda (surpresa, presente). Nulo: todos da unidade.
+  """
+  recipientUserId: ID
+
+  """
+  Transportadora ou loja (Correios, Mercado Livre… ou digitada). Obrigatório.
+  """
+  carrier: String
+
+  """Código de rastreio."""
+  trackingCode: String
+
+  """Observação."""
+  notes: String
+
+  """
+  Onde ficou guardada (prateleira, armário, administração…). Obrigatório.
+  """
+  storageLocation: String
+
+  """Foto da encomenda (JPEG, PNG ou WebP em base64, até 1 MB)."""
+  photo: String
+
+  """
+  Perecível (alimento, remédio, flores…): retirar dentro do prazo, com lembretes a cada 2 horas.
+  """
+  perishable: Boolean
+
+  """Perecível: prazo em horas (2, 4, 8, 12, 24 ou 48; padrão 4)."""
+  perishableHours: Int
+}
+
+"""
+Entrega da encomenda pelo código de retirada, com a assinatura de quem retira.
+"""
+input PickUpParcelInput {
+  """Código de retirada (digitado ou do QR)."""
+  code: String!
+
+  """Nome completo de quem retira."""
+  signerName: String!
+  signerDocumentType: DocumentType
+
+  """CPF ou RG (opcional)."""
+  signerDocument: String
+
+  """A declaração exibida a quem assinou."""
+  declarationShown: String!
+
+  """Imagem da assinatura (PNG ou WebP em base64)."""
+  signatureImage: String!
+
+  """
+  Traços da assinatura em JSON: { width, height, strokes: [[x, y, t, pressão]…] }.
+  """
+  signatureDrawing: String!
+
+  """Hora do aparelho ao assinar."""
+  clientSignedAt: DateTime
+
+  """Fuso do aparelho (ex.: America/Sao_Paulo)."""
+  clientTimeZone: String
+  location: SignatureLocationInput!
+  device: SignatureDeviceInput
+}
+
+"""Localização do aparelho no momento da assinatura."""
+input SignatureLocationInput {
+  status: SignatureLocationStatus!
+  latitude: Float
+  longitude: Float
+
+  """Precisão em metros."""
+  accuracyMeters: Float
+}
+
+"""O aparelho em que a assinatura foi feita."""
+input SignatureDeviceInput {
+  platform: String
+  language: String
+  screenWidth: Int
+  screenHeight: Int
+  pixelRatio: Float
+
+  """touch, pen ou mouse: como a assinatura foi feita."""
+  pointerType: String
+  maxTouchPoints: Int
+}
+
+"""Pessoa autorizada a retirar uma encomenda."""
+input AuthorizeParcelPickupInput {
+  parcelId: ID!
+
+  """Nome completo de quem vai retirar."""
+  name: String!
+  documentType: DocumentType
+
+  """CPF ou RG (opcional)."""
+  document: String
 }
 
 """O formulário completo do espaço."""
