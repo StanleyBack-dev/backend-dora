@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.17.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.16.0...v0.17.0) (2026-11-20)
+
+
+### Features
+
+* **residents:** read-only residents directory for the gate ([5ae8171](https://github.com/StanleyBack-dev/backend-dora/commit/5ae8171e0122071f52f1b7fa1bf8e03954798388))
+* **residents:** read-only residents directory for the gate ([bdcd45c](https://github.com/StanleyBack-dev/backend-dora/commit/bdcd45c68178147b469e2009e20387e48383578d))
+
 ## [0.16.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.15.0...v0.16.0) (2026-11-20)
 
 
