@@ -28,6 +28,12 @@ export enum Permission {
   RESIDENTS_READ = "RESIDENTS_READ",
   /** Parcels: register, hand over (with signature), return; gate and administration (module contracted apart). */
   PARCELS_MANAGE = "PARCELS_MANAGE",
+  /**
+   * Lost and found: register items, check claims, return them (with
+   * signature), donate or discard; gate and administration (module
+   * contracted apart).
+   */
+  LOST_FOUND_MANAGE = "LOST_FOUND_MANAGE",
   /** Create, publish and cancel events (module contracted apart). */
   EVENTS_MANAGE = "EVENTS_MANAGE",
   /** The condominium's PIX and the review of payment receipts (e.g. event tickets). */

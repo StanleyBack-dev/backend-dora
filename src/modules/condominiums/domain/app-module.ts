@@ -9,6 +9,8 @@ export enum AppModule {
   EVENTS = "EVENTS",
   /** Parcels received at the gate, picked up with a signature on the screen. */
   PARCELS = "PARCELS",
+  /** Lost and found: items kept by the gate, claimed and returned signed. */
+  LOST_AND_FOUND = "LOST_AND_FOUND",
 }
 
 export const ALL_APP_MODULES: readonly AppModule[] = Object.values(AppModule);

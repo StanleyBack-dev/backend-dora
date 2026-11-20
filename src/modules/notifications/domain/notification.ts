@@ -49,6 +49,14 @@ export enum NotificationType {
   PARCEL_CANCELLED = "PARCEL_CANCELLED",
   /** Someone authorized another person to pick up a parcel you see. */
   PARCEL_AUTHORIZED = "PARCEL_AUTHORIZED",
+  /** Staff: a resident says a found item is theirs. */
+  FOUND_ITEM_CLAIMED = "FOUND_ITEM_CLAIMED",
+  /** Your claim was accepted: come and take it (or rejected, with why). */
+  FOUND_ITEM_CLAIM_DECIDED = "FOUND_ITEM_CLAIM_DECIDED",
+  /** The item you claimed was handed over (to you, with the receipt). */
+  FOUND_ITEM_RETURNED = "FOUND_ITEM_RETURNED",
+  /** Staff: a found item's keeping period is about to end. */
+  FOUND_ITEM_EXPIRING = "FOUND_ITEM_EXPIRING",
 }
 
 export const ALL_NOTIFICATION_TYPES: readonly NotificationType[] =

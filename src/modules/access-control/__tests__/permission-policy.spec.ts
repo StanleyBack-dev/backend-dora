@@ -36,6 +36,7 @@ describe("group defaults", () => {
       Permission.EVENTS_MANAGE,
       Permission.PAYMENTS_MANAGE,
       Permission.PARCELS_MANAGE,
+      Permission.LOST_FOUND_MANAGE,
     ]);
   });
 
@@ -44,6 +45,7 @@ describe("group defaults", () => {
       Permission.GUESTS_CHECKIN,
       Permission.RESIDENTS_READ,
       Permission.PARCELS_MANAGE,
+      Permission.LOST_FOUND_MANAGE,
     ]);
   });
 
