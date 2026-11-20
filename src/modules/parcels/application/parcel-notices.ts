@@ -180,6 +180,46 @@ export function overdueNotices(
   );
 }
 
+/**
+ * To the other residents who see the parcel: someone else may now pick it
+ * up (or no longer), so nobody is surprised at the desk.
+ */
+export function authorizedNotices(
+  parcel: Parcel,
+  userIds: readonly string[],
+  timeZone: string,
+): OutboxDraft[] {
+  const granted = Boolean(parcel.authorizedName);
+  const by = parcel.authorizedByName ?? "Um morador";
+  return userIds.map((userId) =>
+    deliveryDraft(
+      {
+        userId,
+        type: NotificationType.PARCEL_AUTHORIZED,
+        title: granted
+          ? "Retirada autorizada para outra pessoa"
+          : "Autorização de retirada removida",
+        body: granted
+          ? `${what(parcel)} · ${parcel.authorizedName} pode retirar (autorizado por ${by})`
+          : `${what(parcel)} · só os moradores podem retirar`,
+        link: LINK,
+        email: {
+          subject: granted
+            ? `Retirada autorizada: ${parcel.authorizedName} (código ${parcel.pickupCode})`
+            : `Autorização de retirada removida (código ${parcel.pickupCode})`,
+          intro: granted
+            ? `${by} autorizou ${parcel.authorizedName} a retirar uma encomenda que você também vê. Se não reconhece esta autorização, fale com a portaria ou a administração.`
+            : "A autorização para outra pessoa retirar esta encomenda foi removida.",
+          details: details(parcel, timeZone),
+          ctaLabel: "Ver no app",
+        },
+        calendar: null,
+      },
+      `parcel:${parcel.id}:authorized:${parcel.authorizedAt?.getTime() ?? "none"}:${userId}`,
+    ),
+  );
+}
+
 /** To each resident of the unit: the parcel was picked up, by whom. */
 export function pickedUpNotices(
   parcel: Parcel,

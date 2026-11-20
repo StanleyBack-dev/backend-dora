@@ -1,5 +1,6 @@
 import { Field, ID, ObjectType } from "@nestjs/graphql";
 import { ParcelStatus } from "@/modules/parcels/domain/parcel";
+import { DocumentType } from "@/shared/domain/identity-document";
 import "@/modules/parcels/presentation/graphql/parcels.graphql-enums";
 
 @ObjectType("Parcel", { description: "Encomenda recebida na portaria." })
@@ -39,6 +40,36 @@ export class ParcelType {
     description: "Onde está guardada na portaria.",
   })
   storageLocation!: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description: "Pessoa autorizada a retirar (nulo: nenhuma).",
+  })
+  authorizedName!: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description: "Documento da pessoa autorizada, com o meio à mostra.",
+  })
+  authorizedDocumentMasked!: string | null;
+
+  @Field(() => DocumentType, {
+    nullable: true,
+    description: "Tipo do documento da pessoa autorizada.",
+  })
+  authorizedDocumentType!: DocumentType | null;
+
+  /** The authorized person's document, for the desk only (not exposed). */
+  authorizedDocumentRaw!: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description: "Quem autorizou.",
+  })
+  authorizedByName!: string | null;
+
+  @Field(() => Date, { nullable: true, description: "Quando autorizou." })
+  authorizedAt!: Date | null;
 
   @Field({ description: "Perecível: retirar até pickupDeadline." })
   perishable!: boolean;

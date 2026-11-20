@@ -18,6 +18,15 @@ export function toParcelType(parcel: Parcel): ParcelType {
     storageLocation: parcel.storageLocation,
     pickupCode: parcel.pickupCode,
     perishable: parcel.perishable,
+    authorizedName: parcel.authorizedName,
+    authorizedDocumentMasked:
+      parcel.authorizedDocumentType && parcel.authorizedDocument
+        ? `${parcel.authorizedDocumentType} ${maskDocument(parcel.authorizedDocumentType, parcel.authorizedDocument)}`
+        : null,
+    authorizedDocumentType: parcel.authorizedDocumentType,
+    authorizedDocumentRaw: parcel.authorizedDocument,
+    authorizedByName: parcel.authorizedByName,
+    authorizedAt: parcel.authorizedAt,
     pickupDeadline: parcel.pickupDeadline,
     status: parcel.status,
     receivedAt: parcel.receivedAt,

@@ -4,6 +4,7 @@ import { CondominiumsModule } from "@/modules/condominiums/condominiums.module";
 import { IdentityModule } from "@/modules/identity/identity.module";
 import { OutboxModule } from "@/modules/outbox/outbox.module";
 import { PARCEL_RECEIPT_RENDERER } from "@/modules/parcels/application/ports/parcel-receipt-renderer.port";
+import { AuthorizeParcelPickupUseCase } from "@/modules/parcels/application/use-cases/authorize-parcel-pickup.use-case";
 import { GetParcelReceiptPdfUseCase } from "@/modules/parcels/application/use-cases/get-parcel-receipt-pdf.use-case";
 import { PdfLibParcelReceiptRenderer } from "@/modules/parcels/infrastructure/pdf/pdf-lib-parcel-receipt.renderer";
 import { ParcelAccessService } from "@/modules/parcels/application/parcel-access.service";
@@ -43,6 +44,7 @@ import { ParcelsResolver } from "@/modules/parcels/presentation/graphql/parcels.
     CloseParcelUseCase,
     GetParcelSignatureUseCase,
     GetParcelReceiptPdfUseCase,
+    AuthorizeParcelPickupUseCase,
     SearchParcelRecipientsUseCase,
     ParcelsMaintenanceService,
     ParcelsResolver,

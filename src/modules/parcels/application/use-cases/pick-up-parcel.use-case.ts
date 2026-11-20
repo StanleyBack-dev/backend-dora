@@ -12,6 +12,7 @@ import {
   type Parcel,
   type ParcelRepositoryPort,
 } from "@/modules/parcels/application/ports/parcel-repository.port";
+import { normalizePerson } from "@/modules/parcels/domain/parcel-person";
 import { FindParcelByCodeUseCase } from "@/modules/parcels/application/use-cases/find-parcel-by-code.use-case";
 import {
   canonicalJson,
@@ -33,11 +34,7 @@ import {
   OBJECT_STORAGE,
   type ObjectStoragePort,
 } from "@/shared/application/ports/object-storage.port";
-import {
-  DocumentType,
-  normalizeCpf,
-  normalizeRg,
-} from "@/shared/domain/identity-document";
+import type { DocumentType } from "@/shared/domain/identity-document";
 import { decodeBase64Image } from "@/shared/domain/image-upload";
 
 export type PickUpParcelInput = {
@@ -132,6 +129,18 @@ export class PickUpParcelUseCase {
       collectedByName: actor.name,
       collectedByRole: actor.group,
       sessionId: actor.sessionId ?? null,
+      // Someone else picking up: who was authorized, and by whom.
+      authorization:
+        parcel.authorizedName && parcel.authorizedAt
+          ? {
+              name: parcel.authorizedName,
+              documentType: parcel.authorizedDocumentType,
+              document: parcel.authorizedDocument,
+              authorizedBy: parcel.authorizedById,
+              authorizedByName: parcel.authorizedByName,
+              authorizedAt: parcel.authorizedAt,
+            }
+          : null,
     };
 
     const residents = await this.access.audience(parcel);
@@ -161,26 +170,20 @@ export class PickUpParcelUseCase {
   }
 
   private signer(input: PickUpParcelInput) {
-    const name = input.signerName.trim().replace(/\s+/g, " ");
-    if (name.length < 3 || name.length > 120) {
+    const checked = normalizePerson(
+      {
+        name: input.signerName,
+        documentType: input.signerDocumentType,
+        document: input.signerDocument,
+      },
+      "de quem está retirando",
+    );
+    if ("error" in checked) {
       throw AppException.from(APP_ERRORS.parcels.invalidSigner, {
-        reason: "Informe o nome completo de quem está retirando.",
+        reason: checked.error,
       });
     }
-    const raw = input.signerDocument?.trim();
-    if (!raw) return { name, documentType: null, document: null };
-    const documentType = input.signerDocumentType ?? DocumentType.CPF;
-    const document =
-      documentType === DocumentType.CPF ? normalizeCpf(raw) : normalizeRg(raw);
-    if (!document) {
-      throw AppException.from(APP_ERRORS.parcels.invalidSigner, {
-        reason:
-          documentType === DocumentType.CPF
-            ? "CPF inválido. Confira os números ou deixe em branco."
-            : "RG inválido. Confira os números ou deixe em branco.",
-      });
-    }
-    return { name, documentType, document };
+    return checked.person;
   }
 
   private async signatureImage(base64: string) {
