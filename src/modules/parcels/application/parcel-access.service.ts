@@ -16,7 +16,8 @@ import {
 
 // Every parcels operation starts here: the caller's condominium must have
 // the module (contracted apart). The gate and the managers see every
-// parcel; a resident only those of their unit.
+// parcel; a resident only those of their unit (and, when one was
+// registered for a resident by name, only that resident).
 @Injectable()
 export class ParcelAccessService {
   constructor(
@@ -52,10 +53,34 @@ export class ParcelAccessService {
     throw AppException.from(APP_ERRORS.parcels.notFound, undefined);
   }
 
-  /** Whether the caller may see this parcel (already in their condominium). */
+  /**
+   * Whether the caller may see this parcel (already in their condominium):
+   * the unit's residents, or only its resident when it was registered for
+   * them by name.
+   */
   async canSee(actor: AuthenticatedUser, parcel: Parcel): Promise<boolean> {
     if (await this.canManage(actor)) return true;
+    if (parcel.recipientUserId && parcel.recipientUserId !== actor.id) {
+      return false;
+    }
     const unitId = await this.unitOf(actor, parcel.condominiumId);
     return unitId !== null && unitId === parcel.unitId;
+  }
+
+  /**
+   * Who is told about a parcel: the resident it was registered for (while
+   * still living in the unit), otherwise every resident of the unit.
+   */
+  async audience(
+    parcel: Pick<Parcel, "condominiumId" | "unitId" | "recipientUserId">,
+  ): Promise<string[]> {
+    if (!parcel.unitId) return [];
+    const residents = await this.users.activeUnitMemberIds(
+      parcel.condominiumId,
+      parcel.unitId,
+    );
+    return parcel.recipientUserId && residents.includes(parcel.recipientUserId)
+      ? [parcel.recipientUserId]
+      : residents;
   }
 }

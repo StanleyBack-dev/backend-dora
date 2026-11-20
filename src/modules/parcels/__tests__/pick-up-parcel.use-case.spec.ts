@@ -1,6 +1,6 @@
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { AppException } from "@/common/exceptions/app-exception";
-import type { UserLookupService } from "@/modules/identity/application/user-lookup.service";
+import type { ParcelAccessService } from "@/modules/parcels/application/parcel-access.service";
 import type { ParcelDeclarationService } from "@/modules/parcels/application/parcel-declaration.service";
 import type {
   NewParcelSignature,
@@ -40,6 +40,7 @@ const parcel: Parcel = {
   unitId: "unit-1",
   unitLabel: "A · 101",
   recipientName: null,
+  recipientUserId: null,
   carrier: null,
   trackingCode: null,
   notes: null,
@@ -111,9 +112,9 @@ function setup(pickUpResult: "ok" | "taken" = "ok") {
   const declarations = {
     forParcel: async () => DECLARATION,
   } as unknown as ParcelDeclarationService;
-  const users = {
-    activeUnitMemberIds: async () => ["resident-1"],
-  } as unknown as UserLookupService;
+  const access = {
+    audience: async () => ["resident-1"],
+  } as unknown as ParcelAccessService;
   const images = {
     spacePhoto: async (raw: Buffer) =>
       raw.toString() === "png"
@@ -134,7 +135,7 @@ function setup(pickUpResult: "ok" | "taken" = "ok") {
       parcels,
       finding,
       declarations,
-      users,
+      access,
       images,
       storage,
       clock,

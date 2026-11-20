@@ -19,6 +19,12 @@ export class ParcelType {
   @Field(() => String, { nullable: true })
   recipientName!: string | null;
 
+  @Field({
+    description:
+      "Registrada para um morador pelo nome: só ele é avisado e a vê (os outros da unidade, não).",
+  })
+  recipientOnly!: boolean;
+
   @Field(() => String, { nullable: true })
   carrier!: string | null;
 

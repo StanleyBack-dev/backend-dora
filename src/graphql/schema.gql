@@ -1614,6 +1614,11 @@ type Parcel {
   """A unidade (nulo: removida)."""
   unitLabel: String
   recipientName: String
+
+  """
+  Registrada para um morador pelo nome: só ele é avisado e a vê (os outros da unidade, não).
+  """
+  recipientOnly: Boolean!
   carrier: String
   trackingCode: String
   notes: String
@@ -1675,6 +1680,15 @@ type ParcelOverview {
   """Aguardando retirada há mais dias que o lembrete (3 dias)."""
   waitingLong: Int!
   units: [UnitOption!]!
+
+  """Destinatários já usados (filtro), os mais recentes primeiro."""
+  recipientNames: [String!]!
+
+  """Transportadoras já usadas (filtro)."""
+  carriers: [String!]!
+
+  """Códigos de rastreio (filtro)."""
+  trackingCodes: [String!]!
 }
 
 type ParcelPage {
@@ -1683,6 +1697,16 @@ type ParcelPage {
   page: Int!
   limit: Int!
   totalPages: Int!
+}
+
+"""Um morador (com a unidade) para registrar uma encomenda."""
+type ParcelRecipient {
+  userId: ID!
+  name: String!
+  unitId: ID!
+
+  """Ex.: Bloco A · 101."""
+  unitLabel: String!
 }
 
 """Uma pessoa de um condomínio, vista pela plataforma."""
@@ -2392,6 +2416,11 @@ type Query {
   """A encomenda de um código de retirada (digitado ou do QR)."""
   parcelByCode(code: String!): Parcel!
 
+  """
+  Moradores (com unidade) pelo nome, para registrar uma encomenda (até 20; mínimo de 2 letras).
+  """
+  parcelRecipients(search: String!): [ParcelRecipient!]!
+
   """Todas as pessoas com conta no Dora, com os condomínios."""
   platformPeople(filter: PlatformPeopleFilterInput, page: PageInput): PlatformPersonPage!
 
@@ -2611,6 +2640,15 @@ input ParcelFilterInput {
   Parte do código de retirada, do rastreio, do destinatário ou da transportadora.
   """
   search: String
+
+  """O destinatário (exato, sem diferenciar acentos)."""
+  recipientName: String
+
+  """A transportadora (exata)."""
+  carrier: String
+
+  """O código de rastreio (exato)."""
+  trackingCode: String
 
   """Recebidas a partir deste instante."""
   from: DateTime
@@ -3446,7 +3484,14 @@ input RegisterParcelInput {
   """Nome na etiqueta."""
   recipientName: String
 
-  """Transportadora ou loja (Correios, Mercado Livre…)."""
+  """
+  Escolhido pelo nome: só este morador (da unidade) é avisado e vê a encomenda (surpresa, presente). Nulo: todos da unidade.
+  """
+  recipientUserId: ID
+
+  """
+  Transportadora ou loja (Correios, Mercado Livre… ou digitada). Obrigatório.
+  """
   carrier: String
 
   """Código de rastreio."""
@@ -3455,7 +3500,9 @@ input RegisterParcelInput {
   """Observação."""
   notes: String
 
-  """Onde ficou guardada (prateleira, armário, administração…)."""
+  """
+  Onde ficou guardada (prateleira, armário, administração…). Obrigatório.
+  """
   storageLocation: String
 
   """Foto da encomenda (JPEG, PNG ou WebP em base64, até 1 MB)."""

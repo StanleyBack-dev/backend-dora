@@ -51,7 +51,8 @@ const SELECT = `
   SELECT p.idtb_parcels AS id, p.idtb_condominiums AS "condominiumId",
          p.idtb_units AS "unitId", un.street AS "unitStreet",
          un.block AS "unitBlock", un.number AS "unitNumber",
-         p.recipient_name AS "recipientName", p.carrier,
+         p.recipient_name AS "recipientName",
+         p.recipient_user_id AS "recipientUserId", p.carrier,
          p.tracking_code AS "trackingCode", p.notes,
          p.storage_location AS "storageLocation", p.photo_key AS "photoKey",
          p.pickup_code AS "pickupCode", p.status,
@@ -106,6 +107,9 @@ const toLocation = (row: SignatureRow): SignatureLocation =>
         accuracyMeters: null,
       };
 
+/** Most values offered in each filter list. */
+const USED_VALUES_LIMIT = 300;
+
 /** "%term%" for ILIKE, with the wildcards typed by the user escaped. */
 const likeTerm = (value: string) => `%${value.replace(/[\\%_]/g, "\\$&")}%`;
 
@@ -126,15 +130,16 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
     return this.dataSource.transaction(async (manager) => {
       const [row] = await manager.query<{ id: string }[]>(
         `INSERT INTO tb_parcels
-           (idtb_condominiums, idtb_units, recipient_name, carrier,
-            tracking_code, notes, storage_location, photo_key, pickup_code,
-            received_at, received_by, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11, $11)
+           (idtb_condominiums, idtb_units, recipient_name, recipient_user_id,
+            carrier, tracking_code, notes, storage_location, photo_key,
+            pickup_code, received_at, received_by, created_by, updated_by)
+         VALUES (, , , , , , , , , , , , , )
          RETURNING idtb_parcels AS id`,
         [
           parcel.condominiumId,
           parcel.unitId,
           parcel.recipientName,
+          parcel.recipientUserId,
           parcel.carrier,
           parcel.trackingCode,
           parcel.notes,
@@ -193,6 +198,17 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
           OR unaccent(p.carrier) ILIKE unaccent($${n}))`,
       );
     }
+    for (const [column, value] of [
+      ["recipient_name", filter.recipientName],
+      ["carrier", filter.carrier],
+      ["tracking_code", filter.trackingCode],
+    ] as const) {
+      if (!value) continue;
+      params.push(value);
+      where.push(
+        `lower(unaccent(p.${column})) = lower(unaccent($${params.length}))`,
+      );
+    }
     if (filter.from) {
       params.push(filter.from);
       where.push(`p.received_at >= $${params.length}`);
@@ -206,14 +222,18 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
 
   listForUnit(
     unitId: string,
+    viewerId: string,
     statuses: ParcelStatus[] | null,
     page: PageRequest,
   ): Promise<Paginated<Parcel>> {
-    const params: unknown[] = [unitId];
-    const where = ["p.idtb_units = $1"];
+    const params: unknown[] = [unitId, viewerId];
+    const where = [
+      "p.idtb_units = $1",
+      "(p.recipient_user_id IS NULL OR p.recipient_user_id = $2)",
+    ];
     if (statuses) {
       params.push(statuses);
-      where.push(`p.status = ANY($2::varchar[])`);
+      where.push(`p.status = ANY($3::varchar[])`);
     }
     return this.page(`WHERE ${where.join(" AND ")}`, params, page);
   }
@@ -222,7 +242,14 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
     condominiumId: string,
     waitingSince: Date,
   ): Promise<ParcelOverview> {
-    const [byStatus, [waiting], units] = await Promise.all([
+    const [
+      byStatus,
+      [waiting],
+      units,
+      recipientNames,
+      carriers,
+      trackingCodes,
+    ] = await Promise.all([
       this.dataSource.query<{ status: ParcelStatus; count: number }[]>(
         `SELECT status, count(*)::int AS count
            FROM tb_parcels WHERE idtb_condominiums = $1
@@ -242,12 +269,35 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
           WHERE p.idtb_condominiums = $1`,
         [condominiumId],
       ),
+      this.usedValues(condominiumId, "recipient_name"),
+      this.usedValues(condominiumId, "carrier"),
+      this.usedValues(condominiumId, "tracking_code"),
     ]);
     return {
       byStatus,
       waitingLong: waiting?.count ?? 0,
       units: toUnitOptions(units),
+      recipientNames,
+      carriers,
+      trackingCodes,
     };
+  }
+
+  /** The distinct values of a column, most recently used first. */
+  private async usedValues(
+    condominiumId: string,
+    column: "recipient_name" | "carrier" | "tracking_code",
+  ): Promise<string[]> {
+    const rows = await this.dataSource.query<{ value: string }[]>(
+      `SELECT ${column} AS value
+         FROM tb_parcels
+        WHERE idtb_condominiums = $1 AND ${column} IS NOT NULL
+        GROUP BY ${column}
+        ORDER BY max(received_at) DESC
+        LIMIT ${USED_VALUES_LIMIT}`,
+      [condominiumId],
+    );
+    return rows.map((row) => row.value);
   }
 
   pickUp(

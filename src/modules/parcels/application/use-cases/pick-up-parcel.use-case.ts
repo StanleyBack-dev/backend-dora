@@ -4,7 +4,7 @@ import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import type { RequestMeta } from "@/common/decorators/request-meta.decorator";
 import { APP_ERRORS } from "@/common/exceptions/app-errors.catalog";
 import { AppException } from "@/common/exceptions/app-exception";
-import { UserLookupService } from "@/modules/identity/application/user-lookup.service";
+import { ParcelAccessService } from "@/modules/parcels/application/parcel-access.service";
 import { ParcelDeclarationService } from "@/modules/parcels/application/parcel-declaration.service";
 import { pickedUpNotices } from "@/modules/parcels/application/parcel-notices";
 import {
@@ -80,7 +80,7 @@ export class PickUpParcelUseCase {
     @Inject(PARCEL_REPOSITORY) private readonly parcels: ParcelRepositoryPort,
     private readonly finding: FindParcelByCodeUseCase,
     private readonly declarations: ParcelDeclarationService,
-    private readonly users: UserLookupService,
+    private readonly access: ParcelAccessService,
     @Inject(IMAGE_PROCESSOR) private readonly images: ImageProcessorPort,
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStoragePort,
     @Inject(CLOCK) private readonly clock: ClockPort,
@@ -134,12 +134,7 @@ export class PickUpParcelUseCase {
       sessionId: actor.sessionId ?? null,
     };
 
-    const residents = parcel.unitId
-      ? await this.users.activeUnitMemberIds(
-          parcel.condominiumId,
-          parcel.unitId,
-        )
-      : [];
+    const residents = await this.access.audience(parcel);
     const picked = await this.parcels
       .pickUp(
         parcel.id,

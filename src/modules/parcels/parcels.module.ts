@@ -13,6 +13,7 @@ import { GetParcelSignatureUseCase } from "@/modules/parcels/application/use-cas
 import { ListParcelsUseCase } from "@/modules/parcels/application/use-cases/list-parcels.use-case";
 import { PickUpParcelUseCase } from "@/modules/parcels/application/use-cases/pick-up-parcel.use-case";
 import { RegisterParcelUseCase } from "@/modules/parcels/application/use-cases/register-parcel.use-case";
+import { SearchParcelRecipientsUseCase } from "@/modules/parcels/application/use-cases/search-parcel-recipients.use-case";
 import { ParcelSqlRepository } from "@/modules/parcels/infrastructure/persistence/parcel-sql.repository";
 import { ParcelFieldsResolver } from "@/modules/parcels/presentation/graphql/parcel-fields.resolver";
 import { ParcelsResolver } from "@/modules/parcels/presentation/graphql/parcels.resolver";
@@ -38,6 +39,7 @@ import { ParcelsResolver } from "@/modules/parcels/presentation/graphql/parcels.
     PickUpParcelUseCase,
     CloseParcelUseCase,
     GetParcelSignatureUseCase,
+    SearchParcelRecipientsUseCase,
     ParcelsMaintenanceService,
     ParcelsResolver,
     ParcelFieldsResolver,

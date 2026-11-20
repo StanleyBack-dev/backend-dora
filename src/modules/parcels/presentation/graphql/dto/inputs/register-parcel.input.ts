@@ -13,9 +13,19 @@ export class RegisterParcelInput {
   @MaxLength(200)
   recipientName?: string | null;
 
+  @Field(() => ID, {
+    nullable: true,
+    description:
+      "Escolhido pelo nome: só este morador (da unidade) é avisado e vê a encomenda (surpresa, presente). Nulo: todos da unidade.",
+  })
+  @IsOptional()
+  @IsUUID()
+  recipientUserId?: string | null;
+
   @Field(() => String, {
     nullable: true,
-    description: "Transportadora ou loja (Correios, Mercado Livre…).",
+    description:
+      "Transportadora ou loja (Correios, Mercado Livre… ou digitada). Obrigatório.",
   })
   @IsOptional()
   @IsString()
@@ -36,7 +46,8 @@ export class RegisterParcelInput {
 
   @Field(() => String, {
     nullable: true,
-    description: "Onde ficou guardada (prateleira, armário, administração…).",
+    description:
+      "Onde ficou guardada (prateleira, armário, administração…). Obrigatório.",
   })
   @IsOptional()
   @IsString()
