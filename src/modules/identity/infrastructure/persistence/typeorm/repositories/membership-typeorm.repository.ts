@@ -156,4 +156,20 @@ export class MembershipTypeormRepository implements MembershipRepositoryPort {
     );
     return rows.map((row) => row.id);
   }
+
+  async activeUnitUserIds(
+    condominiumId: string,
+    unitId: string,
+  ): Promise<string[]> {
+    const rows = await this.dataSource.query<{ id: string }[]>(
+      `SELECT m.idtb_users AS id
+         FROM tb_memberships m
+         JOIN tb_residents r ON r.idtb_memberships = m.idtb_memberships
+         JOIN tb_users u ON u.idtb_users = m.idtb_users
+        WHERE m.idtb_condominiums = $1 AND r.idtb_units = $2
+          AND m.active AND u.active`,
+      [condominiumId, unitId],
+    );
+    return rows.map((row) => row.id);
+  }
 }

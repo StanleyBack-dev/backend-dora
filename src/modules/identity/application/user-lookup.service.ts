@@ -38,6 +38,14 @@ export class UserLookupService {
     return this.memberships.activeUserIds(condominiumId, role);
   }
 
+  /** Residents of a unit who can be reached (e.g. told about a parcel). */
+  activeUnitMemberIds(
+    condominiumId: string,
+    unitId: string,
+  ): Promise<string[]> {
+    return this.memberships.activeUnitUserIds(condominiumId, unitId);
+  }
+
   /** The unit of the person's active membership there (null: none). */
   async memberUnitId(
     userId: string,

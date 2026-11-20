@@ -20,10 +20,14 @@ const MANAGER_DEFAULTS: Permission[] = [
   Permission.GUESTS_CHECKIN,
   Permission.EVENTS_MANAGE,
   Permission.PAYMENTS_MANAGE,
+  Permission.PARCELS_MANAGE,
 ];
 
-// Portaria (gate staff): only the day's guests; they don't book.
-const CONCIERGE_DEFAULTS: Permission[] = [Permission.GUESTS_CHECKIN];
+// Portaria (gate staff): the day's guests and the parcels; they don't book.
+const CONCIERGE_DEFAULTS: Permission[] = [
+  Permission.GUESTS_CHECKIN,
+  Permission.PARCELS_MANAGE,
+];
 
 export const GROUP_DEFAULT_PERMISSIONS: Record<
   UserGroup,
