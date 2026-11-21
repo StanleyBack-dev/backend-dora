@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.18.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.17.0...v0.18.0) (2026-11-21)
+
+
+### Features
+
+* **lost-and-found:** "Perdi algo", neighbours' board, receipt PDF and indicators ([7154380](https://github.com/StanleyBack-dev/backend-dora/commit/71543805f5d57e7c2b77fef163c1a12c17a818d2))
+* **lost-and-found:** "Perdi algo", the neighbours' board, receipt PDF and indicators ([39312b2](https://github.com/StanleyBack-dev/backend-dora/commit/39312b2e1d1aaca91f3471031ccf10a84b7a460f))
+* **lost-and-found:** add the lost and found backend core ([c48d0fa](https://github.com/StanleyBack-dev/backend-dora/commit/c48d0fa4dec3802bede25a6cb9f864b8cd1ed417))
+* **lost-and-found:** backend core ([0dc38e1](https://github.com/StanleyBack-dev/backend-dora/commit/0dc38e15f68866e4f12d00a027c52574de2ee981))
+* **lost-and-found:** lost and found module ([50dcbbe](https://github.com/StanleyBack-dev/backend-dora/commit/50dcbbe6c9db896c095c3c28a1bb15c998b58772))
+* **lost-and-found:** resident claims, named owners and the desk queue ([8d8f0ad](https://github.com/StanleyBack-dev/backend-dora/commit/8d8f0ad3a0712ecd9861928de0f60cbfb87be443))
+* **lost-and-found:** resident claims, named owners and the desk queue ([481ba98](https://github.com/StanleyBack-dev/backend-dora/commit/481ba98b9c892c2373a2be3f59c51e1ed2b23207))
+
+
+### Bug Fixes
+
+* **lost-and-found:** open the item page from the staff notices ([1ab0946](https://github.com/StanleyBack-dev/backend-dora/commit/1ab0946623d9abb75666f54ff928333b6b1ae781))
+* **lost-and-found:** open the item page from the staff notices ([c32358a](https://github.com/StanleyBack-dev/backend-dora/commit/c32358a16a7b2f9a1bc245b890105487c59424c6))
+* **parcels:** read the rows of UPDATE ... RETURNING ([5763f4e](https://github.com/StanleyBack-dev/backend-dora/commit/5763f4ed948c9e3d43de62420c8d38e1179116bf))
+
 ## [0.17.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.16.0...v0.17.0) (2026-11-20)
 
 
