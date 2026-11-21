@@ -49,6 +49,24 @@ export enum NotificationType {
   PARCEL_CANCELLED = "PARCEL_CANCELLED",
   /** Someone authorized another person to pick up a parcel you see. */
   PARCEL_AUTHORIZED = "PARCEL_AUTHORIZED",
+  /** Staff: a resident says a found item is theirs. */
+  FOUND_ITEM_CLAIMED = "FOUND_ITEM_CLAIMED",
+  /** Your claim was accepted: come and take it (or rejected, with why). */
+  FOUND_ITEM_CLAIM_DECIDED = "FOUND_ITEM_CLAIM_DECIDED",
+  /** The item you claimed was handed over (to you, with the receipt). */
+  FOUND_ITEM_RETURNED = "FOUND_ITEM_RETURNED",
+  /** Staff: a found item's keeping period is about to end. */
+  FOUND_ITEM_EXPIRING = "FOUND_ITEM_EXPIRING",
+  /** The desk registered an item it knows is the resident's (or the unit's). */
+  FOUND_ITEM_FOR_YOU = "FOUND_ITEM_FOR_YOU",
+  /** To the staff: whoever an item was reserved for says it is not theirs. */
+  FOUND_ITEM_NOT_OWNER = "FOUND_ITEM_NOT_OWNER",
+  /** "Perdi algo": an item of the category you lost was found. */
+  LOST_REPORT_MATCH = "LOST_REPORT_MATCH",
+  /** "Achei isso": a neighbour says they found what was reported lost. */
+  LOST_REPORT_SPOTTED = "LOST_REPORT_SPOTTED",
+  /** "Perdi algo" ended after the keeping period without news. */
+  LOST_REPORT_EXPIRED = "LOST_REPORT_EXPIRED",
 }
 
 export const ALL_NOTIFICATION_TYPES: readonly NotificationType[] =

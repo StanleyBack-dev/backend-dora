@@ -1,6 +1,7 @@
 import { Field, Float, Int, ObjectType } from "@nestjs/graphql";
 import {
   type Dashboard,
+  type LostFoundIndicators,
   type ParcelIndicators,
 } from "@/modules/dashboard/application/ports/dashboard-reader.port";
 
@@ -45,6 +46,52 @@ export class ParcelIndicatorsType implements ParcelIndicators {
   monthly!: ParcelMonthType[];
 }
 
+@ObjectType("FoundItemMonth", { description: "Itens achados de um mês." })
+export class FoundItemMonthType {
+  @Field({ description: "AAAA-MM, no fuso do condomínio." })
+  month!: string;
+
+  @Field(() => Int, { description: "Achados no mês." })
+  found!: number;
+
+  @Field(() => Int, { description: "Desses, os já devolvidos ao dono." })
+  returned!: number;
+}
+
+@ObjectType("LostFoundIndicators", {
+  description: "Indicadores dos achados e perdidos do condomínio.",
+})
+export class LostFoundIndicatorsType implements LostFoundIndicators {
+  @Field(() => Int, { description: "Itens guardados agora." })
+  kept!: number;
+
+  @Field(() => Int, { description: "Pedidos aguardando conferência." })
+  pendingClaims!: number;
+
+  @Field(() => Int, {
+    description: "Guardados com o prazo acabando em até 7 dias.",
+  })
+  expiringSoon!: number;
+
+  @Field(() => Int, { description: 'Avisos de "Perdi algo" abertos.' })
+  openLostReports!: number;
+
+  @Field(() => Int, { description: "Devolvidos nos últimos 90 dias." })
+  returnedLast90Days!: number;
+
+  @Field(() => Int, {
+    nullable: true,
+    description:
+      "Dos itens que saíram nos últimos 90 dias, a porcentagem devolvida ao dono (nulo: nenhum saiu).",
+  })
+  returnRate!: number | null;
+
+  @Field(() => [FoundItemMonthType], {
+    description: "Os últimos 6 meses, do mais antigo ao atual.",
+  })
+  monthly!: FoundItemMonthType[];
+}
+
 @ObjectType("Dashboard", { description: "Painel do gestor do condomínio." })
 export class DashboardType implements Dashboard {
   @Field(() => Int, {
@@ -84,4 +131,10 @@ export class DashboardType implements Dashboard {
     description: "Encomendas (nulo: módulo desligado).",
   })
   parcels!: ParcelIndicatorsType | null;
+
+  @Field(() => LostFoundIndicatorsType, {
+    nullable: true,
+    description: "Achados e perdidos (nulo: módulo desligado).",
+  })
+  lostAndFound!: LostFoundIndicatorsType | null;
 }

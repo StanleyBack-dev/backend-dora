@@ -4,6 +4,7 @@ import { EventsMaintenanceService } from "@/modules/events/application/events-ma
 import { IdentityMaintenanceService } from "@/modules/identity/application/identity-maintenance.service";
 import { NotificationsUseCase } from "@/modules/notifications/application/use-cases/notifications.use-case";
 import { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
+import { LostFoundMaintenanceService } from "@/modules/lost-and-found/application/lost-found-maintenance.service";
 import { ParcelsMaintenanceService } from "@/modules/parcels/application/parcels-maintenance.service";
 import { SystemLogsService } from "@/modules/system-logs/application/system-logs.service";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
@@ -23,6 +24,9 @@ export type CleanupReport = {
   expiredEventOrders: number;
   parcelReminders: number;
   parcelPhotos: number;
+  foundItemsExpiring: number;
+  foundItemPhotos: number;
+  lostReportsExpired: number;
 };
 
 const DELIVERED_RETENTION_DAYS = 30;
@@ -47,6 +51,7 @@ export class CleanupUseCase {
     private readonly bookings: BookingsMaintenanceService,
     private readonly events: EventsMaintenanceService,
     private readonly parcels: ParcelsMaintenanceService,
+    private readonly lostFound: LostFoundMaintenanceService,
   ) {}
 
   async run(): Promise<CleanupReport> {
@@ -60,6 +65,7 @@ export class CleanupUseCase {
       waitlistEntries,
       expiredEventOrders,
       parcels,
+      lostFound,
     ] = await Promise.all([
       this.identity.purge(now),
       this.outbox.purgeDelivered(
@@ -71,6 +77,7 @@ export class CleanupUseCase {
       this.bookings.purge(now),
       this.events.expireOrders(now),
       this.parcels.run(now),
+      this.lostFound.run(now),
     ]);
     const report = {
       sessions: identity.sessions,
@@ -83,6 +90,9 @@ export class CleanupUseCase {
       expiredEventOrders,
       parcelReminders: parcels.reminders,
       parcelPhotos: parcels.photos,
+      foundItemsExpiring: lostFound.expiring,
+      foundItemPhotos: lostFound.photos,
+      lostReportsExpired: lostFound.lostReports,
     };
     this.logger.log(`Limpeza diária: ${JSON.stringify(report)}`);
     return report;

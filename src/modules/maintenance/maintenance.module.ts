@@ -6,6 +6,7 @@ import { CleanupUseCase } from "@/modules/maintenance/application/cleanup.use-ca
 import { InternalMaintenanceController } from "@/modules/maintenance/presentation/rest/internal-maintenance.controller";
 import { NotificationsModule } from "@/modules/notifications/notifications.module";
 import { OutboxModule } from "@/modules/outbox/outbox.module";
+import { LostAndFoundModule } from "@/modules/lost-and-found/lost-and-found.module";
 import { ParcelsModule } from "@/modules/parcels/parcels.module";
 import { SystemLogsModule } from "@/modules/system-logs/system-logs.module";
 
@@ -18,6 +19,7 @@ import { SystemLogsModule } from "@/modules/system-logs/system-logs.module";
     NotificationsModule,
     OutboxModule,
     ParcelsModule,
+    LostAndFoundModule,
     SystemLogsModule,
   ],
   controllers: [InternalMaintenanceController],
