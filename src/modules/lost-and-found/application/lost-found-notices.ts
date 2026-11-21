@@ -15,7 +15,8 @@ import { formatDateTime } from "@/shared/domain/local-date";
 // drafts stored with the change: a claim arrived (staff), it was accepted
 // or rejected, the item was handed over, the keeping period is ending.
 
-const DESK = "/achados-e-perdidos";
+/** The item on the desk (staff notices open it). */
+const deskItem = (itemId: string) => `/achados-e-perdidos/${itemId}`;
 const MINE = "/achados-e-perdidos/meus";
 
 const itemDetails = (
@@ -42,7 +43,7 @@ export function claimedNotices(
         type: NotificationType.FOUND_ITEM_CLAIMED,
         title: "Pedido de item achado",
         body: `${who} diz que “${claim.itemTitle}” é seu.`,
-        link: DESK,
+        link: deskItem(claim.itemId),
         email: {
           subject: `Pedido de item achado: ${claim.itemTitle}`,
           intro: `${who} diz que este item achado é seu. Confira a descrição com os detalhes do item e aceite ou recuse o pedido no app.`,
@@ -143,7 +144,7 @@ export function expiringNotices(
         type: NotificationType.FOUND_ITEM_EXPIRING,
         title: "Prazo de guarda terminando",
         body: `“${item.title}” fica guardado até ${until}: depois, doe ou descarte.`,
-        link: DESK,
+        link: deskItem(item.id),
         email: {
           subject: `Prazo de guarda terminando: ${item.title}`,
           intro: `Este item achado está guardado até ${until} e ninguém o retirou. Depois do prazo, registre a doação ou o descarte no app.`,
