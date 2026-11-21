@@ -331,7 +331,7 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
     notices: (parcel: Parcel) => OutboxDraft[],
   ): Promise<Parcel | null> {
     return this.dataSource.transaction(async (manager) => {
-      const updated = await manager.query<{ id: string }[]>(
+      const [updated] = await manager.query<[{ id: string }[], number]>(
         `UPDATE tb_parcels
             SET status = '${ParcelStatus.PICKED_UP}', closed_at = $2,
                 closed_by = $3, updated_by = $3, updated_at = now()
@@ -397,7 +397,7 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
     notices: (parcel: Parcel) => OutboxDraft[],
   ): Promise<Parcel | null> {
     return this.dataSource.transaction(async (manager) => {
-      const updated = await manager.query<{ id: string }[]>(
+      const [updated] = await manager.query<[{ id: string }[], number]>(
         `UPDATE tb_parcels
             SET status = $2, close_reason = $3, closed_at = $4,
                 closed_by = $5, updated_by = $5, updated_at = now()
@@ -460,7 +460,7 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
 
   markReminded(id: string, at: Date, notices: OutboxDraft[]): Promise<boolean> {
     return this.dataSource.transaction(async (manager) => {
-      const updated = await manager.query<{ id: string }[]>(
+      const [updated] = await manager.query<[{ id: string }[], number]>(
         `UPDATE tb_parcels SET reminded_at = $2
           WHERE idtb_parcels = $1 AND status = '${ParcelStatus.RECEIVED}'
             AND reminded_at IS NULL
@@ -498,7 +498,7 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
     notices: OutboxDraft[],
   ): Promise<boolean> {
     return this.dataSource.transaction(async (manager) => {
-      const updated = await manager.query<{ id: string }[]>(
+      const [updated] = await manager.query<[{ id: string }[], number]>(
         `UPDATE tb_parcels SET perishable_reminded_at = $2
           WHERE idtb_parcels = $1 AND status = '${ParcelStatus.RECEIVED}'
             AND perishable_reminded_at IS NOT DISTINCT FROM $3::timestamptz
@@ -530,7 +530,7 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
     notices: (parcel: Parcel) => OutboxDraft[],
   ): Promise<Parcel | null> {
     return this.dataSource.transaction(async (manager) => {
-      const updated = await manager.query<{ id: string }[]>(
+      const [updated] = await manager.query<[{ id: string }[], number]>(
         `UPDATE tb_parcels
           SET authorized_name = $2, authorized_document_type = $3,
               authorized_document = $4, authorized_by = $5,
@@ -560,7 +560,7 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
     notices: OutboxDraft[],
   ): Promise<boolean> {
     return this.dataSource.transaction(async (manager) => {
-      const updated = await manager.query<{ id: string }[]>(
+      const [updated] = await manager.query<[{ id: string }[], number]>(
         `UPDATE tb_parcels SET overdue_notified_at = $2
           WHERE idtb_parcels = $1 AND status = '${ParcelStatus.RECEIVED}'
             AND overdue_notified_at IS NULL
@@ -574,7 +574,7 @@ export class ParcelSqlRepository implements ParcelRepositoryPort {
   }
 
   async releasePhotos(closedBefore: Date): Promise<string[]> {
-    const rows = await this.dataSource.query<{ key: string }[]>(
+    const [rows] = await this.dataSource.query<[{ key: string }[], number]>(
       `UPDATE tb_parcels p SET photo_key = NULL
          FROM (SELECT idtb_parcels, photo_key FROM tb_parcels
                 WHERE photo_key IS NOT NULL AND closed_at < $1
