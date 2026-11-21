@@ -1,10 +1,11 @@
-import { Field, InputType } from "@nestjs/graphql";
+import { Field, ID, InputType } from "@nestjs/graphql";
 import {
   IsBoolean,
   IsDate,
   IsEnum,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
 } from "class-validator";
 import { FoundItemCategory } from "@/modules/lost-and-found/domain/found-item";
@@ -74,4 +75,22 @@ export class RegisterFoundItemInput {
   @IsOptional()
   @IsBoolean()
   photoHidden?: boolean | null;
+
+  @Field(() => ID, {
+    nullable: true,
+    description:
+      "De quem é, se a portaria sabe: a unidade (os moradores dela são avisados e veem o item).",
+  })
+  @IsOptional()
+  @IsUUID()
+  ownerUnitId?: string | null;
+
+  @Field(() => ID, {
+    nullable: true,
+    description:
+      "Ou um morador da unidade: só ele é avisado e vê o item, com o pedido já aceito.",
+  })
+  @IsOptional()
+  @IsUUID()
+  ownerUserId?: string | null;
 }

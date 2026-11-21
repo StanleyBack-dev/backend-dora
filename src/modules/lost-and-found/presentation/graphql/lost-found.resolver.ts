@@ -17,7 +17,10 @@ import { CloseFoundItemUseCase } from "@/modules/lost-and-found/application/use-
 import { DecideClaimUseCase } from "@/modules/lost-and-found/application/use-cases/decide-claim.use-case";
 import { ListFoundItemsUseCase } from "@/modules/lost-and-found/application/use-cases/list-found-items.use-case";
 import { RegisterFoundItemUseCase } from "@/modules/lost-and-found/application/use-cases/register-found-item.use-case";
+import { ReleaseFoundItemUseCase } from "@/modules/lost-and-found/application/use-cases/release-found-item.use-case";
 import { ReturnFoundItemUseCase } from "@/modules/lost-and-found/application/use-cases/return-found-item.use-case";
+import { SearchFoundItemOwnersUseCase } from "@/modules/lost-and-found/application/use-cases/search-found-item-owners.use-case";
+import { FoundItemOwnerOptionType } from "@/modules/lost-and-found/presentation/graphql/dto/outputs/found-item-owner-option.output";
 import {
   FoundItemCategory,
   FoundItemStatus,
@@ -53,7 +56,32 @@ export class LostFoundResolver {
     private readonly deciding: DecideClaimUseCase,
     private readonly returning: ReturnFoundItemUseCase,
     private readonly closing: CloseFoundItemUseCase,
+    private readonly releasing: ReleaseFoundItemUseCase,
+    private readonly owners: SearchFoundItemOwnersUseCase,
   ) {}
+
+  @RequirePermissions(Permission.LOST_FOUND_MANAGE)
+  @Query(() => [FoundItemOwnerOptionType], {
+    description:
+      "Moradores (com a unidade) pelo nome, para indicar de quem é um item.",
+  })
+  foundItemOwners(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Args("search") search: string,
+  ): Promise<FoundItemOwnerOptionType[]> {
+    return this.owners.execute(actor, search);
+  }
+
+  @Mutation(() => FoundItemType, {
+    description:
+      "Tira a reserva de um item: o dono diz que não é dele (a portaria é avisada), ou a portaria libera para todos.",
+  })
+  async releaseFoundItem(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Args("id", { type: () => ID }, UuidArg()) id: string,
+  ): Promise<FoundItemType> {
+    return toFoundItemType(await this.releasing.execute(actor, id));
+  }
 
   @RequirePermissions(Permission.LOST_FOUND_MANAGE)
   @Query(() => FoundItemPage, {
@@ -71,6 +99,10 @@ export class LostFoundResolver {
         category: filter?.category ?? null,
         search: filter?.search?.trim() || null,
         withPendingClaims: filter?.withPendingClaims ?? false,
+        title: filter?.title?.trim() || null,
+        foundLocation: filter?.foundLocation?.trim() || null,
+        storageLocation: filter?.storageLocation?.trim() || null,
+        residentId: filter?.residentId ?? null,
         from: filter?.from ?? null,
         to: filter?.to ?? null,
       },
@@ -87,6 +119,24 @@ export class LostFoundResolver {
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<FoundItemOverviewType> {
     return this.listing.overview(actor);
+  }
+
+  @RequirePermissions(Permission.LOST_FOUND_MANAGE)
+  @Query(() => FoundItemClaimPage, {
+    description:
+      "Pedidos de itens achados do condomínio: os abertos (aguardando ou aceitos, de itens guardados) em fila, ou todos.",
+  })
+  async foundItemClaims(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Args("open", { type: () => Boolean, nullable: true }) open?: boolean,
+    @Args("page", { nullable: true }) page?: PageInput,
+  ): Promise<Paginated<FoundItemClaimType>> {
+    const found = await this.listing.claims(
+      actor,
+      open ?? true,
+      page ?? DEFAULT_PAGE,
+    );
+    return { ...found, items: found.items.map(toClaimType) };
   }
 
   @Query(() => FoundItemPage, {
@@ -142,12 +192,13 @@ export class LostFoundResolver {
 
   @Mutation(() => FoundItemClaimType, {
     description:
-      "Diz que um item achado é seu, descrevendo-o para a portaria conferir.",
+      "Diz que um item achado é seu (uma descrição é opcional): a portaria confere na retirada.",
   })
   async claimFoundItem(
     @CurrentUser() actor: AuthenticatedUser,
     @Args("itemId", { type: () => ID }, UuidArg()) itemId: string,
-    @Args("message") message: string,
+    @Args("message", { type: () => String, nullable: true })
+    message: string | null,
   ): Promise<FoundItemClaimType> {
     return toClaimType(await this.claiming.claim(actor, itemId, message));
   }

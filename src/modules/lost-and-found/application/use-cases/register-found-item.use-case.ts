@@ -3,7 +3,9 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { APP_ERRORS } from "@/common/exceptions/app-errors.catalog";
 import { AppException } from "@/common/exceptions/app-exception";
+import { CondominiumLookupService } from "@/modules/condominiums/application/condominium-lookup.service";
 import { LostFoundAccessService } from "@/modules/lost-and-found/application/lost-found-access.service";
+import { reservedNotices } from "@/modules/lost-and-found/application/lost-found-notices";
 import {
   FOUND_ITEM_REPOSITORY,
   type FoundItem,
@@ -34,6 +36,10 @@ export type RegisterFoundItemInput = {
   title: string;
   description?: string | null;
   privateDetails?: string | null;
+  /** Whose the desk knows it is: a unit (its residents are told)… */
+  ownerUnitId?: string | null;
+  /** …or one of its residents (only them, with an accepted claim). */
+  ownerUserId?: string | null;
   foundLocation: string;
   /** When it was found (default: now; never in the future). */
   foundAt?: Date | null;
@@ -68,7 +74,9 @@ const REQUIRED: Partial<Record<FoundItemTextField, string>> = {
 // condominium: what it is, where and when it was found, where it is kept,
 // details only the staff sees (to check the owner) and, optionally, a photo
 // (re-encoded from its pixels, no metadata). It is kept for
-// FOUND_ITEM_KEEP_DAYS days from when it was found.
+// FOUND_ITEM_KEEP_DAYS days from when it was found. When the desk knows
+// whose it is (a unit, or one of its residents, like a parcel), only they
+// are told and see it.
 @Injectable()
 export class RegisterFoundItemUseCase {
   private readonly logger = new Logger(RegisterFoundItemUseCase.name);
@@ -77,6 +85,7 @@ export class RegisterFoundItemUseCase {
     @Inject(FOUND_ITEM_REPOSITORY)
     private readonly items: FoundItemRepositoryPort,
     private readonly access: LostFoundAccessService,
+    private readonly condominiums: CondominiumLookupService,
     @Inject(IMAGE_PROCESSOR) private readonly images: ImageProcessorPort,
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStoragePort,
     @Inject(CLOCK) private readonly clock: ClockPort,
@@ -96,24 +105,40 @@ export class RegisterFoundItemUseCase {
       });
     }
 
+    const owner = await this.owner(condominiumId, input);
+
     const photoKey = input.photo
       ? await this.storePhoto(condominiumId, input.photo)
       : null;
     try {
-      return await this.items.create({
-        condominiumId,
-        category: input.category,
-        title: texts.title as string,
-        description: texts.description,
-        privateDetails: texts.privateDetails,
-        foundLocation: texts.foundLocation as string,
-        foundAt,
-        storageLocation: texts.storageLocation as string,
-        photoKey,
-        photoHidden: input.photoHidden ?? hidesPhotoByDefault(input.category),
-        keepUntil: new Date(foundAt.getTime() + FOUND_ITEM_KEEP_DAYS * DAY_MS),
-        registeredBy: actor.id,
-      });
+      const audience = owner.unitId
+        ? await this.access.ownerAudience({
+            condominiumId,
+            ownerUnitId: owner.unitId,
+            ownerUserId: owner.userId,
+          })
+        : [];
+      return await this.items.create(
+        {
+          condominiumId,
+          category: input.category,
+          title: texts.title as string,
+          description: texts.description,
+          privateDetails: texts.privateDetails,
+          foundLocation: texts.foundLocation as string,
+          foundAt,
+          storageLocation: texts.storageLocation as string,
+          photoKey,
+          photoHidden: input.photoHidden ?? hidesPhotoByDefault(input.category),
+          keepUntil: new Date(
+            foundAt.getTime() + FOUND_ITEM_KEEP_DAYS * DAY_MS,
+          ),
+          registeredBy: actor.id,
+          ownerUnitId: owner.unitId,
+          ownerUserId: owner.userId,
+        },
+        (created) => reservedNotices(created, audience, this.clock.timeZone),
+      );
     } catch (error) {
       if (photoKey) {
         await this.storage.deleteMany([photoKey]).catch((cause) => {
@@ -122,6 +147,42 @@ export class RegisterFoundItemUseCase {
       }
       throw error;
     }
+  }
+
+  /** The unit (and resident) named, checked to belong together there. */
+  private async owner(
+    condominiumId: string,
+    input: RegisterFoundItemInput,
+  ): Promise<{ unitId: string | null; userId: string | null }> {
+    const unitId = input.ownerUnitId?.trim() || null;
+    const userId = input.ownerUserId?.trim() || null;
+    if (!unitId) {
+      if (userId) {
+        throw AppException.from(APP_ERRORS.lostFound.invalid, {
+          reason: "Escolha a unidade do morador.",
+        });
+      }
+      return { unitId: null, userId: null };
+    }
+    const unit = await this.condominiums.unitIn(condominiumId, unitId);
+    if (!unit) {
+      throw AppException.from(APP_ERRORS.lostFound.invalid, {
+        reason: "A unidade escolhida não é deste condomínio.",
+      });
+    }
+    if (userId) {
+      const residents = await this.access.ownerAudience({
+        condominiumId,
+        ownerUnitId: unit.id,
+        ownerUserId: null,
+      });
+      if (!residents.includes(userId)) {
+        throw AppException.from(APP_ERRORS.lostFound.invalid, {
+          reason: "O morador escolhido não mora nesta unidade.",
+        });
+      }
+    }
+    return { unitId: unit.id, userId };
   }
 
   private texts(input: RegisterFoundItemInput) {

@@ -18,7 +18,8 @@ import { isKept } from "@/modules/lost-and-found/domain/found-item";
 
 // Every lost-and-found operation starts here: the caller's condominium must
 // have the module (contracted apart). The gate and the managers see every
-// item; a resident, the items still kept and those they claimed.
+// item; a resident, the items still kept (a reserved one only when it is
+// theirs or their unit's) and those they claimed.
 @Injectable()
 export class LostFoundAccessService {
   constructor(
@@ -50,12 +51,49 @@ export class LostFoundAccessService {
     throw AppException.from(APP_ERRORS.lostFound.notFound, undefined);
   }
 
-  /** The desk: any kept item; residents: kept ones, and those they claimed. */
+  /** The caller's unit there (null: not a resident with a unit). */
+  unitOf(actor: AuthenticatedUser, condominiumId: string) {
+    return this.users.memberUnitId(actor.id, condominiumId);
+  }
+
+  /**
+   * Whether a reserved item is the caller's: reserved for them, or for
+   * their unit (without a resident named).
+   */
+  async isOwner(actor: AuthenticatedUser, item: FoundItem): Promise<boolean> {
+    if (!item.ownerUnitId) return false;
+    if (item.ownerUserId) return item.ownerUserId === actor.id;
+    return (await this.unitOf(actor, item.condominiumId)) === item.ownerUnitId;
+  }
+
+  /**
+   * The desk: any item; residents: kept ones (a reserved one only when it
+   * is theirs), and those they claimed.
+   */
   async canSee(actor: AuthenticatedUser, item: FoundItem): Promise<boolean> {
-    if (isKept(item.status)) return true;
     if (await this.canManage(actor)) return true;
+    if (isKept(item.status)) {
+      if (!item.ownerUnitId || (await this.isOwner(actor, item))) return true;
+    }
     const claims = await this.items.claimsOf(item.id);
     return claims.some((claim) => claim.userId === actor.id);
+  }
+
+  /**
+   * Who is told of an item reserved when registered: the resident named
+   * (while still living in the unit), otherwise every resident of the unit.
+   */
+  async ownerAudience(
+    item: Pick<FoundItem, "condominiumId" | "ownerUnitId" | "ownerUserId">,
+  ): Promise<string[]> {
+    if (!item.ownerUnitId) return [];
+    const residents = await this.users.activeUnitMemberIds(
+      item.condominiumId,
+      item.ownerUnitId,
+    );
+    return item.ownerUserId && residents.includes(item.ownerUserId)
+      ? [item.ownerUserId]
+      : residents;
   }
 
   /**

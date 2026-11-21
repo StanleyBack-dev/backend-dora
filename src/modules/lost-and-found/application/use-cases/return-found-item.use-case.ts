@@ -104,6 +104,10 @@ export class ReturnFoundItemUseCase {
       throw AppException.from(APP_ERRORS.lostFound.notKept, undefined);
     }
     const claim = await this.acceptedClaim(item, input.claimId);
+    // A staff member's own claim is handed over by a colleague.
+    if (claim && claim.userId === actor.id) {
+      throw AppException.from(APP_ERRORS.lostFound.ownClaim, undefined);
+    }
     const signer = this.signer(input);
     const drawing = parseSignatureDrawing(input.signatureDrawing);
     if (!drawing) {
@@ -172,16 +176,22 @@ export class ReturnFoundItemUseCase {
     return returned;
   }
 
-  /** The accepted claim being closed (absent: none). */
+  /**
+   * The open claim being closed (absent: none): accepted, or still pending
+   * (the desk checked the owner in person; the return accepts it).
+   */
   private async acceptedClaim(item: FoundItem, claimId?: string | null) {
     if (!claimId) return null;
     const claim = await this.items.findClaim(item.condominiumId, claimId);
     if (!claim || claim.itemId !== item.id) {
       throw AppException.from(APP_ERRORS.lostFound.claimNotFound, undefined);
     }
-    if (claim.status !== ClaimStatus.ACCEPTED) {
+    if (
+      claim.status !== ClaimStatus.ACCEPTED &&
+      claim.status !== ClaimStatus.PENDING
+    ) {
       throw AppException.from(APP_ERRORS.lostFound.invalid, {
-        reason: "Aceite o pedido antes de entregar o item a quem pediu.",
+        reason: "Este pedido foi recusado ou cancelado.",
       });
     }
     return claim;

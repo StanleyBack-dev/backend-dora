@@ -55,20 +55,31 @@ export class FoundItemType {
   })
   closeReason!: string | null;
 
-  @Field(() => String, {
-    nullable: true,
-    description: "Morador a quem foi devolvido (pelo pedido dele).",
-  })
-  returnedToName!: string | null;
-
-  @Field(() => String, { nullable: true, description: "Quem assinou." })
-  signerName!: string | null;
-
   @Field(() => Int, { description: "Pedidos aguardando a portaria." })
   pendingClaims!: number;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "Reservado pela portaria para esta unidade (nulo: qualquer morador pode pedir).",
+  })
+  ownerUnitLabel!: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description: "Reservado para este morador da unidade.",
+  })
+  ownerName!: string | null;
+
+  /** Whose accepted claim it waits for (shown to the desk only). */
+  awaitedByNameRaw!: string | null;
 
   /** For the photo link and the staff-only details (not exposed). */
   photoKey!: string | null;
   privateDetailsRaw!: string | null;
+  /** Who it went back to (shown to the staff and to that resident). */
+  returnedToId!: string | null;
+  returnedToNameRaw!: string | null;
+  signerNameRaw!: string | null;
   condominiumId!: string;
 }

@@ -43,6 +43,16 @@ export type FoundItem = {
   signerName: string | null;
   /** Claims waiting for the staff. */
   pendingClaims: number;
+  /** Whose accepted claim it waits for (they may come for it); null: none. */
+  awaitedByName: string | null;
+  /**
+   * Reserved by the desk for a unit (its residents see it) or one of its
+   * residents (only them); null: anyone may claim it.
+   */
+  ownerUnitId: string | null;
+  ownerUnitLabel: string | null;
+  ownerUserId: string | null;
+  ownerUserName: string | null;
   createdAt: Date;
 };
 
@@ -59,7 +69,13 @@ export type NewFoundItem = {
   photoHidden: boolean;
   keepUntil: Date;
   registeredBy: string;
+  /** Whose the desk says it is (null: unknown). */
+  ownerUnitId: string | null;
+  ownerUserId: string | null;
 };
+
+/** Who browses the kept items (reserved ones show only to their owner). */
+export type KeptViewer = { userId: string; unitId: string | null };
 
 /** Filters of the condominium's items (null / false: any). */
 export type FoundItemFilter = {
@@ -69,6 +85,12 @@ export type FoundItemFilter = {
   search: string | null;
   /** Only items with claims waiting for the staff. */
   withPendingClaims: boolean;
+  /** Exactly these (from the filter lists; case and accents ignored). */
+  title: string | null;
+  foundLocation: string | null;
+  storageLocation: string | null;
+  /** Reserved for this resident, or claimed by them. */
+  residentId: string | null;
   /** Found on or after / before these instants. */
   from: Date | null;
   to: Date | null;
@@ -81,6 +103,12 @@ export type FoundItemOverview = {
   pendingClaims: number;
   /** Kept items whose keeping period ends within the notice window. */
   expiringSoon: number;
+  /** The values in use, for the filter lists (most recent first). */
+  titles: string[];
+  foundLocations: string[];
+  storageLocations: string[];
+  /** Residents an item was reserved for or who claimed one. */
+  residents: { id: string; name: string }[];
 };
 
 /** A claim, with the item and the resident it came from. */
@@ -95,7 +123,8 @@ export type FoundItemClaim = {
   userName: string;
   /** The resident's unit, "Bloco A · 101" (null: none). */
   unitLabel: string | null;
-  message: string;
+  /** What the resident added (optional). */
+  message: string | null;
   status: ClaimStatus;
   createdAt: Date;
   decidedAt: Date | null;
@@ -156,7 +185,24 @@ export type ItemClosing = {
 export type ClosedClaims = FoundItemClaim[];
 
 export interface FoundItemRepositoryPort {
-  create(item: NewFoundItem): Promise<FoundItem>;
+  /**
+   * Stores the item with the notices of its owner (one transaction); a
+   * resident owner gets an accepted claim.
+   */
+  create(
+    item: NewFoundItem,
+    notices: (item: FoundItem) => OutboxDraft[],
+  ): Promise<FoundItem>;
+  /**
+   * Lifts the reservation of a kept item (the owner's open claim is
+   * withdrawn); null when it was not reserved or left meanwhile.
+   */
+  release(
+    itemId: string,
+    by: string,
+    at: Date,
+    notices: (item: FoundItem) => OutboxDraft[],
+  ): Promise<FoundItem | null>;
   /** Only an item of this condominium. */
   find(condominiumId: string, id: string): Promise<FoundItem | null>;
   /** The condominium's items that match: kept first, newest first. */
@@ -169,6 +215,7 @@ export interface FoundItemRepositoryPort {
   listKept(
     condominiumId: string,
     category: FoundItemCategory | null,
+    viewer: KeptViewer,
     page: PageRequest,
   ): Promise<Paginated<FoundItem>>;
   overview(
@@ -178,11 +225,23 @@ export interface FoundItemRepositoryPort {
 
   /** An item's claims, newest first. */
   claimsOf(itemId: string): Promise<FoundItemClaim[]>;
+  /** One person's latest claim on an item (null: none). */
+  latestClaimBy(itemId: string, userId: string): Promise<FoundItemClaim | null>;
   findClaim(condominiumId: string, id: string): Promise<FoundItemClaim | null>;
   /** A resident's claims in this condominium, newest first. */
   claimsBy(
     condominiumId: string,
     userId: string,
+    page: PageRequest,
+  ): Promise<Paginated<FoundItemClaim>>;
+  /**
+   * The condominium's claims (the desk): `open` keeps those waiting or
+   * accepted on items still kept, oldest first (a queue); otherwise every
+   * claim, newest first.
+   */
+  claimsIn(
+    condominiumId: string,
+    open: boolean,
     page: PageRequest,
   ): Promise<Paginated<FoundItemClaim>>;
   /**
@@ -192,7 +251,7 @@ export interface FoundItemRepositoryPort {
   claim(
     itemId: string,
     userId: string,
-    message: string,
+    message: string | null,
     notices: (claim: FoundItemClaim) => OutboxDraft[],
   ): Promise<FoundItemClaim | null>;
   /** Withdraws a pending claim of this person (false: not pending). */

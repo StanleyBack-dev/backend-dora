@@ -40,8 +40,18 @@ export const lostFoundErrors = {
   invalidClaim: {
     code: "FOUND_ITEM_INVALID_CLAIM",
     status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: "A descrição do item pode ter até 500 caracteres.",
+  },
+  notReserved: {
+    code: "FOUND_ITEM_NOT_RESERVED",
+    status: HttpStatus.CONFLICT,
+    message: "Este item não está mais reservado.",
+  },
+  ownClaim: {
+    code: "FOUND_ITEM_OWN_CLAIM",
+    status: HttpStatus.FORBIDDEN,
     message:
-      "Descreva o item com detalhes (de 10 a 500 caracteres): cor, marca, o que tem dentro…",
+      "Este pedido é seu: outra pessoa da portaria ou da gestão precisa conferir e entregar.",
   },
   invalidNote: {
     code: "FOUND_ITEM_INVALID_NOTE",

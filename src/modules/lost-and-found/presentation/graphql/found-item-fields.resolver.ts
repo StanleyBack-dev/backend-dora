@@ -24,8 +24,10 @@ import {
 
 // What depends on who is asking: the photo (hidden from residents when
 // asked, e.g. a document), the details only the staff sees, the item's
-// claims (staff), the declaration to sign and the return receipt. Every
-// query that returns an item already checked the caller may see it.
+// claims (staff), the caller's own claim, the declaration to sign and the
+// return (who took it and the receipt: the staff, or the resident it went
+// back to). Every query that returns an item already checked the caller
+// may see it.
 @Resolver(() => FoundItemType)
 export class FoundItemFieldsResolver {
   constructor(
@@ -80,6 +82,57 @@ export class FoundItemFieldsResolver {
   @ResolveField(() => String, {
     nullable: true,
     description:
+      "Morador com pedido aceito, que pode vir buscar (só a portaria e a gestão veem).",
+  })
+  async awaitedByName(
+    @Parent() item: FoundItemType,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<string | null> {
+    if (!item.awaitedByNameRaw || item.status !== FoundItemStatus.FOUND) {
+      return null;
+    }
+    return (await this.access.canManage(actor)) ? item.awaitedByNameRaw : null;
+  }
+
+  @ResolveField(() => FoundItemClaimType, {
+    nullable: true,
+    description: "O pedido mais recente de quem consulta (nulo: não pediu).",
+  })
+  async myClaim(
+    @Parent() item: FoundItemType,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<FoundItemClaimType | null> {
+    const mine = await this.listing.myClaimOf(actor, item.id);
+    return mine ? toClaimType(mine) : null;
+  }
+
+  @ResolveField(() => String, {
+    nullable: true,
+    description:
+      "Morador a quem foi devolvido (pelo pedido dele). Só a portaria, a gestão e o próprio morador veem.",
+  })
+  async returnedToName(
+    @Parent() item: FoundItemType,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<string | null> {
+    return (await this.seesReturn(item, actor)) ? item.returnedToNameRaw : null;
+  }
+
+  @ResolveField(() => String, {
+    nullable: true,
+    description:
+      "Quem assinou. Só a portaria, a gestão e o morador a quem foi devolvido veem.",
+  })
+  async signerName(
+    @Parent() item: FoundItemType,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<string | null> {
+    return (await this.seesReturn(item, actor)) ? item.signerNameRaw : null;
+  }
+
+  @ResolveField(() => String, {
+    nullable: true,
+    description:
       'A declaração que quem retira assina, sem o começo "Eu, <nome>, ". Só enquanto está guardado.',
   })
   async returnDeclaration(
@@ -91,15 +144,29 @@ export class FoundItemFieldsResolver {
 
   @ResolveField(() => FoundItemReturnType, {
     nullable: true,
-    description: "Comprovante da devolução (só itens devolvidos).",
+    description:
+      "Comprovante da devolução (só itens devolvidos; para a portaria, a gestão e o morador a quem foi devolvido).",
   })
   async returnReceipt(
     @Parent() item: FoundItemType,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<FoundItemReturnType | null> {
     if (item.status !== FoundItemStatus.RETURNED) return null;
+    if (!(await this.seesReturn(item, actor))) return null;
     const record = await this.receipts.execute(item.id);
     if (!record) return null;
     const imageUrl = await this.storage.signedReadUrl(record.imageKey);
     return toReturnType(record, imageUrl);
+  }
+
+  /** The staff, or the resident whose claim the return answered. */
+  private async seesReturn(
+    item: FoundItemType,
+    actor: AuthenticatedUser,
+  ): Promise<boolean> {
+    if (item.returnedToId !== null && item.returnedToId === actor.id) {
+      return true;
+    }
+    return this.access.canManage(actor);
   }
 }
