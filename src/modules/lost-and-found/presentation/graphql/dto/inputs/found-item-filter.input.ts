@@ -1,4 +1,4 @@
-import { Field, InputType } from "@nestjs/graphql";
+import { Field, ID, InputType } from "@nestjs/graphql";
 import {
   ArrayMaxSize,
   IsArray,
@@ -7,6 +7,7 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
 } from "class-validator";
 import {
@@ -37,6 +38,35 @@ export class FoundItemFilterInput {
   @IsString()
   @MaxLength(60)
   search?: string;
+
+  @Field({ nullable: true, description: "Exatamente este item (o que é)." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  title?: string;
+
+  @Field({
+    nullable: true,
+    description: "Exatamente este local onde foi achado.",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  foundLocation?: string;
+
+  @Field({ nullable: true, description: "Exatamente este local de guarda." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  storageLocation?: string;
+
+  @Field(() => ID, {
+    nullable: true,
+    description: "Itens reservados para este morador ou que ele pediu.",
+  })
+  @IsOptional()
+  @IsUUID()
+  residentId?: string;
 
   @Field(() => Boolean, {
     nullable: true,

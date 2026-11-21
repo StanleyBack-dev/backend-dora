@@ -1,5 +1,6 @@
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { AppException } from "@/common/exceptions/app-exception";
+import type { CondominiumLookupService } from "@/modules/condominiums/application/condominium-lookup.service";
 import type { LostFoundAccessService } from "@/modules/lost-and-found/application/lost-found-access.service";
 import type { LostFoundDeclarationService } from "@/modules/lost-and-found/application/lost-found-declaration.service";
 import type {
@@ -12,6 +13,7 @@ import type {
 import { ClaimFoundItemUseCase } from "@/modules/lost-and-found/application/use-cases/claim-found-item.use-case";
 import { CloseFoundItemUseCase } from "@/modules/lost-and-found/application/use-cases/close-found-item.use-case";
 import { DecideClaimUseCase } from "@/modules/lost-and-found/application/use-cases/decide-claim.use-case";
+import { ReleaseFoundItemUseCase } from "@/modules/lost-and-found/application/use-cases/release-found-item.use-case";
 import { RegisterFoundItemUseCase } from "@/modules/lost-and-found/application/use-cases/register-found-item.use-case";
 import { ReturnFoundItemUseCase } from "@/modules/lost-and-found/application/use-cases/return-found-item.use-case";
 import {
@@ -66,26 +68,57 @@ const claim = (overrides: Partial<FoundItemClaim> = {}) =>
     ...overrides,
   }) as FoundItemClaim;
 
+const UNIT_RESIDENTS = ["resident-1", "resident-2"];
 const access = (item: FoundItem) =>
   ({
     condominiumOf: async () => "condo-1",
     loadVisible: async () => item,
     staff: async () => ["gate-1", "manager-1"],
+    canManage: async (actor: AuthenticatedUser) => actor.id === "gate-1",
+    isOwner: async (actor: AuthenticatedUser, found: FoundItem) =>
+      found.ownerUserId
+        ? found.ownerUserId === actor.id
+        : found.ownerUnitId !== null && actor.id.startsWith("resident"),
+    ownerAudience: async (owner: {
+      ownerUnitId: string | null;
+      ownerUserId: string | null;
+    }) =>
+      !owner.ownerUnitId
+        ? []
+        : owner.ownerUserId && UNIT_RESIDENTS.includes(owner.ownerUserId)
+          ? [owner.ownerUserId]
+          : UNIT_RESIDENTS,
   }) as unknown as LostFoundAccessService;
 
 describe("RegisterFoundItemUseCase", () => {
   function setup() {
     const created: NewFoundItem[] = [];
+    const told: string[][] = [];
     const items = {
-      create: async (item: NewFoundItem) => {
+      create: async (
+        item: NewFoundItem,
+        notices: (item: FoundItem) => OutboxDraft[],
+      ) => {
         created.push(item);
-        return { id: "item-1", ...item } as unknown as FoundItem;
+        const stored = { id: "item-1", ...item } as unknown as FoundItem;
+        told.push(
+          notices(stored).map(
+            (notice) => (notice.payload as { userId: string }).userId,
+          ),
+        );
+        return stored;
       },
     } as unknown as FoundItemRepositoryPort;
+    const condominiums = {
+      unitIn: async (_condominium: string, id: string) =>
+        id === "unit-1" ? { id: "unit-1" } : null,
+    } as unknown as CondominiumLookupService;
     return {
+      told,
       useCase: new RegisterFoundItemUseCase(
         items,
         access(kept()),
+        condominiums,
         {} as ImageProcessorPort,
         {} as ObjectStoragePort,
         clock,
@@ -109,6 +142,43 @@ describe("RegisterFoundItemUseCase", () => {
       keepUntil: new Date("2027-02-18T10:00:00Z"),
       registeredBy: "gate-1",
     });
+  });
+
+  it("tells only the resident named, or every resident of the unit", async () => {
+    const { useCase, told, created } = setup();
+    const base = {
+      category: FoundItemCategory.KEYS,
+      title: "Chave com chaveiro azul",
+      foundLocation: "Hall",
+      storageLocation: "Portaria",
+    };
+    await useCase.execute(staff, {
+      ...base,
+      ownerUnitId: "unit-1",
+      ownerUserId: "resident-1",
+    });
+    await useCase.execute(staff, { ...base, ownerUnitId: "unit-1" });
+    await useCase.execute(staff, base);
+    expect(told).toEqual([["resident-1"], UNIT_RESIDENTS, []]);
+    expect(created[0]).toMatchObject({
+      ownerUnitId: "unit-1",
+      ownerUserId: "resident-1",
+    });
+  });
+
+  it("refuses a resident who does not live in the unit", async () => {
+    const { useCase, created } = setup();
+    await expect(
+      useCase.execute(staff, {
+        category: FoundItemCategory.KEYS,
+        title: "Chave",
+        foundLocation: "Hall",
+        storageLocation: "Portaria",
+        ownerUnitId: "unit-1",
+        ownerUserId: "someone-else",
+      }),
+    ).rejects.toThrow("não mora nesta unidade");
+    expect(created).toHaveLength(0);
   });
 
   it("requires what it is, where it was found and where it is kept", async () => {
@@ -145,7 +215,7 @@ describe("ClaimFoundItemUseCase", () => {
       claim: async (
         _item: string,
         _user: string,
-        _message: string,
+        _message: string | null,
         notices: (claim: FoundItemClaim) => OutboxDraft[],
       ) => {
         if (inserted) {
@@ -171,10 +241,12 @@ describe("ClaimFoundItemUseCase", () => {
     expect(told[0]).toEqual(["gate-1", "manager-1"]);
   });
 
-  it("asks for a real description", async () => {
-    const { useCase } = setup(kept(), claim());
+  it("takes a claim without a description, but not one too long", async () => {
+    const { useCase, told } = setup(kept(), claim({ message: null }));
+    await useCase.claim(resident, "item-1", null);
+    expect(told).toHaveLength(1);
     await expect(
-      useCase.claim(resident, "item-1", "é meu"),
+      useCase.claim(resident, "item-1", "x".repeat(501)),
     ).rejects.toBeInstanceOf(AppException);
   });
 
@@ -218,6 +290,15 @@ describe("DecideClaimUseCase", () => {
     expect(decided[0]).toMatchObject({ status: ClaimStatus.ACCEPTED });
   });
 
+  it("accepts with a short note", async () => {
+    const { useCase, decided } = setup(claim());
+    await useCase.execute(staff, "claim-1", true, " ok ");
+    expect(decided[0]).toMatchObject({
+      status: ClaimStatus.ACCEPTED,
+      note: "ok",
+    });
+  });
+
   it("asks why when rejecting", async () => {
     const { useCase, decided } = setup(claim());
     await expect(
@@ -228,6 +309,14 @@ describe("DecideClaimUseCase", () => {
       status: ClaimStatus.REJECTED,
       note: "A cor não confere.",
     });
+  });
+
+  it("does not let staff answer their own claim", async () => {
+    const { useCase, decided } = setup(claim({ userId: staff.id }));
+    await expect(useCase.execute(staff, "claim-1", true, null)).rejects.toThrow(
+      "Este pedido é seu",
+    );
+    expect(decided).toHaveLength(0);
   });
 });
 
@@ -333,8 +422,18 @@ describe("ReturnFoundItemUseCase", () => {
     expect(written()?.evidenceSha256).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it("refuses a claim not accepted yet", async () => {
-    const { useCase } = setup(claim());
+  it("hands over a pending claim directly (checked in person)", async () => {
+    const { useCase, written } = setup(claim());
+    await useCase.execute(
+      staff,
+      { ...input, claimId: "claim-1" },
+      { ipAddress: null, userAgent: null },
+    );
+    expect(written()).toMatchObject({ claimId: "claim-1" });
+  });
+
+  it("refuses a rejected claim", async () => {
+    const { useCase } = setup(claim({ status: ClaimStatus.REJECTED }));
     await expect(
       useCase.execute(
         staff,
@@ -387,5 +486,64 @@ describe("CloseFoundItemUseCase", () => {
     );
     expect(item.status).toBe(FoundItemStatus.DONATED);
     expect(told).toEqual(["resident-1"]);
+  });
+});
+
+describe("ReleaseFoundItemUseCase", () => {
+  function setup(item: FoundItem) {
+    const told: string[][] = [];
+    const items = {
+      release: async (
+        _id: string,
+        _by: string,
+        _at: Date,
+        notices: (item: FoundItem) => OutboxDraft[],
+      ) => {
+        const released = { ...item, ownerUnitId: null, ownerUserId: null };
+        told.push(
+          notices(released).map(
+            (notice) => (notice.payload as { userId: string }).userId,
+          ),
+        );
+        return released;
+      },
+    } as unknown as FoundItemRepositoryPort;
+    return {
+      useCase: new ReleaseFoundItemUseCase(items, access(item), clock),
+      told,
+    };
+  }
+  const reserved = kept({
+    ownerUnitId: "unit-1",
+    ownerUnitLabel: "Bloco A · 101",
+    ownerUserId: "resident-1",
+  });
+
+  it("lets the owner say it is not theirs, and tells the staff", async () => {
+    const { useCase, told } = setup(reserved);
+    const item = await useCase.execute(
+      { id: "resident-1", name: "Sonia" } as AuthenticatedUser,
+      "item-1",
+    );
+    expect(item.ownerUnitId).toBeNull();
+    expect(told[0]).toEqual(["gate-1", "manager-1"]);
+  });
+
+  it("lets the desk lift it without telling anyone", async () => {
+    const { useCase, told } = setup(reserved);
+    await useCase.execute(staff, "item-1");
+    expect(told[0]).toEqual([]);
+  });
+
+  it("refuses someone else, and an item not reserved", async () => {
+    await expect(
+      setup(reserved).useCase.execute(
+        { id: "resident-2" } as AuthenticatedUser,
+        "item-1",
+      ),
+    ).rejects.toBeInstanceOf(AppException);
+    await expect(
+      setup(kept({ ownerUnitId: null })).useCase.execute(staff, "item-1"),
+    ).rejects.toThrow("não está mais reservado");
   });
 });

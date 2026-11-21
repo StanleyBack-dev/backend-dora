@@ -50,15 +50,34 @@ export class ListFoundItemsUseCase {
     return this.items.overview(condominiumId, expiringBefore);
   }
 
-  /** What residents browse: the items still kept. */
+  /**
+   * What residents browse: the items still kept (a reserved one only by
+   * its resident, or its unit's residents).
+   */
   async kept(
     actor: AuthenticatedUser,
     category: FoundItemCategory | null,
     page: PageRequest,
   ): Promise<Paginated<FoundItem>> {
+    const condominiumId = await this.access.condominiumOf(actor);
+    const unitId = await this.access.unitOf(actor, condominiumId);
     return this.items.listKept(
-      await this.access.condominiumOf(actor),
+      condominiumId,
       category,
+      { userId: actor.id, unitId },
+      page,
+    );
+  }
+
+  /** The condominium's claims for the desk (the open ones: a queue). */
+  async claims(
+    actor: AuthenticatedUser,
+    open: boolean,
+    page: PageRequest,
+  ): Promise<Paginated<FoundItemClaim>> {
+    return this.items.claimsIn(
+      await this.access.condominiumOf(actor),
+      open,
       page,
     );
   }
@@ -82,5 +101,13 @@ export class ListFoundItemsUseCase {
   ): Promise<FoundItemClaim[]> {
     const item = await this.access.loadVisible(actor, itemId);
     return this.items.claimsOf(item.id);
+  }
+
+  /** The caller's latest claim on an item they already see (null: none). */
+  async myClaimOf(
+    actor: AuthenticatedUser,
+    itemId: string,
+  ): Promise<FoundItemClaim | null> {
+    return this.items.latestClaimBy(itemId, actor.id);
   }
 }

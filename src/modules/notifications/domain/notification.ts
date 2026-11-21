@@ -57,6 +57,10 @@ export enum NotificationType {
   FOUND_ITEM_RETURNED = "FOUND_ITEM_RETURNED",
   /** Staff: a found item's keeping period is about to end. */
   FOUND_ITEM_EXPIRING = "FOUND_ITEM_EXPIRING",
+  /** The desk registered an item it knows is the resident's (or the unit's). */
+  FOUND_ITEM_FOR_YOU = "FOUND_ITEM_FOR_YOU",
+  /** To the staff: whoever an item was reserved for says it is not theirs. */
+  FOUND_ITEM_NOT_OWNER = "FOUND_ITEM_NOT_OWNER",
 }
 
 export const ALL_NOTIFICATION_TYPES: readonly NotificationType[] =

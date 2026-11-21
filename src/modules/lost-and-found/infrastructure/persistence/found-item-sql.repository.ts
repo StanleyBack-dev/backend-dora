@@ -12,6 +12,7 @@ import type {
   FoundItemRepositoryPort,
   FoundItemReturn,
   ItemClosing,
+  KeptViewer,
   NewFoundItem,
   NewFoundItemReturn,
 } from "@/modules/lost-and-found/application/ports/found-item-repository.port";
@@ -56,12 +57,50 @@ const SELECT = `
          (SELECT count(*)::int FROM tb_found_item_claims c
            WHERE c.idtb_found_items = f.idtb_found_items
              AND c.status = '${ClaimStatus.PENDING}') AS "pendingClaims",
+         (SELECT u.name FROM tb_found_item_claims c
+            JOIN tb_users u ON u.idtb_users = c.idtb_users
+           WHERE c.idtb_found_items = f.idtb_found_items
+             AND c.status = '${ClaimStatus.ACCEPTED}'
+           ORDER BY c.decided_at DESC NULLS LAST
+           LIMIT 1) AS "awaitedByName",
+         f.owner_unit_id AS "ownerUnitId", ou.street AS "ownerUnitStreet",
+         ou.block AS "ownerUnitBlock", ou.number AS "ownerUnitNumber",
+         f.owner_user_id AS "ownerUserId", ow.name AS "ownerUserName",
          f.created_at AS "createdAt"
     FROM tb_found_items f
     LEFT JOIN tb_users rb ON rb.idtb_users = f.registered_by
     LEFT JOIN tb_users cb ON cb.idtb_users = f.closed_by
     LEFT JOIN tb_users rt ON rt.idtb_users = f.returned_to
-    LEFT JOIN tb_found_item_returns r ON r.idtb_found_items = f.idtb_found_items`;
+    LEFT JOIN tb_found_item_returns r ON r.idtb_found_items = f.idtb_found_items
+    LEFT JOIN tb_units ou ON ou.idtb_units = f.owner_unit_id
+    LEFT JOIN tb_users ow ON ow.idtb_users = f.owner_user_id`;
+
+type ItemRow = Omit<FoundItem, "ownerUnitLabel"> & {
+  ownerUnitStreet: string | null;
+  ownerUnitBlock: string | null;
+  ownerUnitNumber: string | null;
+};
+
+const toItem = (row: ItemRow): FoundItem => {
+  const { ownerUnitStreet, ownerUnitBlock, ownerUnitNumber, ...item } = row;
+  return {
+    ...item,
+    ownerUnitLabel:
+      ownerUnitNumber !== null
+        ? unitLabel({
+            street: ownerUnitStreet,
+            block: ownerUnitBlock ?? "",
+            number: ownerUnitNumber,
+          })
+        : null,
+  };
+};
+
+/** Most values offered in each filter list. */
+const USED_VALUES_LIMIT = 300;
+
+/** The note of the claim given to the resident the desk named. */
+const OWNER_NOTE = "Indicado pela portaria no registro.";
 
 /** Kept first, then the newest found. */
 const ORDER = `ORDER BY (f.status = '${KEPT}') DESC, f.found_at DESC,
@@ -152,30 +191,88 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
     private readonly outbox: OutboxTypeormWriter,
   ) {}
 
-  async create(item: NewFoundItem): Promise<FoundItem> {
-    const [row] = await this.dataSource.query<{ id: string }[]>(
-      `INSERT INTO tb_found_items
+  create(
+    item: NewFoundItem,
+    notices: (item: FoundItem) => OutboxDraft[],
+  ): Promise<FoundItem> {
+    return this.dataSource.transaction(async (manager) => {
+      const [row] = await manager.query<{ id: string }[]>(
+        `INSERT INTO tb_found_items
          (idtb_condominiums, category, title, description, private_details,
           found_location, found_at, storage_location, photo_key, photo_hidden,
-          keep_until, registered_by, created_by, updated_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12, $12)
+          keep_until, registered_by, created_by, updated_by, owner_unit_id,
+          owner_user_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12, $12,
+               $13, $14)
        RETURNING idtb_found_items AS id`,
-      [
-        item.condominiumId,
-        item.category,
-        item.title,
-        item.description,
-        item.privateDetails,
-        item.foundLocation,
-        item.foundAt,
-        item.storageLocation,
-        item.photoKey,
-        item.photoHidden,
-        item.keepUntil,
-        item.registeredBy,
-      ],
-    );
-    return this.get(this.dataSource.manager, row.id);
+        [
+          item.condominiumId,
+          item.category,
+          item.title,
+          item.description,
+          item.privateDetails,
+          item.foundLocation,
+          item.foundAt,
+          item.storageLocation,
+          item.photoKey,
+          item.photoHidden,
+          item.keepUntil,
+          item.registeredBy,
+          item.ownerUnitId,
+          item.ownerUserId,
+        ],
+      );
+      // A resident the desk knows it belongs to: their claim, accepted.
+      if (item.ownerUserId) {
+        await manager.query(
+          `INSERT INTO tb_found_item_claims
+           (idtb_found_items, idtb_users, status, decided_at, decided_by,
+            decision_note)
+         VALUES ($1, $2, '${ClaimStatus.ACCEPTED}', now(), $3, $4)`,
+          [row.id, item.ownerUserId, item.registeredBy, OWNER_NOTE],
+        );
+      }
+      const created = await this.get(manager, row.id);
+      await this.outbox.write(manager, notices(created));
+      return created;
+    });
+  }
+
+  release(
+    itemId: string,
+    by: string,
+    at: Date,
+    notices: (item: FoundItem) => OutboxDraft[],
+  ): Promise<FoundItem | null> {
+    return this.dataSource.transaction(async (manager) => {
+      const [previous] = await manager.query<{ ownerUserId: string | null }[]>(
+        `SELECT owner_user_id AS "ownerUserId" FROM tb_found_items
+          WHERE idtb_found_items = $1 AND status = '${KEPT}'
+            AND owner_unit_id IS NOT NULL
+          FOR UPDATE`,
+        [itemId],
+      );
+      if (!previous) return null;
+      await manager.query(
+        `UPDATE tb_found_items
+            SET owner_unit_id = NULL, owner_user_id = NULL, updated_by = $2,
+                updated_at = now()
+          WHERE idtb_found_items = $1`,
+        [itemId, by],
+      );
+      if (previous.ownerUserId) {
+        await manager.query(
+          `UPDATE tb_found_item_claims
+              SET status = '${ClaimStatus.WITHDRAWN}', updated_at = $3
+            WHERE idtb_found_items = $1 AND idtb_users = $2
+              AND status IN ('${ClaimStatus.PENDING}', '${ClaimStatus.ACCEPTED}')`,
+          [itemId, previous.ownerUserId, at],
+        );
+      }
+      const item = await this.get(manager, itemId);
+      await this.outbox.write(manager, notices(item));
+      return item;
+    });
   }
 
   async find(condominiumId: string, id: string): Promise<FoundItem | null> {
@@ -211,6 +308,27 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
           OR unaccent(f.found_location) ILIKE unaccent($${n}))`,
       );
     }
+    for (const [column, value] of [
+      ["title", filter.title],
+      ["found_location", filter.foundLocation],
+      ["storage_location", filter.storageLocation],
+    ] as const) {
+      if (!value) continue;
+      params.push(value);
+      where.push(
+        `lower(unaccent(f.${column})) = lower(unaccent(${params.length}))`,
+      );
+    }
+    if (filter.residentId) {
+      params.push(filter.residentId);
+      const n = params.length;
+      where.push(
+        `(f.owner_user_id = ${n}::uuid
+          OR EXISTS (SELECT 1 FROM tb_found_item_claims c
+                      WHERE c.idtb_found_items = f.idtb_found_items
+                        AND c.idtb_users = ${n}::uuid))`,
+      );
+    }
     if (filter.withPendingClaims) {
       where.push(
         `EXISTS (SELECT 1 FROM tb_found_item_claims c
@@ -232,13 +350,22 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
   listKept(
     condominiumId: string,
     category: FoundItemCategory | null,
+    viewer: KeptViewer,
     page: PageRequest,
   ): Promise<Paginated<FoundItem>> {
-    const params: unknown[] = [condominiumId];
-    const where = ["f.idtb_condominiums = $1", `f.status = '${KEPT}'`];
+    // A reserved item shows only to its resident (or, reserved for a
+    // unit, to that unit's residents).
+    const params: unknown[] = [condominiumId, viewer.userId, viewer.unitId];
+    const where = [
+      "f.idtb_condominiums = $1",
+      `f.status = '${KEPT}'`,
+      `(f.owner_unit_id IS NULL
+        OR f.owner_user_id = $2
+        OR (f.owner_user_id IS NULL AND f.owner_unit_id = $3::uuid))`,
+    ];
     if (category) {
       params.push(category);
-      where.push(`f.category = $2`);
+      where.push(`f.category = ${params.length}`);
     }
     return this.page(`WHERE ${where.join(" AND ")}`, params, page);
   }
@@ -247,7 +374,14 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
     condominiumId: string,
     expiringBefore: Date,
   ): Promise<FoundItemOverview> {
-    const [byStatus, [counts]] = await Promise.all([
+    const [
+      byStatus,
+      [counts],
+      titles,
+      foundLocations,
+      storageLocations,
+      residents,
+    ] = await Promise.all([
       this.dataSource.query<{ status: FoundItemStatus; count: number }[]>(
         `SELECT status, count(*)::int AS count
            FROM tb_found_items WHERE idtb_condominiums = $1
@@ -265,12 +399,51 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
                AND keep_until < $2) AS "expiringSoon"`,
         [condominiumId, expiringBefore],
       ),
+      this.usedValues(condominiumId, "title"),
+      this.usedValues(condominiumId, "found_location"),
+      this.usedValues(condominiumId, "storage_location"),
+      this.dataSource.query<{ id: string; name: string }[]>(
+        `SELECT u.idtb_users AS id, u.name
+           FROM tb_users u
+          WHERE u.idtb_users IN (
+                  SELECT f.owner_user_id FROM tb_found_items f
+                   WHERE f.idtb_condominiums = $1
+                  UNION
+                  SELECT c.idtb_users FROM tb_found_item_claims c
+                    JOIN tb_found_items f
+                      ON f.idtb_found_items = c.idtb_found_items
+                   WHERE f.idtb_condominiums = $1)
+          ORDER BY u.name
+          LIMIT ${USED_VALUES_LIMIT}`,
+        [condominiumId],
+      ),
     ]);
     return {
       byStatus,
       pendingClaims: counts?.pendingClaims ?? 0,
       expiringSoon: counts?.expiringSoon ?? 0,
+      titles,
+      foundLocations,
+      storageLocations,
+      residents,
     };
+  }
+
+  /** The distinct values of a column, most recently found first. */
+  private async usedValues(
+    condominiumId: string,
+    column: "title" | "found_location" | "storage_location",
+  ): Promise<string[]> {
+    const rows = await this.dataSource.query<{ value: string }[]>(
+      `SELECT ${column} AS value
+         FROM tb_found_items
+        WHERE idtb_condominiums = $1
+        GROUP BY ${column}
+        ORDER BY max(found_at) DESC
+        LIMIT ${USED_VALUES_LIMIT}`,
+      [condominiumId],
+    );
+    return rows.map((row) => row.value);
   }
 
   async claimsOf(itemId: string): Promise<FoundItemClaim[]> {
@@ -280,6 +453,19 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
         ORDER BY c.created_at DESC`,
       [itemId],
     );
+  }
+
+  async latestClaimBy(
+    itemId: string,
+    userId: string,
+  ): Promise<FoundItemClaim | null> {
+    const [claim] = await this.claims(
+      this.dataSource.manager,
+      `${CLAIM_SELECT} WHERE c.idtb_found_items = $1 AND c.idtb_users = $2
+        ORDER BY c.created_at DESC LIMIT 1`,
+      [itemId, userId],
+    );
+    return claim ?? null;
   }
 
   async findClaim(
@@ -293,6 +479,35 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
       [condominiumId, id],
     );
     return claim ?? null;
+  }
+
+  async claimsIn(
+    condominiumId: string,
+    open: boolean,
+    page: PageRequest,
+  ): Promise<Paginated<FoundItemClaim>> {
+    const clause = open
+      ? `WHERE f.idtb_condominiums = $1 AND f.status = '${KEPT}'
+          AND c.status IN ('${ClaimStatus.PENDING}', '${ClaimStatus.ACCEPTED}')`
+      : `WHERE f.idtb_condominiums = $1`;
+    const order = open
+      ? `ORDER BY (c.status = '${ClaimStatus.PENDING}') DESC, c.created_at`
+      : `ORDER BY c.created_at DESC`;
+    const [items, [count]] = await Promise.all([
+      this.claims(
+        this.dataSource.manager,
+        `${CLAIM_SELECT} ${clause} ${order}, c.idtb_found_item_claims
+          LIMIT ${Number(page.limit)} OFFSET ${(page.page - 1) * page.limit}`,
+        [condominiumId],
+      ),
+      this.dataSource.query<{ total: number }[]>(
+        `SELECT count(*)::int AS total FROM tb_found_item_claims c
+           JOIN tb_found_items f ON f.idtb_found_items = c.idtb_found_items
+          ${clause}`,
+        [condominiumId],
+      ),
+    ]);
+    return paginate(items, count?.total ?? 0, page);
   }
 
   async claimsBy(
@@ -321,7 +536,7 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
   claim(
     itemId: string,
     userId: string,
-    message: string,
+    message: string | null,
     notices: (claim: FoundItemClaim) => OutboxDraft[],
   ): Promise<FoundItemClaim | null> {
     return this.dataSource.transaction(async (manager) => {
@@ -443,7 +658,18 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
           record.evidenceSha256,
         ],
       );
-      // The claim it closes stays accepted; every other open one is over.
+      // The claim it closes is accepted (if it was still pending, the desk
+      // checked the owner at the handover); every other open one is over.
+      if (record.claimId) {
+        await manager.query(
+          `UPDATE tb_found_item_claims
+              SET status = '${ClaimStatus.ACCEPTED}', decided_at = $2,
+                  decided_by = $3, updated_at = now()
+            WHERE idtb_found_item_claims = $1
+              AND status = '${ClaimStatus.PENDING}'`,
+          [record.claimId, record.signedAt, record.collectedBy],
+        );
+      }
       const rejected = await this.rejectOpenClaims(
         manager,
         itemId,
@@ -623,12 +849,12 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
     return item;
   }
 
-  private query(
+  private async query(
     manager: EntityManager,
     sql: string,
     params: unknown[],
   ): Promise<FoundItem[]> {
-    return manager.query<FoundItem[]>(sql, params);
+    return (await manager.query<ItemRow[]>(sql, params)).map(toItem);
   }
 
   private async claims(

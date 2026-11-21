@@ -27,9 +27,13 @@ export function toFoundItemType(item: FoundItem): FoundItemType {
     closedAt: item.closedAt,
     closedByName: item.closedByName,
     closeReason: item.closeReason,
-    returnedToName: item.returnedToName,
-    signerName: item.signerName,
+    returnedToId: item.returnedToId,
+    returnedToNameRaw: item.returnedToName,
+    signerNameRaw: item.signerName,
     pendingClaims: item.pendingClaims,
+    awaitedByNameRaw: item.awaitedByName,
+    ownerUnitLabel: item.ownerUnitLabel,
+    ownerName: item.ownerUserName,
   };
 }
 

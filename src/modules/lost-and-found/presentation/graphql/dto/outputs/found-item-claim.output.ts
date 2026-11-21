@@ -34,8 +34,11 @@ export class FoundItemClaimType {
   @Field(() => String, { nullable: true, description: "Unidade do morador." })
   unitLabel!: string | null;
 
-  @Field({ description: "Como o morador descreveu o item." })
-  message!: string;
+  @Field(() => String, {
+    nullable: true,
+    description: "O que o morador acrescentou sobre o item (opcional).",
+  })
+  message!: string | null;
 
   @Field(() => ClaimStatus)
   status!: ClaimStatus;

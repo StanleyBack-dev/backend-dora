@@ -1535,8 +1535,8 @@ type FoundItemClaim {
   """Unidade do morador."""
   unitLabel: String
 
-  """Como o morador descreveu o item."""
-  message: String!
+  """O que o morador acrescentou sobre o item (opcional)."""
+  message: String
   status: FoundItemClaimStatus!
   createdAt: DateTime!
   decidedAt: DateTime
@@ -1544,6 +1544,9 @@ type FoundItemClaim {
 
   """Observação da portaria (o motivo, ao recusar)."""
   decisionNote: String
+
+  """O item pedido."""
+  item: FoundItem!
 }
 
 """Guardado, devolvido ao dono, doado ou descartado."""
@@ -1572,6 +1575,88 @@ enum FoundItemClaimStatus {
   ACCEPTED
   REJECTED
   WITHDRAWN
+}
+
+"""Item achado no condomínio."""
+type FoundItem {
+  id: ID!
+  category: FoundItemCategory!
+
+  """O que é (ex.: chave com chaveiro azul)."""
+  title: String!
+
+  """O que os moradores veem sobre o item."""
+  description: String
+
+  """Onde foi achado."""
+  foundLocation: String!
+  foundAt: DateTime!
+
+  """Onde está guardado."""
+  storageLocation: String!
+
+  """A foto não aparece para os moradores."""
+  photoHidden: Boolean!
+  status: FoundItemStatus!
+  registeredByName: String
+
+  """Guardado até (depois: doado ou descartado)."""
+  keepUntil: DateTime!
+  closedAt: DateTime
+  closedByName: String
+
+  """Por que foi doado ou descartado."""
+  closeReason: String
+
+  """Pedidos aguardando a portaria."""
+  pendingClaims: Int!
+
+  """
+  Reservado pela portaria para esta unidade (nulo: qualquer morador pode pedir).
+  """
+  ownerUnitLabel: String
+
+  """Reservado para este morador da unidade."""
+  ownerName: String
+
+  """
+  Link temporário da foto (nulo para moradores quando a foto está escondida).
+  """
+  photoUrl: String
+
+  """Detalhes para conferir o dono: só a portaria e a gestão veem."""
+  privateDetails: String
+
+  """Pedidos do item (só a portaria e a gestão; vazio para os demais)."""
+  claims: [FoundItemClaim!]!
+
+  """
+  Morador com pedido aceito, que pode vir buscar (só a portaria e a gestão veem).
+  """
+  awaitedByName: String
+
+  """O pedido mais recente de quem consulta (nulo: não pediu)."""
+  myClaim: FoundItemClaim
+
+  """
+  Morador a quem foi devolvido (pelo pedido dele). Só a portaria, a gestão e o próprio morador veem.
+  """
+  returnedToName: String
+
+  """
+  Quem assinou. Só a portaria, a gestão e o morador a quem foi devolvido veem.
+  """
+  signerName: String
+
+  """
+  A declaração que quem retira assina, sem o começo "Eu, <nome>, ". Só enquanto está guardado.
+  """
+  returnDeclaration: String
+
+  """
+  Comprovante da devolução (só itens devolvidos; para a portaria, a gestão e o morador a quem foi devolvido).
+  """
+  returnReceipt: FoundItemReturn
 }
 
 """
@@ -1626,64 +1711,14 @@ enum SignatureLocationStatus {
   UNAVAILABLE
 }
 
-"""Item achado no condomínio."""
-type FoundItem {
-  id: ID!
-  category: FoundItemCategory!
+"""Um morador (com a unidade) para indicar de quem é um item."""
+type FoundItemOwnerOptionType {
+  userId: ID!
+  name: String!
+  unitId: ID!
 
-  """O que é (ex.: chave com chaveiro azul)."""
-  title: String!
-
-  """O que os moradores veem sobre o item."""
-  description: String
-
-  """Onde foi achado."""
-  foundLocation: String!
-  foundAt: DateTime!
-
-  """Onde está guardado."""
-  storageLocation: String!
-
-  """A foto não aparece para os moradores."""
-  photoHidden: Boolean!
-  status: FoundItemStatus!
-  registeredByName: String
-
-  """Guardado até (depois: doado ou descartado)."""
-  keepUntil: DateTime!
-  closedAt: DateTime
-  closedByName: String
-
-  """Por que foi doado ou descartado."""
-  closeReason: String
-
-  """Morador a quem foi devolvido (pelo pedido dele)."""
-  returnedToName: String
-
-  """Quem assinou."""
-  signerName: String
-
-  """Pedidos aguardando a portaria."""
-  pendingClaims: Int!
-
-  """
-  Link temporário da foto (nulo para moradores quando a foto está escondida).
-  """
-  photoUrl: String
-
-  """Detalhes para conferir o dono: só a portaria e a gestão veem."""
-  privateDetails: String
-
-  """Pedidos do item (só a portaria e a gestão; vazio para os demais)."""
-  claims: [FoundItemClaim!]!
-
-  """
-  A declaração que quem retira assina, sem o começo "Eu, <nome>, ". Só enquanto está guardado.
-  """
-  returnDeclaration: String
-
-  """Comprovante da devolução (só itens devolvidos)."""
-  returnReceipt: FoundItemReturn
+  """Ex.: Bloco A · 101."""
+  unitLabel: String!
 }
 
 type FoundItemClaimPage {
@@ -1699,6 +1734,12 @@ type FoundItemStatusCount {
   count: Int!
 }
 
+"""Um morador que pediu um item ou para quem um foi reservado."""
+type FoundItemResident {
+  id: ID!
+  name: String!
+}
+
 """Os itens achados do condomínio em números."""
 type FoundItemOverview {
   byStatus: [FoundItemStatusCount!]!
@@ -1708,6 +1749,18 @@ type FoundItemOverview {
 
   """Itens guardados com o prazo terminando em até 7 dias."""
   expiringSoon: Int!
+
+  """Os itens registrados (para o filtro; recentes primeiro)."""
+  titles: [String!]!
+
+  """Os locais onde itens foram achados."""
+  foundLocations: [String!]!
+
+  """Os locais de guarda usados."""
+  storageLocations: [String!]!
+
+  """Moradores que pediram itens ou para quem itens foram reservados."""
+  residents: [FoundItemResident!]!
 }
 
 type FoundItemPage {
@@ -1760,6 +1813,8 @@ enum NotificationType {
   FOUND_ITEM_CLAIM_DECIDED
   FOUND_ITEM_RETURNED
   FOUND_ITEM_EXPIRING
+  FOUND_ITEM_FOR_YOU
+  FOUND_ITEM_NOT_OWNER
 }
 
 type NotificationPage {
@@ -2772,11 +2827,19 @@ type Query {
     page: PageInput
   ): LandingLeadPage!
 
+  """Moradores (com a unidade) pelo nome, para indicar de quem é um item."""
+  foundItemOwners(search: String!): [FoundItemOwnerOptionType!]!
+
   """Itens achados do condomínio, com filtros, por página."""
   foundItems(filter: FoundItemFilterInput, page: PageInput): FoundItemPage!
 
   """Os itens achados em números."""
   foundItemOverview: FoundItemOverview!
+
+  """
+  Pedidos de itens achados do condomínio: os abertos (aguardando ou aceitos, de itens guardados) em fila, ou todos.
+  """
+  foundItemClaims(open: Boolean, page: PageInput): FoundItemClaimPage!
 
   """Itens achados ainda guardados (o que os moradores consultam)."""
   keptFoundItems(category: FoundItemCategory, page: PageInput): FoundItemPage!
@@ -3046,6 +3109,18 @@ input FoundItemFilterInput {
 
   """Parte do que é, da descrição ou de onde foi achado."""
   search: String
+
+  """Exatamente este item (o que é)."""
+  title: String
+
+  """Exatamente este local onde foi achado."""
+  foundLocation: String
+
+  """Exatamente este local de guarda."""
+  storageLocation: String
+
+  """Itens reservados para este morador ou que ele pediu."""
+  residentId: ID
 
   """Só os itens com pedidos aguardando."""
   withPendingClaims: Boolean
@@ -3326,11 +3401,18 @@ type Mutation {
   """
   recordLandingEvents(input: RecordLandingEventsInput!): Int!
 
+  """
+  Tira a reserva de um item: o dono diz que não é dele (a portaria é avisada), ou a portaria libera para todos.
+  """
+  releaseFoundItem(id: ID!): FoundItem!
+
   """Registra um item achado no condomínio."""
   registerFoundItem(input: RegisterFoundItemInput!): FoundItem!
 
-  """Diz que um item achado é seu, descrevendo-o para a portaria conferir."""
-  claimFoundItem(itemId: ID!, message: String!): FoundItemClaim!
+  """
+  Diz que um item achado é seu (uma descrição é opcional): a portaria confere na retirada.
+  """
+  claimFoundItem(itemId: ID!, message: String): FoundItemClaim!
 
   """Cancela um pedido seu ainda aguardando."""
   withdrawFoundItemClaim(claimId: ID!): FoundItemClaim!
@@ -3962,6 +4044,16 @@ input RegisterFoundItemInput {
 
   """Esconder a foto dos moradores (padrão: só documentos)."""
   photoHidden: Boolean
+
+  """
+  De quem é, se a portaria sabe: a unidade (os moradores dela são avisados e veem o item).
+  """
+  ownerUnitId: ID
+
+  """
+  Ou um morador da unidade: só ele é avisado e vê o item, com o pedido já aceito.
+  """
+  ownerUserId: ID
 }
 
 """

@@ -30,14 +30,14 @@ export class ClaimFoundItemUseCase {
   async claim(
     actor: AuthenticatedUser,
     itemId: string,
-    message: string,
+    message: string | null | undefined,
   ): Promise<FoundItemClaim> {
     const item = await this.access.loadVisible(actor, itemId);
     if (!isKept(item.status)) {
       throw AppException.from(APP_ERRORS.lostFound.notKept, undefined);
     }
     const text = normalizeClaimMessage(message);
-    if (!text) {
+    if (text === undefined) {
       throw AppException.from(APP_ERRORS.lostFound.invalidClaim, undefined);
     }
     const staff = (await this.access.staff(item.condominiumId)).filter(

@@ -1,4 +1,4 @@
-import { Field, Int, ObjectType } from "@nestjs/graphql";
+import { Field, ID, Int, ObjectType } from "@nestjs/graphql";
 import { FoundItemStatus } from "@/modules/lost-and-found/domain/found-item";
 import "@/modules/lost-and-found/presentation/graphql/lost-found.graphql-enums";
 
@@ -9,6 +9,17 @@ export class FoundItemStatusCountType {
 
   @Field(() => Int)
   count!: number;
+}
+
+@ObjectType("FoundItemResident", {
+  description: "Um morador que pediu um item ou para quem um foi reservado.",
+})
+export class FoundItemResidentType {
+  @Field(() => ID)
+  id!: string;
+
+  @Field()
+  name!: string;
 }
 
 @ObjectType("FoundItemOverview", {
@@ -25,4 +36,21 @@ export class FoundItemOverviewType {
     description: "Itens guardados com o prazo terminando em até 7 dias.",
   })
   expiringSoon!: number;
+
+  @Field(() => [String], {
+    description: "Os itens registrados (para o filtro; recentes primeiro).",
+  })
+  titles!: string[];
+
+  @Field(() => [String], { description: "Os locais onde itens foram achados." })
+  foundLocations!: string[];
+
+  @Field(() => [String], { description: "Os locais de guarda usados." })
+  storageLocations!: string[];
+
+  @Field(() => [FoundItemResidentType], {
+    description:
+      "Moradores que pediram itens ou para quem itens foram reservados.",
+  })
+  residents!: FoundItemResidentType[];
 }

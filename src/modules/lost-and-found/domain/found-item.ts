@@ -92,11 +92,15 @@ export function normalizeNote(value: string | null | undefined) {
   return note.length >= 3 && note.length <= 300 ? note : null;
 }
 
-/** What a claim says about the item: 10 to 500 characters (null otherwise). */
-export function normalizeClaimMessage(value: string | null | undefined) {
-  const message = (value ?? "").trim().replace(/\s+/g, " ");
-  return message.length >= 10 && message.length <= 500 ? message : null;
-}
+/** A claim's optional description: up to 500 characters. */
+export const CLAIM_MESSAGE_MAX = 500;
+
+/**
+ * What a claim says about the item (optional): trimmed, "" -> null;
+ * undefined when it is too long.
+ */
+export const normalizeClaimMessage = (value: string | null | undefined) =>
+  optionalText(value, CLAIM_MESSAGE_MAX);
 
 /** Only an item still kept can be claimed, returned, donated or discarded. */
 export const isKept = (status: FoundItemStatus) =>
