@@ -61,6 +61,12 @@ export enum NotificationType {
   FOUND_ITEM_FOR_YOU = "FOUND_ITEM_FOR_YOU",
   /** To the staff: whoever an item was reserved for says it is not theirs. */
   FOUND_ITEM_NOT_OWNER = "FOUND_ITEM_NOT_OWNER",
+  /** "Perdi algo": an item of the category you lost was found. */
+  LOST_REPORT_MATCH = "LOST_REPORT_MATCH",
+  /** "Achei isso": a neighbour says they found what was reported lost. */
+  LOST_REPORT_SPOTTED = "LOST_REPORT_SPOTTED",
+  /** "Perdi algo" ended after the keeping period without news. */
+  LOST_REPORT_EXPIRED = "LOST_REPORT_EXPIRED",
 }
 
 export const ALL_NOTIFICATION_TYPES: readonly NotificationType[] =

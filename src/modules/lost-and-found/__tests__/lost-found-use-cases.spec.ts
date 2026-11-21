@@ -2,6 +2,10 @@ import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { AppException } from "@/common/exceptions/app-exception";
 import type { CondominiumLookupService } from "@/modules/condominiums/application/condominium-lookup.service";
 import type { LostFoundAccessService } from "@/modules/lost-and-found/application/lost-found-access.service";
+import type {
+  LostReport,
+  LostReportRepositoryPort,
+} from "@/modules/lost-and-found/application/ports/lost-report-repository.port";
 import type { LostFoundDeclarationService } from "@/modules/lost-and-found/application/lost-found-declaration.service";
 import type {
   FoundItem,
@@ -22,6 +26,7 @@ import {
   FoundItemStatus,
   returnDeclaration,
 } from "@/modules/lost-and-found/domain/found-item";
+import { LostReportStatus } from "@/modules/lost-and-found/domain/lost-report";
 import type { OutboxDraft } from "@/modules/outbox/domain/outbox";
 import type { ClockPort } from "@/shared/application/ports/clock.port";
 import type { ImageProcessorPort } from "@/shared/application/ports/image-processor.port";
@@ -74,6 +79,7 @@ const access = (item: FoundItem) =>
     condominiumOf: async () => "condo-1",
     loadVisible: async () => item,
     staff: async () => ["gate-1", "manager-1"],
+    onlyStaffMember: async () => false,
     canManage: async (actor: AuthenticatedUser) => actor.id === "gate-1",
     isOwner: async (actor: AuthenticatedUser, found: FoundItem) =>
       found.ownerUserId
@@ -84,7 +90,9 @@ const access = (item: FoundItem) =>
       ownerUserId: string | null;
     }) =>
       !owner.ownerUnitId
-        ? []
+        ? owner.ownerUserId
+          ? [owner.ownerUserId]
+          : []
         : owner.ownerUserId && UNIT_RESIDENTS.includes(owner.ownerUserId)
           ? [owner.ownerUserId]
           : UNIT_RESIDENTS,
@@ -113,10 +121,33 @@ describe("RegisterFoundItemUseCase", () => {
       unitIn: async (_condominium: string, id: string) =>
         id === "unit-1" ? { id: "unit-1" } : null,
     } as unknown as CondominiumLookupService;
+    // Someone lost keys; the gate itself too (not told of its own item).
+    const reports = {
+      openOf: async (_condominium: string, category: FoundItemCategory) =>
+        category === FoundItemCategory.KEYS
+          ? ([
+              { userId: "resident-9", title: "Chave do carro" },
+              { userId: "resident-9", title: "Chave de casa" },
+              { userId: "gate-1", title: "Minhas chaves" },
+            ] as LostReport[])
+          : [],
+      // "report-open" is still open; "report-done" already ended.
+      find: async (_condominium: string, id: string) =>
+        id === "report-open" || id === "report-done"
+          ? ({
+              id,
+              status:
+                id === "report-open"
+                  ? LostReportStatus.OPEN
+                  : LostReportStatus.FOUND,
+            } as LostReport)
+          : null,
+    } as unknown as LostReportRepositoryPort;
     return {
       told,
       useCase: new RegisterFoundItemUseCase(
         items,
+        reports,
         access(kept()),
         condominiums,
         {} as ImageProcessorPort,
@@ -144,6 +175,26 @@ describe("RegisterFoundItemUseCase", () => {
     });
   });
 
+  it("reserves it for a staff member (only them told), not for someone else", async () => {
+    const { useCase, told, created } = setup();
+    const base = {
+      category: FoundItemCategory.KEYS,
+      title: "Crachá",
+      foundLocation: "Hall",
+      storageLocation: "Portaria",
+    };
+    await useCase.execute(staff, { ...base, ownerUserId: "manager-1" });
+    expect(created[0]).toMatchObject({
+      ownerUnitId: null,
+      ownerUserId: "manager-1",
+    });
+    expect(told).toEqual([["manager-1"]]);
+    await expect(
+      useCase.execute(staff, { ...base, ownerUserId: "resident-1" }),
+    ).rejects.toThrow("alguém da equipe");
+    expect(created).toHaveLength(1);
+  });
+
   it("tells only the resident named, or every resident of the unit", async () => {
     const { useCase, told, created } = setup();
     const base = {
@@ -159,11 +210,30 @@ describe("RegisterFoundItemUseCase", () => {
     });
     await useCase.execute(staff, { ...base, ownerUnitId: "unit-1" });
     await useCase.execute(staff, base);
-    expect(told).toEqual([["resident-1"], UNIT_RESIDENTS, []]);
+    // Reserved: only the owners; not reserved: who lost keys (once each).
+    expect(told).toEqual([["resident-1"], UNIT_RESIDENTS, ["resident-9"]]);
     expect(created[0]).toMatchObject({
       ownerUnitId: "unit-1",
       ownerUserId: "resident-1",
     });
+  });
+
+  it("ends the report it answers, and refuses one already ended", async () => {
+    const { useCase, created } = setup();
+    const base = {
+      category: FoundItemCategory.KEYS,
+      title: "Chave do carro",
+      foundLocation: "Garagem",
+      storageLocation: "Portaria",
+    };
+    await useCase.execute(staff, { ...base, lostReportId: "report-open" });
+    // Linked in the item's own transaction (the repository refuses an
+    // ended one).
+    expect(created[0]).toMatchObject({ lostReportId: "report-open" });
+    await expect(
+      useCase.execute(staff, { ...base, lostReportId: "report-done" }),
+    ).rejects.toThrow("já foi encerrado");
+    expect(created).toHaveLength(1);
   });
 
   it("refuses a resident who does not live in the unit", async () => {
@@ -314,7 +384,7 @@ describe("DecideClaimUseCase", () => {
   it("does not let staff answer their own claim", async () => {
     const { useCase, decided } = setup(claim({ userId: staff.id }));
     await expect(useCase.execute(staff, "claim-1", true, null)).rejects.toThrow(
-      "Este pedido é seu",
+      "Este item é seu",
     );
     expect(decided).toHaveLength(0);
   });
@@ -341,10 +411,15 @@ describe("ReturnFoundItemUseCase", () => {
     ],
   });
 
-  function setup(found: FoundItemClaim | null) {
+  function setup(
+    found: FoundItemClaim | null,
+    open: FoundItemClaim[] = found ? [found] : [],
+    alone = false,
+  ) {
     let written: NewFoundItemReturn | null = null;
     const items = {
       findClaim: async () => found,
+      claimsOf: async () => open,
       returnItem: async (
         _id: string,
         record: NewFoundItemReturn,
@@ -381,10 +456,24 @@ describe("ReturnFoundItemUseCase", () => {
       put: async () => undefined,
       deleteMany: async () => undefined,
     } as unknown as ObjectStoragePort;
+    const closedReports: string[] = [];
+    const reports = {
+      closeFoundBy: async (userId: string) => {
+        closedReports.push(userId);
+        return 1;
+      },
+    } as unknown as LostReportRepositoryPort;
     return {
+      closedReports,
       useCase: new ReturnFoundItemUseCase(
         items,
-        access(kept()),
+        reports,
+        alone
+          ? ({
+              ...access(kept()),
+              onlyStaffMember: async () => true,
+            } as unknown as LostFoundAccessService)
+          : access(kept()),
         declarations,
         images,
         storage,
@@ -404,7 +493,9 @@ describe("ReturnFoundItemUseCase", () => {
   };
 
   it("returns it to the accepted claim with the evidence digest", async () => {
-    const { useCase, written } = setup(claim({ status: ClaimStatus.ACCEPTED }));
+    const { useCase, written, closedReports } = setup(
+      claim({ status: ClaimStatus.ACCEPTED }),
+    );
     const item = await useCase.execute(
       staff,
       { ...input, claimId: "claim-1" },
@@ -420,6 +511,9 @@ describe("ReturnFoundItemUseCase", () => {
     });
     expect(written()?.declaration).toBe(`Eu, Maria Souza, ${DECLARATION}`);
     expect(written()?.evidenceSha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(written()?.selfHandover).toBe(false);
+    // Their "Perdi algo" of that category ends.
+    expect(closedReports).toEqual(["resident-1"]);
   });
 
   it("hands over a pending claim directly (checked in person)", async () => {
@@ -430,6 +524,30 @@ describe("ReturnFoundItemUseCase", () => {
       { ipAddress: null, userAgent: null },
     );
     expect(written()).toMatchObject({ claimId: "claim-1" });
+  });
+
+  it('refuses handing over to oneself, even as "someone else"', async () => {
+    const own = claim({ userId: "gate-1", status: ClaimStatus.ACCEPTED });
+    const { useCase, written } = setup(null, [own]);
+    await expect(
+      useCase.execute(
+        staff,
+        { ...input, signerName: "Porteiro Gate", claimId: null },
+        { ipAddress: null, userAgent: null },
+      ),
+    ).rejects.toThrow("outra pessoa da portaria");
+    expect(written()).toBeNull();
+  });
+
+  it("lets the team's only member hand over their own item, on record", async () => {
+    const own = claim({ userId: "gate-1", status: ClaimStatus.ACCEPTED });
+    const { useCase, written } = setup(own, [own], true);
+    await useCase.execute(
+      staff,
+      { ...input, signerName: "Porteiro Gate", claimId: "claim-1" },
+      { ipAddress: null, userAgent: null },
+    );
+    expect(written()).toMatchObject({ selfHandover: true });
   });
 
   it("refuses a rejected claim", async () => {
@@ -492,6 +610,7 @@ describe("CloseFoundItemUseCase", () => {
 describe("ReleaseFoundItemUseCase", () => {
   function setup(item: FoundItem) {
     const told: string[][] = [];
+    const reopened: string[] = [];
     const items = {
       release: async (
         _id: string,
@@ -509,7 +628,18 @@ describe("ReleaseFoundItemUseCase", () => {
       },
     } as unknown as FoundItemRepositoryPort;
     return {
-      useCase: new ReleaseFoundItemUseCase(items, access(item), clock),
+      reopened,
+      useCase: new ReleaseFoundItemUseCase(
+        items,
+        {
+          reopenLinkedTo: async (itemId: string) => {
+            reopened.push(itemId);
+            return 1;
+          },
+        } as unknown as LostReportRepositoryPort,
+        access(item),
+        clock,
+      ),
       told,
     };
   }
@@ -520,13 +650,15 @@ describe("ReleaseFoundItemUseCase", () => {
   });
 
   it("lets the owner say it is not theirs, and tells the staff", async () => {
-    const { useCase, told } = setup(reserved);
+    const { useCase, told, reopened } = setup(reserved);
     const item = await useCase.execute(
       { id: "resident-1", name: "Sonia" } as AuthenticatedUser,
       "item-1",
     );
     expect(item.ownerUnitId).toBeNull();
     expect(told[0]).toEqual(["gate-1", "manager-1"]);
+    // A "Perdi algo" report it was registered from is open again.
+    expect(reopened).toEqual([item.id]);
   });
 
   it("lets the desk lift it without telling anyone", async () => {

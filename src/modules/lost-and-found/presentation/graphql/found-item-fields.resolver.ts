@@ -38,6 +38,18 @@ export class FoundItemFieldsResolver {
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStoragePort,
   ) {}
 
+  @ResolveField(() => Boolean, {
+    description:
+      "Quem está vendo é o único da equipe (portaria e gestão): pode entregar a si mesmo um item que pediu, com registro no comprovante.",
+  })
+  async soleStaffMember(
+    @Parent() item: FoundItemType,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<boolean> {
+    if (!(await this.access.canManage(actor))) return false;
+    return this.access.onlyStaffMember(actor, item.condominiumId);
+  }
+
   @ResolveField(() => String, {
     nullable: true,
     description:
@@ -115,7 +127,9 @@ export class FoundItemFieldsResolver {
     @Parent() item: FoundItemType,
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<string | null> {
-    return (await this.seesReturn(item, actor)) ? item.returnedToNameRaw : null;
+    return (await this.access.seesReturn(actor, item))
+      ? item.returnedToNameRaw
+      : null;
   }
 
   @ResolveField(() => String, {
@@ -127,7 +141,9 @@ export class FoundItemFieldsResolver {
     @Parent() item: FoundItemType,
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<string | null> {
-    return (await this.seesReturn(item, actor)) ? item.signerNameRaw : null;
+    return (await this.access.seesReturn(actor, item))
+      ? item.signerNameRaw
+      : null;
   }
 
   @ResolveField(() => String, {
@@ -152,21 +168,10 @@ export class FoundItemFieldsResolver {
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<FoundItemReturnType | null> {
     if (item.status !== FoundItemStatus.RETURNED) return null;
-    if (!(await this.seesReturn(item, actor))) return null;
+    if (!(await this.access.seesReturn(actor, item))) return null;
     const record = await this.receipts.execute(item.id);
     if (!record) return null;
     const imageUrl = await this.storage.signedReadUrl(record.imageKey);
     return toReturnType(record, imageUrl);
-  }
-
-  /** The staff, or the resident whose claim the return answered. */
-  private async seesReturn(
-    item: FoundItemType,
-    actor: AuthenticatedUser,
-  ): Promise<boolean> {
-    if (item.returnedToId !== null && item.returnedToId === actor.id) {
-      return true;
-    }
-    return this.access.canManage(actor);
   }
 }

@@ -36,6 +36,11 @@ export type ReturnEvidence = {
   collectedByName: string;
   collectedByRole: string;
   sessionId: string | null;
+  /**
+   * Handed over by its own claimant, the only active member of the team at
+   * the time (otherwise a colleague must): written into the signed record.
+   */
+  selfHandover: boolean;
 };
 
 /** The digest stored with the return; recomputing it verifies the record. */

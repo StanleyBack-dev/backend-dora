@@ -4,6 +4,8 @@ import type { DataSource } from "typeorm";
 import type {
   Dashboard,
   DashboardReaderPort,
+  LostFoundIndicators,
+  LostFoundIndicatorsWindow,
   ParcelIndicators,
   ParcelIndicatorsWindow,
 } from "@/modules/dashboard/application/ports/dashboard-reader.port";
@@ -110,6 +112,74 @@ export class DashboardSqlReader implements DashboardReaderPort {
         counts?.averagePickupHours != null
           ? Number(counts.averagePickupHours)
           : null,
+      monthly,
+    };
+  }
+
+  async lostAndFound(
+    condominiumId: string,
+    window: LostFoundIndicatorsWindow,
+  ): Promise<LostFoundIndicators> {
+    const [[counts], monthly] = await Promise.all([
+      this.dataSource.query<
+        {
+          kept: number;
+          pendingClaims: number;
+          expiringSoon: number;
+          openLostReports: number;
+          returnedLast90Days: number;
+          leftLast90Days: number;
+        }[]
+      >(
+        `SELECT
+           count(*) FILTER (WHERE f.status = 'FOUND')::int AS kept,
+           (SELECT count(*)::int FROM tb_found_item_claims c
+              JOIN tb_found_items k ON k.idtb_found_items = c.idtb_found_items
+             WHERE k.idtb_condominiums = $1 AND k.status = 'FOUND'
+               AND c.status = 'PENDING') AS "pendingClaims",
+           count(*) FILTER (WHERE f.status = 'FOUND' AND f.keep_until <= $2)::int
+             AS "expiringSoon",
+           (SELECT count(*)::int FROM tb_lost_reports l
+             WHERE l.idtb_condominiums = $1 AND l.status = 'OPEN')
+             AS "openLostReports",
+           count(*) FILTER (WHERE f.status = 'RETURNED' AND f.closed_at >= $3)::int
+             AS "returnedLast90Days",
+           count(*) FILTER (WHERE f.status <> 'FOUND' AND f.closed_at >= $3)::int
+             AS "leftLast90Days"
+         FROM tb_found_items f WHERE f.idtb_condominiums = $1`,
+        [condominiumId, window.expiringBefore, window.since90Days],
+      ),
+      // The last 6 months in the condominium's calendar, empty ones too.
+      this.dataSource.query<
+        { month: string; found: number; returned: number }[]
+      >(
+        `WITH months AS (
+           SELECT generate_series(
+             date_trunc('month', $2::timestamptz AT TIME ZONE $3) - interval '5 months',
+             date_trunc('month', $2::timestamptz AT TIME ZONE $3),
+             interval '1 month') AS month
+         )
+         SELECT to_char(m.month, 'YYYY-MM') AS month,
+                count(f.idtb_found_items)::int AS found,
+                count(f.idtb_found_items) FILTER (WHERE f.status = 'RETURNED')::int
+                  AS returned
+           FROM months m
+           LEFT JOIN tb_found_items f
+             ON f.idtb_condominiums = $1
+            AND date_trunc('month', f.found_at AT TIME ZONE $3) = m.month
+          GROUP BY m.month ORDER BY m.month`,
+        [condominiumId, window.now, window.timeZone],
+      ),
+    ]);
+    const left = counts?.leftLast90Days ?? 0;
+    const returned = counts?.returnedLast90Days ?? 0;
+    return {
+      kept: counts?.kept ?? 0,
+      pendingClaims: counts?.pendingClaims ?? 0,
+      expiringSoon: counts?.expiringSoon ?? 0,
+      openLostReports: counts?.openLostReports ?? 0,
+      returnedLast90Days: returned,
+      returnRate: left > 0 ? Math.round((returned / left) * 100) : null,
       monthly,
     };
   }

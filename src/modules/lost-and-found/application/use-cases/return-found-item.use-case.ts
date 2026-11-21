@@ -23,6 +23,10 @@ import {
   type ReturnEvidence,
   returnEvidenceDigest,
 } from "@/modules/lost-and-found/domain/return-evidence";
+import {
+  LOST_REPORT_REPOSITORY,
+  type LostReportRepositoryPort,
+} from "@/modules/lost-and-found/application/ports/lost-report-repository.port";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
 import {
   IMAGE_PROCESSOR,
@@ -87,6 +91,8 @@ export class ReturnFoundItemUseCase {
   constructor(
     @Inject(FOUND_ITEM_REPOSITORY)
     private readonly items: FoundItemRepositoryPort,
+    @Inject(LOST_REPORT_REPOSITORY)
+    private readonly reports: LostReportRepositoryPort,
     private readonly access: LostFoundAccessService,
     private readonly declarations: LostFoundDeclarationService,
     @Inject(IMAGE_PROCESSOR) private readonly images: ImageProcessorPort,
@@ -104,8 +110,25 @@ export class ReturnFoundItemUseCase {
       throw AppException.from(APP_ERRORS.lostFound.notKept, undefined);
     }
     const claim = await this.acceptedClaim(item, input.claimId);
-    // A staff member's own claim is handed over by a colleague.
-    if (claim && claim.userId === actor.id) {
+    // Nobody hands an item over to themselves: a staff member who claimed
+    // it, or whom it is reserved for, leaves it to a colleague, whatever
+    // claim (or "someone else") is chosen.
+    const claims = await this.items.claimsOf(item.id);
+    const ownOpenClaim = claims.some(
+      (open) =>
+        open.userId === actor.id &&
+        (open.status === ClaimStatus.PENDING ||
+          open.status === ClaimStatus.ACCEPTED),
+    );
+    const own =
+      (claim !== null && claim.userId === actor.id) ||
+      ownOpenClaim ||
+      item.ownerUserId === actor.id;
+    // Unless nobody else is on the team (a one-person condominium): then
+    // they may, and the signed record says so.
+    const selfHandover =
+      own && (await this.access.onlyStaffMember(actor, item.condominiumId));
+    if (own && !selfHandover) {
       throw AppException.from(APP_ERRORS.lostFound.ownClaim, undefined);
     }
     const signer = this.signer(input);
@@ -146,6 +169,7 @@ export class ReturnFoundItemUseCase {
       collectedBy: actor.id,
       collectedByName: actor.name,
       collectedByRole: actor.group,
+      selfHandover,
       sessionId: actor.sessionId ?? null,
     };
 
@@ -172,6 +196,19 @@ export class ReturnFoundItemUseCase {
     if (!returned) {
       await this.discard(imageKey);
       throw AppException.from(APP_ERRORS.lostFound.notKept, undefined);
+    }
+    // Back with its owner: their "Perdi algo" of that category ends.
+    if (returned.returnedToId) {
+      await this.reports
+        .closeFoundBy(
+          returned.returnedToId,
+          returned.id,
+          returned.category,
+          this.clock.now(),
+        )
+        .catch((error: unknown) => {
+          this.logger.warn(`Lost reports not closed: ${String(error)}`);
+        });
     }
     return returned;
   }

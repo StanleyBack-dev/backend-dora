@@ -1,5 +1,5 @@
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
-import type { LostFoundAccessService } from "@/modules/lost-and-found/application/lost-found-access.service";
+import { LostFoundAccessService } from "@/modules/lost-and-found/application/lost-found-access.service";
 import type { LostFoundDeclarationService } from "@/modules/lost-and-found/application/lost-found-declaration.service";
 import type { GetReturnReceiptUseCase } from "@/modules/lost-and-found/application/use-cases/get-return-receipt.use-case";
 import type { ListFoundItemsUseCase } from "@/modules/lost-and-found/application/use-cases/list-found-items.use-case";
@@ -22,12 +22,15 @@ const returned = {
 
 function setup() {
   const receipts = { execute: jest.fn().mockResolvedValue(null) };
+  // The real rule of who sees a return, over a staff check.
+  const access = {
+    canManage: jest.fn((actor: AuthenticatedUser) =>
+      Promise.resolve(actor.id === "gate-1"),
+    ),
+  } as unknown as LostFoundAccessService;
+  access.seesReturn = LostFoundAccessService.prototype.seesReturn.bind(access);
   const resolver = new FoundItemFieldsResolver(
-    {
-      canManage: jest.fn((actor: AuthenticatedUser) =>
-        Promise.resolve(actor.id === "gate-1"),
-      ),
-    } as unknown as LostFoundAccessService,
+    access,
     {} as ListFoundItemsUseCase,
     {} as LostFoundDeclarationService,
     receipts as unknown as GetReturnReceiptUseCase,

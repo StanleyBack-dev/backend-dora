@@ -102,6 +102,15 @@ export const CLAIM_MESSAGE_MAX = 500;
 export const normalizeClaimMessage = (value: string | null | undefined) =>
   optionalText(value, CLAIM_MESSAGE_MAX);
 
+/**
+ * Reserved by the desk for someone: a unit, one of its residents, or a
+ * staff member (no unit). Hidden from everyone else while kept.
+ */
+export const isReserved = (item: {
+  ownerUnitId: string | null;
+  ownerUserId: string | null;
+}) => Boolean(item.ownerUnitId || item.ownerUserId);
+
 /** Only an item still kept can be claimed, returned, donated or discarded. */
 export const isKept = (status: FoundItemStatus) =>
   status === FoundItemStatus.FOUND;

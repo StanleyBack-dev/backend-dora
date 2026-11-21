@@ -9,7 +9,11 @@ import {
   type FoundItem,
   type FoundItemRepositoryPort,
 } from "@/modules/lost-and-found/application/ports/found-item-repository.port";
-import { isKept } from "@/modules/lost-and-found/domain/found-item";
+import {
+  LOST_REPORT_REPOSITORY,
+  type LostReportRepositoryPort,
+} from "@/modules/lost-and-found/application/ports/lost-report-repository.port";
+import { isKept, isReserved } from "@/modules/lost-and-found/domain/found-item";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
 
 // An item the desk reserved for someone goes to everyone: its owner says
@@ -20,6 +24,8 @@ export class ReleaseFoundItemUseCase {
   constructor(
     @Inject(FOUND_ITEM_REPOSITORY)
     private readonly items: FoundItemRepositoryPort,
+    @Inject(LOST_REPORT_REPOSITORY)
+    private readonly reports: LostReportRepositoryPort,
     private readonly access: LostFoundAccessService,
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
@@ -29,7 +35,7 @@ export class ReleaseFoundItemUseCase {
     if (!isKept(item.status)) {
       throw AppException.from(APP_ERRORS.lostFound.notKept, undefined);
     }
-    if (!item.ownerUnitId) {
+    if (!isReserved(item)) {
       throw AppException.from(APP_ERRORS.lostFound.notReserved, undefined);
     }
     const desk = await this.access.canManage(actor);
@@ -59,6 +65,9 @@ export class ReleaseFoundItemUseCase {
     if (!released) {
       throw AppException.from(APP_ERRORS.lostFound.notReserved, undefined);
     }
+    // Registered from a "Perdi algo" report, but not theirs after all: the
+    // report goes back to "looking".
+    await this.reports.reopenLinkedTo(released.id);
     return released;
   }
 }

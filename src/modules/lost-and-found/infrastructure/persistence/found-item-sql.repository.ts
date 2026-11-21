@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { InjectDataSource } from "@nestjs/typeorm";
 import type { DataSource, EntityManager } from "typeorm";
+import { APP_ERRORS } from "@/common/exceptions/app-errors.catalog";
+import { AppException } from "@/common/exceptions/app-exception";
 import { unitLabel } from "@/modules/condominiums/domain/unit";
 import type {
   ClaimDecision,
@@ -21,6 +23,7 @@ import {
   type FoundItemCategory,
   FoundItemStatus,
 } from "@/modules/lost-and-found/domain/found-item";
+import { LostReportStatus } from "@/modules/lost-and-found/domain/lost-report";
 import type { OutboxDraft } from "@/modules/outbox/domain/outbox";
 import { OutboxTypeormWriter } from "@/modules/outbox/infrastructure/persistence/typeorm/outbox-typeorm.repository";
 import {
@@ -222,7 +225,8 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
           item.ownerUserId,
         ],
       );
-      // A resident the desk knows it belongs to: their claim, accepted.
+      // Someone the desk knows it belongs to (a resident or a staff
+      // member): their claim, accepted.
       if (item.ownerUserId) {
         await manager.query(
           `INSERT INTO tb_found_item_claims
@@ -231,6 +235,22 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
          VALUES ($1, $2, '${ClaimStatus.ACCEPTED}', now(), $3, $4)`,
           [row.id, item.ownerUserId, item.registeredBy, OWNER_NOTE],
         );
+      }
+      // From a report: it must still be open (two desks at once: only the
+      // first registers; the other gets "already ended" and nothing).
+      if (item.lostReportId) {
+        const [linked] = await manager.query<[{ id: string }[], number]>(
+          `UPDATE tb_lost_reports
+              SET status = '${LostReportStatus.FOUND}', closed_at = now(),
+                  idtb_found_items = $2
+            WHERE idtb_lost_reports = $1 AND idtb_condominiums = $3
+              AND status = '${LostReportStatus.OPEN}'
+            RETURNING idtb_lost_reports AS id`,
+          [item.lostReportId, row.id, item.condominiumId],
+        );
+        if (linked.length === 0) {
+          throw AppException.from(APP_ERRORS.lostFound.reportClosed, undefined);
+        }
       }
       const created = await this.get(manager, row.id);
       await this.outbox.write(manager, notices(created));
@@ -248,7 +268,7 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
       const [previous] = await manager.query<{ ownerUserId: string | null }[]>(
         `SELECT owner_user_id AS "ownerUserId" FROM tb_found_items
           WHERE idtb_found_items = $1 AND status = '${KEPT}'
-            AND owner_unit_id IS NOT NULL
+            AND (owner_unit_id IS NOT NULL OR owner_user_id IS NOT NULL)
           FOR UPDATE`,
         [itemId],
       );
@@ -353,19 +373,19 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
     viewer: KeptViewer,
     page: PageRequest,
   ): Promise<Paginated<FoundItem>> {
-    // A reserved item shows only to its resident (or, reserved for a
-    // unit, to that unit's residents).
+    // A reserved item shows only to whoever it is for (a resident or a
+    // staff member), or, reserved for a unit, to that unit's residents.
     const params: unknown[] = [condominiumId, viewer.userId, viewer.unitId];
     const where = [
       "f.idtb_condominiums = $1",
       `f.status = '${KEPT}'`,
-      `(f.owner_unit_id IS NULL
+      `((f.owner_unit_id IS NULL AND f.owner_user_id IS NULL)
         OR f.owner_user_id = $2
         OR (f.owner_user_id IS NULL AND f.owner_unit_id = $3::uuid))`,
     ];
     if (category) {
       params.push(category);
-      where.push(`f.category = ${params.length}`);
+      where.push(`f.category = $${params.length}`);
     }
     return this.page(`WHERE ${where.join(" AND ")}`, params, page);
   }
@@ -562,7 +582,7 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
   }
 
   async withdrawClaim(claimId: string, userId: string): Promise<boolean> {
-    const updated = await this.dataSource.query<{ id: string }[]>(
+    const [updated] = await this.dataSource.query<[{ id: string }[], number]>(
       `UPDATE tb_found_item_claims
           SET status = '${ClaimStatus.WITHDRAWN}', updated_at = now()
         WHERE idtb_found_item_claims = $1 AND idtb_users = $2
@@ -579,7 +599,7 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
     notices: (claim: FoundItemClaim) => OutboxDraft[],
   ): Promise<FoundItemClaim | null> {
     return this.dataSource.transaction(async (manager) => {
-      const updated = await manager.query<{ id: string }[]>(
+      const [updated] = await manager.query<[{ id: string }[], number]>(
         `UPDATE tb_found_item_claims c
             SET status = $2, decision_note = $3, decided_at = $4,
                 decided_by = $5, updated_at = now()
@@ -608,7 +628,7 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
     notices: (item: FoundItem, rejected: ClosedClaims) => OutboxDraft[],
   ): Promise<FoundItem | null> {
     return this.dataSource.transaction(async (manager) => {
-      const updated = await manager.query<{ id: string }[]>(
+      const [updated] = await manager.query<[{ id: string }[], number]>(
         `UPDATE tb_found_items
             SET status = '${FoundItemStatus.RETURNED}', closed_at = $2,
                 closed_by = $3, returned_to = $4, updated_by = $3,
@@ -691,7 +711,7 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
     notices: (item: FoundItem, rejected: ClosedClaims) => OutboxDraft[],
   ): Promise<FoundItem | null> {
     return this.dataSource.transaction(async (manager) => {
-      const updated = await manager.query<{ id: string }[]>(
+      const [updated] = await manager.query<[{ id: string }[], number]>(
         `UPDATE tb_found_items
             SET status = $2, close_reason = $3, closed_at = $4,
                 closed_by = $5, updated_by = $5, updated_at = now()
@@ -766,7 +786,7 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
     notices: OutboxDraft[],
   ): Promise<boolean> {
     return this.dataSource.transaction(async (manager) => {
-      const updated = await manager.query<{ id: string }[]>(
+      const [updated] = await manager.query<[{ id: string }[], number]>(
         `UPDATE tb_found_items SET expiry_notified_at = $2
           WHERE idtb_found_items = $1 AND status = '${KEPT}'
             AND expiry_notified_at IS NULL
@@ -780,7 +800,7 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
   }
 
   async releasePhotos(closedBefore: Date): Promise<string[]> {
-    const rows = await this.dataSource.query<{ key: string }[]>(
+    const [rows] = await this.dataSource.query<[{ key: string }[], number]>(
       `UPDATE tb_found_items f SET photo_key = NULL
          FROM (SELECT idtb_found_items, photo_key FROM tb_found_items
                 WHERE photo_key IS NOT NULL AND closed_at < $1
@@ -801,7 +821,7 @@ export class FoundItemSqlRepository implements FoundItemRepositoryPort {
     by: string,
     at: Date,
   ): Promise<ClosedClaims> {
-    const rows = await manager.query<{ id: string }[]>(
+    const [rows] = await manager.query<[{ id: string }[], number]>(
       `UPDATE tb_found_item_claims
           SET status = '${ClaimStatus.REJECTED}', decision_note = $3,
               decided_at = $4, decided_by = $5, updated_at = now()

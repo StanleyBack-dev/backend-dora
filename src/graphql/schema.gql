@@ -561,6 +561,44 @@ type ParcelIndicators {
   monthly: [ParcelMonth!]!
 }
 
+"""Itens achados de um mês."""
+type FoundItemMonth {
+  """AAAA-MM, no fuso do condomínio."""
+  month: String!
+
+  """Achados no mês."""
+  found: Int!
+
+  """Desses, os já devolvidos ao dono."""
+  returned: Int!
+}
+
+"""Indicadores dos achados e perdidos do condomínio."""
+type LostFoundIndicators {
+  """Itens guardados agora."""
+  kept: Int!
+
+  """Pedidos aguardando conferência."""
+  pendingClaims: Int!
+
+  """Guardados com o prazo acabando em até 7 dias."""
+  expiringSoon: Int!
+
+  """Avisos de "Perdi algo" abertos."""
+  openLostReports: Int!
+
+  """Devolvidos nos últimos 90 dias."""
+  returnedLast90Days: Int!
+
+  """
+  Dos itens que saíram nos últimos 90 dias, a porcentagem devolvida ao dono (nulo: nenhum saiu).
+  """
+  returnRate: Int
+
+  """Os últimos 6 meses, do mais antigo ao atual."""
+  monthly: [FoundItemMonth!]!
+}
+
 """Painel do gestor do condomínio."""
 type Dashboard {
   """Moradores com acesso ativo (sem a equipe)."""
@@ -589,6 +627,9 @@ type Dashboard {
 
   """Encomendas (nulo: módulo desligado)."""
   parcels: ParcelIndicators
+
+  """Achados e perdidos (nulo: módulo desligado)."""
+  lostAndFound: LostFoundIndicators
 }
 
 """Dependente de um morador (aprovado pela administração)."""
@@ -1620,6 +1661,11 @@ type FoundItem {
   ownerName: String
 
   """
+  Quem está vendo é o único da equipe (portaria e gestão): pode entregar a si mesmo um item que pediu, com registro no comprovante.
+  """
+  soleStaffMember: Boolean!
+
+  """
   Link temporário da foto (nulo para moradores quando a foto está escondida).
   """
   photoUrl: String
@@ -1700,6 +1746,11 @@ type FoundItemReturn {
 
   """As provas ainda conferem com o SHA-256 gravado."""
   intact: Boolean!
+
+  """
+  Entregue pela própria pessoa que pediu, por ser a única da equipe no momento.
+  """
+  selfHandover: Boolean!
 }
 
 """
@@ -1709,6 +1760,15 @@ enum SignatureLocationStatus {
   GRANTED
   DENIED
   UNAVAILABLE
+}
+
+"""Alguém da equipe (portaria ou gestão), para indicar o dono."""
+type FoundItemStaffOption {
+  userId: ID!
+  name: String!
+
+  """Portaria ou Gestão."""
+  roleLabel: String!
 }
 
 """Um morador (com a unidade) para indicar de quem é um item."""
@@ -1763,8 +1823,104 @@ type FoundItemOverview {
   residents: [FoundItemResident!]!
 }
 
+"""Comprovante de devolução de um item achado, em PDF."""
+type FoundItemReceiptFile {
+  """Nome sugerido do arquivo."""
+  fileName: String!
+
+  """application/pdf"""
+  mimeType: String!
+
+  """O PDF em base64."""
+  base64Content: String!
+}
+
 type FoundItemPage {
   items: [FoundItem!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+""""Perdi algo": o que um morador perdeu."""
+type LostReport {
+  id: ID!
+  userId: ID!
+  userName: String!
+
+  """A unidade de quem perdeu (para indicar o dono de um item)."""
+  unitId: ID
+
+  """A unidade de quem perdeu."""
+  unitLabel: String
+  category: FoundItemCategory!
+  title: String!
+  description: String
+  lostLocation: String
+
+  """O dia em que perdeu (AAAA-MM-DD)."""
+  lostOn: String
+
+  """Aparece no mural dos vizinhos."""
+  shared: Boolean!
+
+  """Vizinhos que disseram "Achei isso"."""
+  spotCount: Int!
+  status: LostReportStatus!
+
+  """O item achado com que o aviso terminou."""
+  foundItemId: ID
+  closedAt: DateTime
+  createdAt: DateTime!
+
+  """Link temporário da foto do objeto (nulo: sem foto)."""
+  photoUrl: String
+}
+
+"""
+Aviso de item perdido: procurando, encontrado, cancelado ou encerrado sem notícias.
+"""
+enum LostReportStatus {
+  OPEN
+  FOUND
+  CANCELLED
+  EXPIRED
+}
+
+"""
+Um aviso de "Perdi algo" no mural dos vizinhos: sem quem perdeu nem os detalhes.
+"""
+type LostReportBoardItem {
+  id: ID!
+  category: FoundItemCategory!
+  title: String!
+  lostLocation: String
+
+  """O dia em que perdeu (AAAA-MM-DD)."""
+  lostOn: String
+
+  """Link temporário da foto (nulo: sem foto)."""
+  photoUrl: String
+
+  """O aviso é de quem está vendo."""
+  mine: Boolean!
+
+  """Quem está vendo já disse que achou."""
+  spottedByMe: Boolean!
+  createdAt: DateTime!
+}
+
+type LostReportBoardPage {
+  items: [LostReportBoardItem!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+type LostReportPage {
+  items: [LostReport!]!
   total: Int!
   page: Int!
   limit: Int!
@@ -1815,6 +1971,9 @@ enum NotificationType {
   FOUND_ITEM_EXPIRING
   FOUND_ITEM_FOR_YOU
   FOUND_ITEM_NOT_OWNER
+  LOST_REPORT_MATCH
+  LOST_REPORT_SPOTTED
+  LOST_REPORT_EXPIRED
 }
 
 type NotificationPage {
@@ -2827,8 +2986,18 @@ type Query {
     page: PageInput
   ): LandingLeadPage!
 
+  """
+  Comprovante de devolução em PDF (portaria e gestores, ou o morador a quem o item voltou).
+  """
+  foundItemReceiptPdf(id: ID!): FoundItemReceiptFile!
+
   """Moradores (com a unidade) pelo nome, para indicar de quem é um item."""
   foundItemOwners(search: String!): [FoundItemOwnerOptionType!]!
+
+  """
+  A equipe do condomínio (portaria e gestão), para indicar que um item é de um funcionário.
+  """
+  foundItemStaff: [FoundItemStaffOption!]!
 
   """Itens achados do condomínio, com filtros, por página."""
   foundItems(filter: FoundItemFilterInput, page: PageInput): FoundItemPage!
@@ -2851,6 +3020,19 @@ type Query {
 
   """Os meus pedidos de itens achados."""
   myFoundItemClaims(page: PageInput): FoundItemClaimPage!
+
+  """
+  Mural "Procura-se": o que os vizinhos perderam e escolheram mostrar (sem quem perdeu nem os detalhes).
+  """
+  lostReportBoard(page: PageInput): LostReportBoardPage!
+
+  """Os meus avisos de itens perdidos (os abertos primeiro)."""
+  myLostReports(page: PageInput): LostReportPage!
+
+  """
+  Avisos de itens perdidos do condomínio: os abertos (procurando) ou os encerrados.
+  """
+  lostReports(open: Boolean, page: PageInput): LostReportPage!
 
   """Mais recentes primeiro."""
   myNotifications(unreadOnly: Boolean! = false, page: PageInput): NotificationPage!
@@ -3430,6 +3612,19 @@ type Mutation {
 
   """Registra que o item foi descartado, com o motivo."""
   discardFoundItem(id: ID!, reason: String!): FoundItem!
+
+  """
+  "Achei isso": diz que achou um item do mural; quem perdeu e a portaria são avisados.
+  """
+  spotLostReport(id: ID!, note: String): Boolean!
+
+  """
+  "Perdi algo": avisa o que perdeu; quando a portaria registrar um item da mesma categoria, você é avisado.
+  """
+  reportLostItem(input: ReportLostItemInput!): LostReport!
+
+  """Encerra o meu aviso: encontrei (found = true) ou não procuro mais."""
+  closeLostReport(id: ID!, found: Boolean!): LostReport!
   markNotificationRead(id: ID!): Boolean!
 
   """Quantas foram marcadas."""
@@ -4051,9 +4246,14 @@ input RegisterFoundItemInput {
   ownerUnitId: ID
 
   """
-  Ou um morador da unidade: só ele é avisado e vê o item, com o pedido já aceito.
+  Ou um morador da unidade (com ownerUnitId), ou alguém da equipe (sem unidade): só essa pessoa é avisada e vê o item, com o pedido já aceito.
   """
   ownerUserId: ID
+
+  """
+  O aviso de "Perdi algo" que o item atende: ele se encerra como encontrado, ligado ao item.
+  """
+  lostReportId: ID
 }
 
 """
@@ -4109,6 +4309,31 @@ input SignatureDeviceInput {
   """touch, pen ou mouse: como a assinatura foi feita."""
   pointerType: String
   maxTouchPoints: Int
+}
+
+""""Perdi algo": o que o morador perdeu."""
+input ReportLostItemInput {
+  category: FoundItemCategory!
+
+  """O que é (ex.: chave com chaveiro azul)."""
+  title: String!
+
+  """Detalhes que ajudam a reconhecer (cor, marca…)."""
+  description: String
+
+  """Onde pode ter perdido."""
+  lostLocation: String
+
+  """O dia em que perdeu (AAAA-MM-DD), se souber."""
+  lostOn: String
+
+  """
+  Foto do objeto ou de um parecido: JPEG, PNG ou WebP em base64 (sem o prefixo data:), até 1 MB.
+  """
+  photo: String
+
+  """Mostrar no mural dos vizinhos (sem o nome, a unidade e os detalhes)."""
+  shared: Boolean
 }
 
 """PushSubscription do navegador (PushManager)."""

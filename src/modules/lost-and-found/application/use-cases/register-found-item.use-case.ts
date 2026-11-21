@@ -5,7 +5,14 @@ import { APP_ERRORS } from "@/common/exceptions/app-errors.catalog";
 import { AppException } from "@/common/exceptions/app-exception";
 import { CondominiumLookupService } from "@/modules/condominiums/application/condominium-lookup.service";
 import { LostFoundAccessService } from "@/modules/lost-and-found/application/lost-found-access.service";
-import { reservedNotices } from "@/modules/lost-and-found/application/lost-found-notices";
+import {
+  lostMatchNotices,
+  reservedNotices,
+} from "@/modules/lost-and-found/application/lost-found-notices";
+import {
+  LOST_REPORT_REPOSITORY,
+  type LostReportRepositoryPort,
+} from "@/modules/lost-and-found/application/ports/lost-report-repository.port";
 import {
   FOUND_ITEM_REPOSITORY,
   type FoundItem,
@@ -29,6 +36,7 @@ import {
   OBJECT_STORAGE,
   type ObjectStoragePort,
 } from "@/shared/application/ports/object-storage.port";
+import { LostReportStatus } from "@/modules/lost-and-found/domain/lost-report";
 import { decodeBase64Image } from "@/shared/domain/image-upload";
 
 export type RegisterFoundItemInput = {
@@ -48,6 +56,8 @@ export type RegisterFoundItemInput = {
   photo?: string | null;
   /** Hide the photo from residents (default: only for documents). */
   photoHidden?: boolean | null;
+  /** The "Perdi algo" report it answers (ends as found, linked to it). */
+  lostReportId?: string | null;
 };
 
 /** Largest photo (as sent) and the side it is shrunk to. */
@@ -84,6 +94,8 @@ export class RegisterFoundItemUseCase {
   constructor(
     @Inject(FOUND_ITEM_REPOSITORY)
     private readonly items: FoundItemRepositoryPort,
+    @Inject(LOST_REPORT_REPOSITORY)
+    private readonly reports: LostReportRepositoryPort,
     private readonly access: LostFoundAccessService,
     private readonly condominiums: CondominiumLookupService,
     @Inject(IMAGE_PROCESSOR) private readonly images: ImageProcessorPort,
@@ -106,19 +118,38 @@ export class RegisterFoundItemUseCase {
     }
 
     const owner = await this.owner(condominiumId, input);
+    // From a report: still open (not registered twice).
+    const reportId = input.lostReportId?.trim() || null;
+    if (reportId) {
+      const report = await this.reports.find(condominiumId, reportId);
+      if (!report) {
+        throw AppException.from(APP_ERRORS.lostFound.reportNotFound, undefined);
+      }
+      if (report.status !== LostReportStatus.OPEN) {
+        throw AppException.from(APP_ERRORS.lostFound.reportClosed, undefined);
+      }
+    }
 
     const photoKey = input.photo
       ? await this.storePhoto(condominiumId, input.photo)
       : null;
     try {
-      const audience = owner.unitId
+      const reserved = Boolean(owner.unitId || owner.userId);
+      const audience = reserved
         ? await this.access.ownerAudience({
             condominiumId,
             ownerUnitId: owner.unitId,
             ownerUserId: owner.userId,
           })
         : [];
-      return await this.items.create(
+      // Not reserved: whoever said they lost something of this category
+      // is told it may be theirs (not whoever registers it).
+      const looking = reserved
+        ? []
+        : (await this.reports.openOf(condominiumId, input.category)).filter(
+            (report) => report.userId !== actor.id,
+          );
+      const created = await this.items.create(
         {
           condominiumId,
           category: input.category,
@@ -136,9 +167,14 @@ export class RegisterFoundItemUseCase {
           registeredBy: actor.id,
           ownerUnitId: owner.unitId,
           ownerUserId: owner.userId,
+          lostReportId: reportId,
         },
-        (created) => reservedNotices(created, audience, this.clock.timeZone),
+        (created) => [
+          ...reservedNotices(created, audience, this.clock.timeZone),
+          ...lostMatchNotices(created, looking, this.clock.timeZone),
+        ],
       );
+      return created;
     } catch (error) {
       if (photoKey) {
         await this.storage.deleteMany([photoKey]).catch((cause) => {
@@ -157,12 +193,16 @@ export class RegisterFoundItemUseCase {
     const unitId = input.ownerUnitId?.trim() || null;
     const userId = input.ownerUserId?.trim() || null;
     if (!unitId) {
-      if (userId) {
+      if (!userId) return { unitId: null, userId: null };
+      // No unit: a staff member of this condominium (gate or management).
+      const staff = await this.access.staff(condominiumId);
+      if (!staff.includes(userId)) {
         throw AppException.from(APP_ERRORS.lostFound.invalid, {
-          reason: "Escolha a unidade do morador.",
+          reason:
+            "Escolha a unidade do morador, ou alguém da equipe deste condomínio.",
         });
       }
-      return { unitId: null, userId: null };
+      return { unitId: null, userId };
     }
     const unit = await this.condominiums.unitIn(condominiumId, unitId);
     if (!unit) {

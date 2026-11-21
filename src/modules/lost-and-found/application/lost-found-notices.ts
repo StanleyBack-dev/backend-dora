@@ -2,6 +2,7 @@ import type {
   FoundItem,
   FoundItemClaim,
 } from "@/modules/lost-and-found/application/ports/found-item-repository.port";
+import type { LostReport } from "@/modules/lost-and-found/application/ports/lost-report-repository.port";
 import {
   CATEGORY_LABELS,
   ClaimStatus,
@@ -223,6 +224,43 @@ export function expiringNotices(
         calendar: null,
       },
       `found-item:${item.id}:expiring:${userId}`,
+    ),
+  );
+}
+
+/**
+ * To whoever said they lost something of this category: an item was found
+ * and may be theirs (one notice per resident, whatever their reports).
+ */
+export function lostMatchNotices(
+  item: FoundItem,
+  reports: readonly LostReport[],
+  timeZone: string,
+): OutboxDraft[] {
+  const byUser = new Map<string, LostReport>();
+  for (const report of reports) {
+    if (!byUser.has(report.userId)) byUser.set(report.userId, report);
+  }
+  return [...byUser.values()].map((report) =>
+    deliveryDraft(
+      {
+        userId: report.userId,
+        type: NotificationType.LOST_REPORT_MATCH,
+        title: "Pode ser o que você perdeu",
+        body: `A portaria achou “${item.title}” (${CATEGORY_LABELS[item.category]}). Você avisou que perdeu “${report.title}”: confira se é seu.`,
+        link: deskItem(item.id),
+        email: {
+          subject: `Pode ser o que você perdeu: ${item.title}`,
+          intro: `Você avisou que perdeu “${report.title}”. A portaria acabou de registrar um item da mesma categoria: se for seu, toque em “É meu” no app.`,
+          details: [
+            { label: "Item", value: item.title },
+            ...itemDetails(item, timeZone),
+          ],
+          ctaLabel: "Ver no app",
+        },
+        calendar: null,
+      },
+      `found-item:${item.id}:lost-match:${report.userId}`,
     ),
   );
 }

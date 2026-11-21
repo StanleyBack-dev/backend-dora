@@ -88,9 +88,18 @@ export class RegisterFoundItemInput {
   @Field(() => ID, {
     nullable: true,
     description:
-      "Ou um morador da unidade: só ele é avisado e vê o item, com o pedido já aceito.",
+      "Ou um morador da unidade (com ownerUnitId), ou alguém da equipe (sem unidade): só essa pessoa é avisada e vê o item, com o pedido já aceito.",
   })
   @IsOptional()
   @IsUUID()
   ownerUserId?: string | null;
+
+  @Field(() => ID, {
+    nullable: true,
+    description:
+      'O aviso de "Perdi algo" que o item atende: ele se encerra como encontrado, ligado ao item.',
+  })
+  @IsOptional()
+  @IsUUID()
+  lostReportId?: string | null;
 }

@@ -15,6 +15,8 @@ export type CheckedReturn = FoundItemReturn & {
    * written at signing, and the drawing still gives its own digest.
    */
   intact: boolean;
+  /** Handed over by its own claimant, the team's only member then. */
+  selfHandover: boolean;
 };
 
 // The return receipt: the signature with its evidence, and whether the
@@ -34,6 +36,6 @@ export class GetReturnReceiptUseCase {
       sha256(canonicalJson(record.evidence)) === record.evidenceSha256 &&
       sha256(canonicalJson(record.drawing)) === evidence?.strokesSha256 &&
       evidence?.imageSha256 === record.imageSha256;
-    return { ...record, intact };
+    return { ...record, intact, selfHandover: evidence?.selfHandover === true };
   }
 }
