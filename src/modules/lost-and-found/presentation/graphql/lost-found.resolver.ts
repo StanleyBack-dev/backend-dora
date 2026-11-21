@@ -14,12 +14,15 @@ import { RequireModule } from "@/modules/condominiums/presentation/decorators/re
 import { LostFoundAccessService } from "@/modules/lost-and-found/application/lost-found-access.service";
 import { ClaimFoundItemUseCase } from "@/modules/lost-and-found/application/use-cases/claim-found-item.use-case";
 import { CloseFoundItemUseCase } from "@/modules/lost-and-found/application/use-cases/close-found-item.use-case";
+import { GetReturnReceiptPdfUseCase } from "@/modules/lost-and-found/application/use-cases/get-return-receipt-pdf.use-case";
 import { DecideClaimUseCase } from "@/modules/lost-and-found/application/use-cases/decide-claim.use-case";
+import { ListFoundItemStaffUseCase } from "@/modules/lost-and-found/application/use-cases/list-found-item-staff.use-case";
 import { ListFoundItemsUseCase } from "@/modules/lost-and-found/application/use-cases/list-found-items.use-case";
 import { RegisterFoundItemUseCase } from "@/modules/lost-and-found/application/use-cases/register-found-item.use-case";
 import { ReleaseFoundItemUseCase } from "@/modules/lost-and-found/application/use-cases/release-found-item.use-case";
 import { ReturnFoundItemUseCase } from "@/modules/lost-and-found/application/use-cases/return-found-item.use-case";
 import { SearchFoundItemOwnersUseCase } from "@/modules/lost-and-found/application/use-cases/search-found-item-owners.use-case";
+import { FoundItemStaffOptionType } from "@/modules/lost-and-found/presentation/graphql/dto/outputs/found-item-staff-option.output";
 import { FoundItemOwnerOptionType } from "@/modules/lost-and-found/presentation/graphql/dto/outputs/found-item-owner-option.output";
 import {
   FoundItemCategory,
@@ -31,6 +34,7 @@ import { ReturnFoundItemInput } from "@/modules/lost-and-found/presentation/grap
 import { FoundItemClaimPage } from "@/modules/lost-and-found/presentation/graphql/dto/outputs/found-item-claim-page.output";
 import { FoundItemClaimType } from "@/modules/lost-and-found/presentation/graphql/dto/outputs/found-item-claim.output";
 import { FoundItemOverviewType } from "@/modules/lost-and-found/presentation/graphql/dto/outputs/found-item-overview.output";
+import { FoundItemReceiptFileType } from "@/modules/lost-and-found/presentation/graphql/dto/outputs/found-item-receipt-file.output";
 import { FoundItemPage } from "@/modules/lost-and-found/presentation/graphql/dto/outputs/found-item-page.output";
 import { FoundItemType } from "@/modules/lost-and-found/presentation/graphql/dto/outputs/found-item.output";
 import {
@@ -58,7 +62,20 @@ export class LostFoundResolver {
     private readonly closing: CloseFoundItemUseCase,
     private readonly releasing: ReleaseFoundItemUseCase,
     private readonly owners: SearchFoundItemOwnersUseCase,
+    private readonly receiptPdfs: GetReturnReceiptPdfUseCase,
+    private readonly staffList: ListFoundItemStaffUseCase,
   ) {}
+
+  @Query(() => FoundItemReceiptFileType, {
+    description:
+      "Comprovante de devolução em PDF (portaria e gestores, ou o morador a quem o item voltou).",
+  })
+  foundItemReceiptPdf(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Args("id", { type: () => ID }, UuidArg()) id: string,
+  ): Promise<FoundItemReceiptFileType> {
+    return this.receiptPdfs.execute(actor, id);
+  }
 
   @RequirePermissions(Permission.LOST_FOUND_MANAGE)
   @Query(() => [FoundItemOwnerOptionType], {
@@ -70,6 +87,17 @@ export class LostFoundResolver {
     @Args("search") search: string,
   ): Promise<FoundItemOwnerOptionType[]> {
     return this.owners.execute(actor, search);
+  }
+
+  @RequirePermissions(Permission.LOST_FOUND_MANAGE)
+  @Query(() => [FoundItemStaffOptionType], {
+    description:
+      "A equipe do condomínio (portaria e gestão), para indicar que um item é de um funcionário.",
+  })
+  foundItemStaff(
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<FoundItemStaffOptionType[]> {
+    return this.staffList.execute(actor);
   }
 
   @Mutation(() => FoundItemType, {

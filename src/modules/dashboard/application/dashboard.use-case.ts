@@ -8,6 +8,7 @@ import {
 } from "@/modules/dashboard/application/ports/dashboard-reader.port";
 import { ModuleAccessService } from "@/modules/condominiums/application/module-access.service";
 import { AppModule } from "@/modules/condominiums/domain/app-module";
+import { FOUND_ITEM_EXPIRY_NOTICE_DAYS } from "@/modules/lost-and-found/domain/found-item";
 import { PARCEL_REMINDER_DAYS } from "@/modules/parcels/domain/parcel";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
 
@@ -36,15 +37,29 @@ export class DashboardUseCase {
       this.reader.read(condominiumId, actor.platformAdmin, today),
       this.modules.enabled(condominiumId),
     ]);
-    // Parcels only where the module is on.
-    const parcels = modules.includes(AppModule.PARCELS)
-      ? await this.reader.parcels(condominiumId, {
-          now,
-          stuckBefore: new Date(now.getTime() - PARCEL_REMINDER_DAYS * DAY_MS),
-          since30Days: new Date(now.getTime() - 30 * DAY_MS),
-          timeZone: this.clock.timeZone,
-        })
-      : null;
-    return { ...counts, parcels };
+    // Each module's block only where it is on.
+    const [parcels, lostAndFound] = await Promise.all([
+      modules.includes(AppModule.PARCELS)
+        ? this.reader.parcels(condominiumId, {
+            now,
+            stuckBefore: new Date(
+              now.getTime() - PARCEL_REMINDER_DAYS * DAY_MS,
+            ),
+            since30Days: new Date(now.getTime() - 30 * DAY_MS),
+            timeZone: this.clock.timeZone,
+          })
+        : null,
+      modules.includes(AppModule.LOST_AND_FOUND)
+        ? this.reader.lostAndFound(condominiumId, {
+            now,
+            expiringBefore: new Date(
+              now.getTime() + FOUND_ITEM_EXPIRY_NOTICE_DAYS * DAY_MS,
+            ),
+            since90Days: new Date(now.getTime() - 90 * DAY_MS),
+            timeZone: this.clock.timeZone,
+          })
+        : null,
+    ]);
+    return { ...counts, parcels, lostAndFound };
   }
 }

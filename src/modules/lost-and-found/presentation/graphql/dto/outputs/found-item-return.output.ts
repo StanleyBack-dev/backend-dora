@@ -76,4 +76,10 @@ export class FoundItemReturnType {
 
   @Field({ description: "As provas ainda conferem com o SHA-256 gravado." })
   intact!: boolean;
+
+  @Field({
+    description:
+      "Entregue pela própria pessoa que pediu, por ser a única da equipe no momento.",
+  })
+  selfHandover!: boolean;
 }

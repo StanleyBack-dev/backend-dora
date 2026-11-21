@@ -4,6 +4,8 @@ import { AppModule } from "@/modules/condominiums/domain/app-module";
 import { DashboardUseCase } from "@/modules/dashboard/application/dashboard.use-case";
 import type {
   DashboardReaderPort,
+  LostFoundIndicators,
+  LostFoundIndicatorsWindow,
   ParcelIndicators,
   ParcelIndicatorsWindow,
 } from "@/modules/dashboard/application/ports/dashboard-reader.port";
@@ -25,13 +27,31 @@ const indicators: ParcelIndicators = {
   monthly: [],
 };
 
+const lostFound: LostFoundIndicators = {
+  kept: 5,
+  pendingClaims: 2,
+  expiringSoon: 1,
+  openLostReports: 3,
+  returnedLast90Days: 4,
+  returnRate: 80,
+  monthly: [],
+};
+
 function setup(modules: AppModule[]) {
   const windows: ParcelIndicatorsWindow[] = [];
+  const lostWindows: LostFoundIndicatorsWindow[] = [];
   const reader = {
     read: async () => ({ units: 4 }),
     parcels: async (_condominiumId: string, window: ParcelIndicatorsWindow) => {
       windows.push(window);
       return indicators;
+    },
+    lostAndFound: async (
+      _condominiumId: string,
+      window: LostFoundIndicatorsWindow,
+    ) => {
+      lostWindows.push(window);
+      return lostFound;
     },
   } as unknown as DashboardReaderPort;
   const clock = {
@@ -44,7 +64,11 @@ function setup(modules: AppModule[]) {
   const access = {
     enabled: async () => modules,
   } as unknown as ModuleAccessService;
-  return { useCase: new DashboardUseCase(reader, clock, access), windows };
+  return {
+    useCase: new DashboardUseCase(reader, clock, access),
+    windows,
+    lostWindows,
+  };
 }
 
 describe("DashboardUseCase", () => {
@@ -61,6 +85,20 @@ describe("DashboardUseCase", () => {
     const { useCase, windows } = setup([AppModule.BOOKINGS]);
     const dashboard = await useCase.get(actor);
     expect(dashboard.parcels).toBeNull();
+    expect(dashboard.lostAndFound).toBeNull();
     expect(windows).toHaveLength(0);
+  });
+
+  it("adds the lost and found indicators where the module is on", async () => {
+    const { useCase, lostWindows } = setup([AppModule.LOST_AND_FOUND]);
+    const dashboard = await useCase.get(actor);
+    expect(dashboard.lostAndFound).toEqual(lostFound);
+    expect(dashboard.parcels).toBeNull();
+    expect(lostWindows[0].expiringBefore).toEqual(
+      new Date("2026-11-27T12:00:00Z"),
+    );
+    expect(lostWindows[0].since90Days).toEqual(
+      new Date("2026-08-22T12:00:00Z"),
+    );
   });
 });

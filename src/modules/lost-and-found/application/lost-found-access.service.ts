@@ -14,7 +14,7 @@ import {
   type FoundItem,
   type FoundItemRepositoryPort,
 } from "@/modules/lost-and-found/application/ports/found-item-repository.port";
-import { isKept } from "@/modules/lost-and-found/domain/found-item";
+import { isKept, isReserved } from "@/modules/lost-and-found/domain/found-item";
 
 // Every lost-and-found operation starts here: the caller's condominium must
 // have the module (contracted apart). The gate and the managers see every
@@ -56,13 +56,24 @@ export class LostFoundAccessService {
     return this.users.memberUnitId(actor.id, condominiumId);
   }
 
+  /** Who sees a return (who took it, the receipt): the staff, or the resident whose claim it answered. */
+  async seesReturn(
+    actor: AuthenticatedUser,
+    item: Pick<FoundItem, "returnedToId">,
+  ): Promise<boolean> {
+    if (item.returnedToId !== null && item.returnedToId === actor.id) {
+      return true;
+    }
+    return this.canManage(actor);
+  }
+
   /**
-   * Whether a reserved item is the caller's: reserved for them, or for
-   * their unit (without a resident named).
+   * Whether a reserved item is the caller's: reserved for them (a resident
+   * or a staff member), or for their unit (without a resident named).
    */
   async isOwner(actor: AuthenticatedUser, item: FoundItem): Promise<boolean> {
-    if (!item.ownerUnitId) return false;
     if (item.ownerUserId) return item.ownerUserId === actor.id;
+    if (!item.ownerUnitId) return false;
     return (await this.unitOf(actor, item.condominiumId)) === item.ownerUnitId;
   }
 
@@ -73,7 +84,7 @@ export class LostFoundAccessService {
   async canSee(actor: AuthenticatedUser, item: FoundItem): Promise<boolean> {
     if (await this.canManage(actor)) return true;
     if (isKept(item.status)) {
-      if (!item.ownerUnitId || (await this.isOwner(actor, item))) return true;
+      if (!isReserved(item) || (await this.isOwner(actor, item))) return true;
     }
     const claims = await this.items.claimsOf(item.id);
     return claims.some((claim) => claim.userId === actor.id);
@@ -81,12 +92,13 @@ export class LostFoundAccessService {
 
   /**
    * Who is told of an item reserved when registered: the resident named
-   * (while still living in the unit), otherwise every resident of the unit.
+   * (while still living in the unit), otherwise every resident of the unit;
+   * a staff member named (no unit), only them.
    */
   async ownerAudience(
     item: Pick<FoundItem, "condominiumId" | "ownerUnitId" | "ownerUserId">,
   ): Promise<string[]> {
-    if (!item.ownerUnitId) return [];
+    if (!item.ownerUnitId) return item.ownerUserId ? [item.ownerUserId] : [];
     const residents = await this.users.activeUnitMemberIds(
       item.condominiumId,
       item.ownerUnitId,
@@ -94,6 +106,18 @@ export class LostFoundAccessService {
     return item.ownerUserId && residents.includes(item.ownerUserId)
       ? [item.ownerUserId]
       : residents;
+  }
+
+  /**
+   * Whether the caller is the only active member of the team there (gate
+   * and management): then nobody else could hand them their own item.
+   */
+  async onlyStaffMember(
+    actor: AuthenticatedUser,
+    condominiumId: string,
+  ): Promise<boolean> {
+    const staff = await this.staff(condominiumId);
+    return staff.every((userId) => userId === actor.id);
   }
 
   /**

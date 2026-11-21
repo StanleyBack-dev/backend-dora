@@ -51,7 +51,7 @@ export const lostFoundErrors = {
     code: "FOUND_ITEM_OWN_CLAIM",
     status: HttpStatus.FORBIDDEN,
     message:
-      "Este pedido é seu: outra pessoa da portaria ou da gestão precisa conferir e entregar.",
+      "Este item é seu (você pediu ou ele foi reservado para você): outra pessoa da portaria ou da gestão precisa conferir e entregar.",
   },
   invalidNote: {
     code: "FOUND_ITEM_INVALID_NOTE",
@@ -74,5 +74,20 @@ export const lostFoundErrors = {
     status: HttpStatus.CONFLICT,
     message:
       "Os dados do item mudaram enquanto a tela estava aberta. Abra o item de novo e peça para assinar outra vez.",
+  },
+  noReceipt: {
+    code: "FOUND_ITEM_NO_RECEIPT",
+    status: HttpStatus.CONFLICT,
+    message: "Este item ainda não foi devolvido: não há comprovante.",
+  },
+  reportNotFound: {
+    code: "LOST_REPORT_NOT_FOUND",
+    status: HttpStatus.NOT_FOUND,
+    message: "Aviso de item perdido não encontrado.",
+  },
+  reportClosed: {
+    code: "LOST_REPORT_CLOSED",
+    status: HttpStatus.CONFLICT,
+    message: "Este aviso já foi encerrado.",
   },
 } as const;

@@ -72,6 +72,11 @@ export type NewFoundItem = {
   /** Whose the desk says it is (null: unknown). */
   ownerUnitId: string | null;
   ownerUserId: string | null;
+  /**
+   * The "Perdi algo" report it answers: ended as found, linked to it, in
+   * the same transaction (null: none). Already ended: nothing is created.
+   */
+  lostReportId: string | null;
 };
 
 /** Who browses the kept items (reserved ones show only to their owner). */

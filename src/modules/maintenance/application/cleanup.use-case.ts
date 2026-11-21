@@ -26,6 +26,7 @@ export type CleanupReport = {
   parcelPhotos: number;
   foundItemsExpiring: number;
   foundItemPhotos: number;
+  lostReportsExpired: number;
 };
 
 const DELIVERED_RETENTION_DAYS = 30;
@@ -91,6 +92,7 @@ export class CleanupUseCase {
       parcelPhotos: parcels.photos,
       foundItemsExpiring: lostFound.expiring,
       foundItemPhotos: lostFound.photos,
+      lostReportsExpired: lostFound.lostReports,
     };
     this.logger.log(`Limpeza diária: ${JSON.stringify(report)}`);
     return report;

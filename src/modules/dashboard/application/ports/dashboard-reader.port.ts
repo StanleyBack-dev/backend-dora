@@ -17,6 +17,8 @@ export type Dashboard = {
   failedNotifications: number | null;
   /** The parcels module's numbers (null: the module is off). */
   parcels: ParcelIndicators | null;
+  /** The lost and found module's numbers (null: the module is off). */
+  lostAndFound: LostFoundIndicators | null;
 };
 
 /** Parcels at a glance: what waits, how fast they leave, the monthly volume. */
@@ -34,6 +36,35 @@ export type ParcelIndicators = {
   monthly: { month: string; received: number; pickedUp: number }[];
 };
 
+/** Lost and found at a glance: what is kept, what waits, what went back. */
+export type LostFoundIndicators = {
+  /** Kept now. */
+  kept: number;
+  /** Claims waiting for the staff (items still kept). */
+  pendingClaims: number;
+  /** Kept, the keeping period ending within FOUND_ITEM_EXPIRY_NOTICE_DAYS. */
+  expiringSoon: number;
+  /** "Perdi algo" reports still open. */
+  openLostReports: number;
+  /** Returned in the last 90 days. */
+  returnedLast90Days: number;
+  /**
+   * Of the items that left in the last 90 days, the share returned to the
+   * owner (0-100; null: none left).
+   */
+  returnRate: number | null;
+  /** Found per month, oldest first (the last 6, this one included). */
+  monthly: { month: string; found: number; returned: number }[];
+};
+
+/** What the lost and found indicators are counted against. */
+export type LostFoundIndicatorsWindow = {
+  now: Date;
+  expiringBefore: Date;
+  since90Days: Date;
+  timeZone: string;
+};
+
 /** What the parcels indicators are counted against. */
 export type ParcelIndicatorsWindow = {
   now: Date;
@@ -48,11 +79,15 @@ export interface DashboardReaderPort {
     condominiumId: string,
     platform: boolean,
     today: { from: Date; to: Date },
-  ): Promise<Omit<Dashboard, "parcels">>;
+  ): Promise<Omit<Dashboard, "parcels" | "lostAndFound">>;
   parcels(
     condominiumId: string,
     window: ParcelIndicatorsWindow,
   ): Promise<ParcelIndicators>;
+  lostAndFound(
+    condominiumId: string,
+    window: LostFoundIndicatorsWindow,
+  ): Promise<LostFoundIndicators>;
 }
 
 export const DASHBOARD_READER = Symbol("DASHBOARD_READER");

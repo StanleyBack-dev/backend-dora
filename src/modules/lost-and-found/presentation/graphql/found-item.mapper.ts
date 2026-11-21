@@ -84,5 +84,6 @@ export function toReturnType(
     collectedByRole: record.collectedByRole,
     evidenceSha256: record.evidenceSha256,
     intact: record.intact,
+    selfHandover: record.selfHandover,
   };
 }
