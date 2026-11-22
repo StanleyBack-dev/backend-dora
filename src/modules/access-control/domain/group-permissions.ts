@@ -23,6 +23,7 @@ const MANAGER_DEFAULTS: Permission[] = [
   Permission.PAYMENTS_MANAGE,
   Permission.PARCELS_MANAGE,
   Permission.LOST_FOUND_MANAGE,
+  Permission.PURCHASES_MANAGE,
 ];
 
 // Portaria (gate staff): the day's guests, the parcels, lost and found and

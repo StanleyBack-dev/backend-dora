@@ -21,6 +21,7 @@ export const STAMPED_TABLES = {
     key: "idtb_enrollment_requests",
   },
   event: { table: "tb_events", key: "idtb_events" },
+  supplier: { table: "tb_suppliers", key: "idtb_suppliers" },
   support_request: {
     table: "tb_support_requests",
     key: "idtb_support_requests",

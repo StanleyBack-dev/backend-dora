@@ -11,6 +11,8 @@ export enum AppModule {
   PARCELS = "PARCELS",
   /** Lost and found: items kept by the gate, claimed and returned signed. */
   LOST_AND_FOUND = "LOST_AND_FOUND",
+  /** The condominium's purchases: suppliers, requests, quotes and approval. */
+  PURCHASES = "PURCHASES",
 }
 
 export const ALL_APP_MODULES: readonly AppModule[] = Object.values(AppModule);

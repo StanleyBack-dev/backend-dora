@@ -440,6 +440,7 @@ enum AppModule {
   EVENTS
   PARCELS
   LOST_AND_FOUND
+  PURCHASES
 }
 
 """Quem recebe um PIX: chave, nome e cidade (como no banco)."""
@@ -1361,6 +1362,7 @@ enum Permission {
   RESIDENTS_READ
   PARCELS_MANAGE
   LOST_FOUND_MANAGE
+  PURCHASES_MANAGE
   EVENTS_MANAGE
   PAYMENTS_MANAGE
   AUDIT_READ
@@ -2492,6 +2494,116 @@ type PlatformMetrics {
   health: HealthMetrics!
 }
 
+"""Um fornecedor no filtro “Nome” (nome fantasia ou razão social)."""
+type SupplierNameOption {
+  id: ID!
+  name: String!
+}
+
+"""Um CNPJ/CPF no filtro de documento."""
+type SupplierDocumentOption {
+  documentType: SupplierDocumentType!
+
+  """Só os números."""
+  document: String!
+}
+
+"""Fornecedor com CNPJ (empresa) ou CPF (autônomo)."""
+enum SupplierDocumentType {
+  CNPJ
+  CPF
+}
+
+"""
+O que os filtros dos fornecedores oferecem: os nomes, contatos e documentos em uso.
+"""
+type SupplierFilterOptions {
+  suppliers: [SupplierNameOption!]!
+  contacts: [String!]!
+  documents: [SupplierDocumentOption!]!
+}
+
+"""
+Os fornecedores em números (os cards da página), independente dos filtros.
+"""
+type SupplierOverview {
+  active: Int!
+  inactive: Int!
+
+  """Ativos sem chave PIX para pagamento."""
+  activeWithoutPix: Int!
+
+  """Ativos sem telefone nem e-mail."""
+  activeWithoutContact: Int!
+
+  """Categorias atendidas por ao menos um fornecedor ativo."""
+  categoriesServed: Int!
+}
+
+"""Fornecedor do condomínio (empresa ou autônomo)."""
+type Supplier {
+  id: ID!
+  documentType: SupplierDocumentType!
+
+  """CNPJ ou CPF, só os números."""
+  document: String!
+
+  """Razão social, ou o nome do autônomo."""
+  name: String!
+  tradeName: String
+  categories: [PurchaseCategory!]!
+
+  """Com OTHER entre as categorias: o que ele atende, digitado."""
+  categoryOther: String
+  contactName: String
+  email: String
+
+  """Só os números, com DDD."""
+  phone: String
+  city: String
+  state: String
+  pixKeyType: PixKeyType
+  pixKey: String
+  notes: String
+  active: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""
+Categoria de uma compra ou do que um fornecedor atende (manutenção, elétrica, limpeza, alimentação…); o que não estiver na lista é OTHER, com o texto digitado.
+"""
+enum PurchaseCategory {
+  MAINTENANCE
+  ELECTRICAL
+  PLUMBING
+  PAINTING
+  CONSTRUCTION
+  ELEVATORS
+  CLEANING
+  PEST_CONTROL
+  GARDENING
+  POOL
+  SECURITY
+  TECHNOLOGY
+  OFFICE
+  FOOD
+  EVENTS
+  FURNITURE
+  UNIFORMS
+  GAS
+  PROFESSIONAL
+  OTHER
+}
+
+type SupplierPage {
+  items: [Supplier!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
 """Dependente aprovado de um morador."""
 type ResidentDependent {
   id: ID!
@@ -3080,6 +3192,20 @@ type Query {
   """
   platformMetrics(filter: PlatformMetricsFilterInput): PlatformMetrics!
 
+  """Fornecedores do condomínio (ativos primeiro, por nome)."""
+  suppliers(filter: SupplierFilterInput, page: PageInput): SupplierPage!
+
+  """
+  O que os filtros dos fornecedores oferecem (nomes, contatos e CNPJ/CPF em uso).
+  """
+  supplierFilterOptions: SupplierFilterOptions!
+
+  """Os fornecedores em números (os cards da página)."""
+  supplierOverview: SupplierOverview!
+
+  """Um fornecedor do condomínio."""
+  supplier(id: ID!): Supplier!
+
   """
   Moradores ativos do condomínio, por nome, com filtros e por página (somente leitura).
   """
@@ -3360,6 +3486,22 @@ input PlatformMetricsFilterInput {
 
   """Um condomínio (vazio: todos)."""
   condominiumId: ID
+}
+
+"""Filtros dos fornecedores."""
+input SupplierFilterInput {
+  """Exatamente este fornecedor."""
+  supplierId: ID
+
+  """Exatamente este contato."""
+  contactName: String
+
+  """Exatamente este CNPJ/CPF (com ou sem pontuação)."""
+  document: String
+  category: PurchaseCategory
+
+  """Só os ativos (true) ou só os inativos (false); vazio: todos."""
+  active: Boolean
 }
 
 """Filtros da consulta de moradores."""
@@ -3671,6 +3813,17 @@ type Mutation {
 
   """Remove a própria foto de perfil."""
   removeMyPhoto: Boolean!
+
+  """Cadastra um fornecedor."""
+  createSupplier(input: SupplierInput!): Supplier!
+
+  """Altera um fornecedor."""
+  updateSupplier(id: ID!, input: SupplierInput!): Supplier!
+
+  """
+  Ativa ou desativa um fornecedor (inativo não entra em novas cotações; o histórico fica).
+  """
+  setSupplierActive(id: ID!, active: Boolean!): Supplier!
   createSpace(input: SpaceInput!): Space!
   updateSpace(id: ID!, input: SpaceInput!): Space!
 
@@ -4432,6 +4585,38 @@ input AuthorizeParcelPickupInput {
 
   """CPF ou RG (opcional)."""
   document: String
+}
+
+"""Dados de um fornecedor."""
+input SupplierInput {
+  documentType: SupplierDocumentType!
+
+  """CNPJ ou CPF (com ou sem pontuação)."""
+  document: String!
+
+  """Razão social, ou o nome do autônomo."""
+  name: String!
+
+  """Nome fantasia."""
+  tradeName: String
+
+  """O que o fornecedor atende (ao menos uma)."""
+  categories: [PurchaseCategory!]!
+
+  """
+  Com OTHER entre as categorias: o que ele atende, digitado (ex.: dedetização).
+  """
+  categoryOther: String
+  contactName: String
+  email: String
+  phone: String
+  city: String
+
+  """UF (ex.: GO)."""
+  state: String
+  pixKeyType: PixKeyType
+  pixKey: String
+  notes: String
 }
 
 """O formulário completo do espaço."""
