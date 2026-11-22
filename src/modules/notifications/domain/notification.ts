@@ -67,6 +67,10 @@ export enum NotificationType {
   LOST_REPORT_SPOTTED = "LOST_REPORT_SPOTTED",
   /** "Perdi algo" ended after the keeping period without news. */
   LOST_REPORT_EXPIRED = "LOST_REPORT_EXPIRED",
+  /** Purchases: a purchase request was made (to the managers). */
+  PURCHASE_REQUEST_CREATED = "PURCHASE_REQUEST_CREATED",
+  /** Purchases: someone else cancelled your purchase request. */
+  PURCHASE_REQUEST_CANCELLED = "PURCHASE_REQUEST_CANCELLED",
 }
 
 export const ALL_NOTIFICATION_TYPES: readonly NotificationType[] =

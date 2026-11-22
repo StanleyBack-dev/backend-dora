@@ -3,6 +3,7 @@ import { accessControlErrors } from "@/common/exceptions/catalogs/access-control
 import { auditErrors } from "@/common/exceptions/catalogs/audit-errors.catalog";
 import { authErrors } from "@/common/exceptions/catalogs/auth-errors.catalog";
 import { condominiumsErrors } from "@/common/exceptions/catalogs/condominiums-errors.catalog";
+import { catalogErrors } from "@/common/exceptions/catalogs/catalog-errors.catalog";
 import { bookingsErrors } from "@/common/exceptions/catalogs/bookings-errors.catalog";
 import { broadcastsErrors } from "@/common/exceptions/catalogs/broadcasts-errors.catalog";
 import { enrollmentErrors } from "@/common/exceptions/catalogs/enrollment-errors.catalog";
@@ -18,6 +19,7 @@ import { purchasesErrors } from "@/common/exceptions/catalogs/purchases-errors.c
 import { parcelsErrors } from "@/common/exceptions/catalogs/parcels-errors.catalog";
 import { spacesErrors } from "@/common/exceptions/catalogs/spaces-errors.catalog";
 import { storageErrors } from "@/common/exceptions/catalogs/storage-errors.catalog";
+import { suppliersErrors } from "@/common/exceptions/catalogs/suppliers-errors.catalog";
 import { supportErrors } from "@/common/exceptions/catalogs/support-errors.catalog";
 import { supportersErrors } from "@/common/exceptions/catalogs/supporters-errors.catalog";
 import { tenancyErrors } from "@/common/exceptions/catalogs/tenancy-errors.catalog";
@@ -27,6 +29,7 @@ export const APP_ERRORS = {
   audit: auditErrors,
   auth: authErrors,
   bookings: bookingsErrors,
+  catalog: catalogErrors,
   broadcasts: broadcastsErrors,
   condominiums: condominiumsErrors,
   enrollment: enrollmentErrors,
@@ -42,6 +45,7 @@ export const APP_ERRORS = {
   platformMetrics: platformMetricsErrors,
   spaces: spacesErrors,
   storage: storageErrors,
+  suppliers: suppliersErrors,
   support: supportErrors,
   supporters: supportersErrors,
   tenancy: tenancyErrors,

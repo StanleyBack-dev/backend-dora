@@ -1,20 +1,32 @@
 import { HttpStatus } from "@nestjs/common";
 
 export const purchasesErrors = {
-  supplierNotFound: {
-    code: "SUPPLIER_NOT_FOUND",
-    status: HttpStatus.NOT_FOUND,
-    message: "Fornecedor não encontrado neste condomínio.",
+  spaceUnavailable: {
+    code: "PURCHASE_SPACE_UNAVAILABLE",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message:
+      "O espaço escolhido não está mais disponível. Escolha outro ou digite o local.",
   },
-  supplierInvalid: {
-    code: "SUPPLIER_INVALID",
+  catalogUnavailable: {
+    code: "PURCHASE_CATALOG_UNAVAILABLE",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message:
+      "Um dos produtos ou marcas escolhidos não está mais disponível. Escolha outro (ou deixe “Qualquer marca”).",
+  },
+  requestNotFound: {
+    code: "PURCHASE_REQUEST_NOT_FOUND",
+    status: HttpStatus.NOT_FOUND,
+    message: "Solicitação de compra não encontrada neste condomínio.",
+  },
+  requestInvalid: {
+    code: "PURCHASE_REQUEST_INVALID",
     status: HttpStatus.UNPROCESSABLE_ENTITY,
     message: (params: { reason: string }) => params.reason,
   },
-  supplierDocumentTaken: {
-    code: "SUPPLIER_DOCUMENT_TAKEN",
+  requestLocked: {
+    code: "PURCHASE_REQUEST_LOCKED",
     status: HttpStatus.CONFLICT,
     message:
-      "Já existe um fornecedor com este CNPJ/CPF no condomínio. Procure por ele na lista (ele pode estar inativo).",
+      "Esta solicitação já está em cotação ou foi encerrada: ela não pode mais ser alterada nem cancelada.",
   },
 };
