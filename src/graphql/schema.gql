@@ -388,6 +388,62 @@ enum UserGroup {
   ADMIN_MASTER
 }
 
+"""Marca do catálogo do condomínio."""
+type Brand {
+  id: ID!
+  name: String!
+  active: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""Quantos produtos (ou marcas) estão ativos e inativos."""
+type CatalogCounts {
+  active: Int!
+  inactive: Int!
+}
+
+"""Um produto ou marca nos selects (os novos usos oferecem só os ativos)."""
+type CatalogOption {
+  id: ID!
+  name: String!
+  active: Boolean!
+
+  """Produtos: a unidade de costume."""
+  unit: String
+}
+
+"""
+Produto do catálogo do condomínio (usado pelas compras e, no futuro, por outros módulos).
+"""
+type Product {
+  id: ID!
+  name: String!
+
+  """Unidade de costume (un, cx, kg…)."""
+  unit: String!
+  description: String
+  active: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type ProductPage {
+  items: [Product!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+type BrandPage {
+  items: [Brand!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
 """Condomínio cliente, como o console da plataforma o mostra."""
 type Condominium {
   id: ID!
@@ -1363,6 +1419,7 @@ enum Permission {
   PARCELS_MANAGE
   LOST_FOUND_MANAGE
   PURCHASES_MANAGE
+  PURCHASES_REQUEST
   EVENTS_MANAGE
   PAYMENTS_MANAGE
   AUDIT_READ
@@ -1976,6 +2033,8 @@ enum NotificationType {
   LOST_REPORT_MATCH
   LOST_REPORT_SPOTTED
   LOST_REPORT_EXPIRED
+  PURCHASE_REQUEST_CREATED
+  PURCHASE_REQUEST_CANCELLED
 }
 
 type NotificationPage {
@@ -2494,86 +2553,92 @@ type PlatformMetrics {
   health: HealthMetrics!
 }
 
-"""Um fornecedor no filtro “Nome” (nome fantasia ou razão social)."""
-type SupplierNameOption {
+"""Uma solicitação no filtro (número e título)."""
+type PurchaseRequestOption {
+  id: ID!
+  number: Int!
+  title: String!
+}
+
+"""Quem fez solicitações (filtro “Solicitante”)."""
+type PurchaseRequesterOption {
   id: ID!
   name: String!
 }
 
-"""Um CNPJ/CPF no filtro de documento."""
-type SupplierDocumentOption {
-  documentType: SupplierDocumentType!
-
-  """Só os números."""
-  document: String!
-}
-
-"""Fornecedor com CNPJ (empresa) ou CPF (autônomo)."""
-enum SupplierDocumentType {
-  CNPJ
-  CPF
+"""O que os filtros das solicitações oferecem (as que a pessoa vê)."""
+type PurchaseRequestFilterOptions {
+  requests: [PurchaseRequestOption!]!
+  requesters: [PurchaseRequesterOption!]!
 }
 
 """
-O que os filtros dos fornecedores oferecem: os nomes, contatos e documentos em uso.
+As solicitações em números (os cards da página), independente dos filtros.
 """
-type SupplierFilterOptions {
-  suppliers: [SupplierNameOption!]!
-  contacts: [String!]!
-  documents: [SupplierDocumentOption!]!
+type PurchaseRequestOverview {
+  """Aguardando cotação."""
+  open: Int!
+
+  """Em andamento e urgentes."""
+  urgent: Int!
+
+  """Em andamento e precisam em até 7 dias."""
+  dueSoon: Int!
+
+  """Em andamento e com a data em que precisavam já passada."""
+  overdue: Int!
 }
 
-"""
-Os fornecedores em números (os cards da página), independente dos filtros.
-"""
-type SupplierOverview {
-  active: Int!
-  inactive: Int!
-
-  """Ativos sem chave PIX para pagamento."""
-  activeWithoutPix: Int!
-
-  """Ativos sem telefone nem e-mail."""
-  activeWithoutContact: Int!
-
-  """Categorias atendidas por ao menos um fornecedor ativo."""
-  categoriesServed: Int!
-}
-
-"""Fornecedor do condomínio (empresa ou autônomo)."""
-type Supplier {
+"""Um item de uma solicitação de compra."""
+type PurchaseRequestItem {
   id: ID!
-  documentType: SupplierDocumentType!
+  productId: ID!
+  productName: String!
+  quantity: Float!
+  unit: String!
 
-  """CNPJ ou CPF, só os números."""
-  document: String!
+  """A marca pedida (vazio: qualquer marca)."""
+  brandId: ID
+  brandName: String
+  note: String
+}
 
-  """Razão social, ou o nome do autônomo."""
-  name: String!
-  tradeName: String
-  categories: [PurchaseCategory!]!
+"""Solicitação de compra (o que a equipe precisa comprar)."""
+type PurchaseRequest {
+  id: ID!
 
-  """Com OTHER entre as categorias: o que ele atende, digitado."""
+  """Número no condomínio (exibido como SC-0001)."""
+  number: Int!
+  title: String!
+  description: String
+  categories: [Category!]!
+
+  """Com OTHER entre as categorias: de que é a compra, digitado."""
   categoryOther: String
-  contactName: String
-  email: String
+  priority: PurchasePriority!
 
-  """Só os números, com DDD."""
-  phone: String
-  city: String
-  state: String
-  pixKeyType: PixKeyType
-  pixKey: String
-  notes: String
-  active: Boolean!
+  """O espaço do condomínio onde vai ser usado."""
+  spaceId: ID
+
+  """Onde vai ser usado: o nome do espaço ou o local digitado."""
+  location: String
+
+  """Dia em que precisa (AAAA-MM-DD)."""
+  neededBy: String
+  status: PurchaseRequestStatus!
+  requestedById: ID!
+  requestedByName: String!
+  items: [PurchaseRequestItem!]!
+  cancelReason: String
+  cancelledAt: DateTime
   createdAt: DateTime!
   updatedAt: DateTime!
 }
 
 """
-Categoria de uma compra ou do que um fornecedor atende (manutenção, elétrica, limpeza, alimentação…); o que não estiver na lista é OTHER, com o texto digitado.
+Categoria de uma compra, de um fornecedor ou de outro registro (manutenção, elétrica, limpeza, alimentação…); o que não estiver na lista é OTHER, com o texto digitado.
 """
-enum PurchaseCategory {
+enum Category {
   MAINTENANCE
   ELECTRICAL
   PLUMBING
@@ -2596,12 +2661,54 @@ enum PurchaseCategory {
   OTHER
 }
 
-type SupplierPage {
-  items: [Supplier!]!
+"""Prioridade de uma solicitação de compra."""
+enum PurchasePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+"""
+Solicitação de compra: aguardando cotação, em cotação, aguardando aprovação, aprovada, pedido feito, recebida, concluída, reprovada ou cancelada.
+"""
+enum PurchaseRequestStatus {
+  OPEN
+  QUOTING
+  AWAITING_APPROVAL
+  APPROVED
+  ORDERED
+  RECEIVED
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+type PurchaseRequestPage {
+  items: [PurchaseRequest!]!
   total: Int!
   page: Int!
   limit: Int!
   totalPages: Int!
+}
+
+"""O produto (ou marca) em mais solicitações."""
+type PurchaseCatalogTop {
+  name: String!
+  requestCount: Int!
+}
+
+"""
+Como os produtos e marcas do catálogo aparecem nas solicitações de compra.
+"""
+type PurchaseCatalogUsage {
+  """Produtos em ao menos uma solicitação."""
+  productsInUse: Int!
+  topProduct: PurchaseCatalogTop
+
+  """Marcas em ao menos uma solicitação."""
+  brandsInUse: Int!
+  topBrand: PurchaseCatalogTop
 }
 
 """Dependente aprovado de um morador."""
@@ -2743,6 +2850,90 @@ type Space {
 
   """Até 3 fotos."""
   photos: [SpacePhoto!]!
+}
+
+"""Um fornecedor no filtro “Nome” (nome fantasia ou razão social)."""
+type SupplierNameOption {
+  id: ID!
+  name: String!
+}
+
+"""Um CNPJ/CPF no filtro de documento."""
+type SupplierDocumentOption {
+  documentType: SupplierDocumentType!
+
+  """Só os números."""
+  document: String!
+}
+
+"""Fornecedor com CNPJ (empresa) ou CPF (autônomo)."""
+enum SupplierDocumentType {
+  CNPJ
+  CPF
+}
+
+"""
+O que os filtros dos fornecedores oferecem: os nomes, contatos e documentos em uso.
+"""
+type SupplierFilterOptions {
+  suppliers: [SupplierNameOption!]!
+  contacts: [String!]!
+  documents: [SupplierDocumentOption!]!
+}
+
+"""
+Os fornecedores em números (os cards da página), independente dos filtros.
+"""
+type SupplierOverview {
+  active: Int!
+  inactive: Int!
+
+  """Ativos sem chave PIX para pagamento."""
+  activeWithoutPix: Int!
+
+  """Ativos sem telefone nem e-mail."""
+  activeWithoutContact: Int!
+
+  """Categorias atendidas por ao menos um fornecedor ativo."""
+  categoriesServed: Int!
+}
+
+"""Fornecedor do condomínio (empresa ou autônomo)."""
+type Supplier {
+  id: ID!
+  documentType: SupplierDocumentType!
+
+  """CNPJ ou CPF, só os números."""
+  document: String!
+
+  """Razão social, ou o nome do autônomo."""
+  name: String!
+  tradeName: String
+  categories: [Category!]!
+
+  """Com OTHER entre as categorias: o que ele atende, digitado."""
+  categoryOther: String
+  contactName: String
+  email: String
+
+  """Só os números, com DDD."""
+  phone: String
+  city: String
+  state: String
+  pixKeyType: PixKeyType
+  pixKey: String
+  notes: String
+  active: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type SupplierPage {
+  items: [Supplier!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
 }
 
 """Solicitação de suporte."""
@@ -2983,6 +3174,24 @@ type Query {
   """Os comunicados do condomínio em números."""
   broadcastStats: BroadcastStats!
 
+  """Marcas do catálogo (ativas primeiro, por nome)."""
+  brands(filter: CatalogFilterInput, page: PageInput): BrandPage!
+
+  """Todas as marcas, por nome (selects e filtros)."""
+  brandOptions: [CatalogOption!]!
+
+  """Quantas marcas estão ativas e inativas."""
+  brandCounts: CatalogCounts!
+
+  """Produtos do catálogo (ativos primeiro, por nome)."""
+  products(filter: CatalogFilterInput, page: PageInput): ProductPage!
+
+  """Todos os produtos, por nome (selects e filtros)."""
+  productOptions: [CatalogOption!]!
+
+  """Quantos produtos estão ativos e inativos."""
+  productCounts: CatalogCounts!
+
   """O PIX do condomínio (nulo: ainda não cadastrado)."""
   condominiumPix: PixReceiver
   condominiums(filter: CondominiumFilterInput): [Condominium!]!
@@ -3192,19 +3401,26 @@ type Query {
   """
   platformMetrics(filter: PlatformMetricsFilterInput): PlatformMetrics!
 
-  """Fornecedores do condomínio (ativos primeiro, por nome)."""
-  suppliers(filter: SupplierFilterInput, page: PageInput): SupplierPage!
+  """
+  Solicitações de compra (todas para a gestão; as próprias para quem só solicita), as mais novas primeiro.
+  """
+  purchaseRequests(filter: PurchaseRequestFilterInput, page: PageInput): PurchaseRequestPage!
+
+  """Uma solicitação de compra."""
+  purchaseRequest(id: ID!): PurchaseRequest!
 
   """
-  O que os filtros dos fornecedores oferecem (nomes, contatos e CNPJ/CPF em uso).
+  O que os filtros das solicitações oferecem (números, títulos e solicitantes).
   """
-  supplierFilterOptions: SupplierFilterOptions!
+  purchaseRequestFilterOptions: PurchaseRequestFilterOptions!
 
-  """Os fornecedores em números (os cards da página)."""
-  supplierOverview: SupplierOverview!
+  """As solicitações em números (os cards da página)."""
+  purchaseRequestOverview: PurchaseRequestOverview!
 
-  """Um fornecedor do condomínio."""
-  supplier(id: ID!): Supplier!
+  """
+  Como os produtos e marcas do catálogo aparecem nas solicitações (cards das páginas do catálogo).
+  """
+  purchaseCatalogUsage: PurchaseCatalogUsage!
 
   """
   Moradores ativos do condomínio, por nome, com filtros e por página (somente leitura).
@@ -3219,6 +3435,20 @@ type Query {
   """
   spaces(includeInactive: Boolean! = false): [Space!]!
   space(id: ID!): Space!
+
+  """Fornecedores do condomínio (ativos primeiro, por nome)."""
+  suppliers(filter: SupplierFilterInput, page: PageInput): SupplierPage!
+
+  """
+  O que os filtros dos fornecedores oferecem (nomes, contatos e CNPJ/CPF em uso).
+  """
+  supplierFilterOptions: SupplierFilterOptions!
+
+  """Os fornecedores em números (os cards da página)."""
+  supplierOverview: SupplierOverview!
+
+  """Um fornecedor do condomínio."""
+  supplier(id: ID!): Supplier!
 
   """Quantas solicitações de suporte ainda posso enviar hoje."""
   supportQuota: SupportQuota!
@@ -3296,6 +3526,15 @@ input DayGuestFilterInput {
 
   """true: só quem já entrou; false: só quem ainda não entrou."""
   checkedIn: Boolean
+}
+
+"""Filtros dos produtos ou das marcas."""
+input CatalogFilterInput {
+  """Exatamente este."""
+  id: ID
+
+  """Só os ativos (true) ou só os inativos (false); vazio: todos."""
+  active: Boolean
 }
 
 input CondominiumFilterInput {
@@ -3488,6 +3727,29 @@ input PlatformMetricsFilterInput {
   condominiumId: ID
 }
 
+"""Filtros das solicitações de compra."""
+input PurchaseRequestFilterInput {
+  """Exatamente esta solicitação."""
+  requestId: ID
+
+  """Feitas por esta pessoa."""
+  requestedById: ID
+
+  """Com esta categoria entre as suas."""
+  category: Category
+  priority: PurchasePriority
+  statuses: [PurchaseRequestStatus!]
+}
+
+"""Filtros da consulta de moradores."""
+input ResidentsFilterInput {
+  """Um morador (pelo nome)."""
+  userId: ID
+
+  """A unidade."""
+  unitId: ID
+}
+
 """Filtros dos fornecedores."""
 input SupplierFilterInput {
   """Exatamente este fornecedor."""
@@ -3498,19 +3760,10 @@ input SupplierFilterInput {
 
   """Exatamente este CNPJ/CPF (com ou sem pontuação)."""
   document: String
-  category: PurchaseCategory
+  category: Category
 
   """Só os ativos (true) ou só os inativos (false); vazio: todos."""
   active: Boolean
-}
-
-"""Filtros da consulta de moradores."""
-input ResidentsFilterInput {
-  """Um morador (pelo nome)."""
-  userId: ID
-
-  """A unidade."""
-  unitId: ID
 }
 
 input SystemLogFilterInput {
@@ -3570,6 +3823,32 @@ type Mutation {
   createSpaceBlock(input: CreateSpaceBlockInput!): SpaceBlock!
   deleteSpaceBlock(id: ID!): Boolean!
   sendBroadcast(input: BroadcastInput!): Broadcast!
+
+  """
+  Cadastra uma marca (um nome por condomínio); também ao preencher um item.
+  """
+  createBrand(name: String!): Brand!
+
+  """Renomeia uma marca."""
+  renameBrand(id: ID!, name: String!): Brand!
+
+  """
+  Ativa ou desativa uma marca (inativa não aparece em novos usos; o histórico fica).
+  """
+  setBrandActive(id: ID!, active: Boolean!): Brand!
+
+  """
+  Cadastra um produto (um nome por condomínio); também ao preencher um item.
+  """
+  createProduct(input: ProductInput!): Product!
+
+  """Altera um produto."""
+  updateProduct(id: ID!, input: ProductInput!): Product!
+
+  """
+  Ativa ou desativa um produto (inativo não aparece em novos usos; o histórico fica).
+  """
+  setProductActive(id: ID!, active: Boolean!): Product!
 
   """
   Liga ou desliga um módulo contratado à parte (ex.: Eventos) no condomínio.
@@ -3814,16 +4093,18 @@ type Mutation {
   """Remove a própria foto de perfil."""
   removeMyPhoto: Boolean!
 
-  """Cadastra um fornecedor."""
-  createSupplier(input: SupplierInput!): Supplier!
+  """
+  Faz uma solicitação de compra (numerada no condomínio); a gestão é avisada.
+  """
+  createPurchaseRequest(input: PurchaseRequestInput!): PurchaseRequest!
 
-  """Altera um fornecedor."""
-  updateSupplier(id: ID!, input: SupplierInput!): Supplier!
+  """Altera uma solicitação (dados e itens) enquanto aguarda cotação."""
+  updatePurchaseRequest(id: ID!, input: PurchaseRequestInput!): PurchaseRequest!
 
   """
-  Ativa ou desativa um fornecedor (inativo não entra em novas cotações; o histórico fica).
+  Cancela uma solicitação que aguarda cotação, com o motivo (quem pediu é avisado quando foi outra pessoa).
   """
-  setSupplierActive(id: ID!, active: Boolean!): Supplier!
+  cancelPurchaseRequest(id: ID!, reason: String!): PurchaseRequest!
   createSpace(input: SpaceInput!): Space!
   updateSpace(id: ID!, input: SpaceInput!): Space!
 
@@ -3838,6 +4119,17 @@ type Mutation {
 
   """Exclui o espaço."""
   deleteSpace(id: ID!): Boolean!
+
+  """Cadastra um fornecedor."""
+  createSupplier(input: SupplierInput!): Supplier!
+
+  """Altera um fornecedor."""
+  updateSupplier(id: ID!, input: SupplierInput!): Supplier!
+
+  """
+  Ativa ou desativa um fornecedor (inativo não entra em novas cotações; o histórico fica).
+  """
+  setSupplierActive(id: ID!, active: Boolean!): Supplier!
 
   """
   Envia uma solicitação de suporte (até 3 por dia); avisa os administradores.
@@ -3948,6 +4240,17 @@ input BroadcastInput {
 
   """Também envia por e-mail."""
   sendEmail: Boolean!
+}
+
+"""Dados de um produto do catálogo."""
+input ProductInput {
+  name: String!
+
+  """Unidade de costume (un, cx, kg…)."""
+  unit: String!
+
+  """O que identifica o produto (medida, modelo…)."""
+  description: String
 }
 
 input PixReceiverInput {
@@ -4587,36 +4890,48 @@ input AuthorizeParcelPickupInput {
   document: String
 }
 
-"""Dados de um fornecedor."""
-input SupplierInput {
-  documentType: SupplierDocumentType!
+"""Dados de uma solicitação de compra."""
+input PurchaseRequestInput {
+  """O que precisa ser comprado ou contratado."""
+  title: String!
+  description: String
 
-  """CNPJ ou CPF (com ou sem pontuação)."""
-  document: String!
+  """De que é a compra (ao menos uma)."""
+  categories: [Category!]!
 
-  """Razão social, ou o nome do autônomo."""
-  name: String!
-
-  """Nome fantasia."""
-  tradeName: String
-
-  """O que o fornecedor atende (ao menos uma)."""
-  categories: [PurchaseCategory!]!
-
-  """
-  Com OTHER entre as categorias: o que ele atende, digitado (ex.: dedetização).
-  """
+  """Com OTHER entre as categorias: de que é a compra, digitado."""
   categoryOther: String
-  contactName: String
-  email: String
-  phone: String
-  city: String
 
-  """UF (ex.: GO)."""
-  state: String
-  pixKeyType: PixKeyType
-  pixKey: String
-  notes: String
+  """Vazio: normal."""
+  priority: PurchasePriority
+
+  """Um espaço do condomínio onde vai ser usado."""
+  spaceId: ID
+
+  """Outro local (sem espaço), digitado."""
+  location: String
+
+  """Dia em que precisa (AAAA-MM-DD), hoje ou depois."""
+  neededBy: String
+  items: [PurchaseRequestItemInput!]!
+}
+
+"""Um item de uma solicitação de compra."""
+input PurchaseRequestItemInput {
+  """Um produto do catálogo do condomínio."""
+  productId: ID!
+
+  """Maior que zero, até 2 casas decimais."""
+  quantity: Float!
+
+  """un, cx, kg, m², serviço…"""
+  unit: String!
+
+  """Uma marca do catálogo (vazio: qualquer marca)."""
+  brandId: ID
+
+  """Observação do item (cor, medida, modelo…)."""
+  note: String
 }
 
 """O formulário completo do espaço."""
@@ -4671,6 +4986,38 @@ input GuestRulesInput {
 
   """A portaria exige o documento de cada convidado."""
   documentRequired: Boolean!
+}
+
+"""Dados de um fornecedor."""
+input SupplierInput {
+  documentType: SupplierDocumentType!
+
+  """CNPJ ou CPF (com ou sem pontuação)."""
+  document: String!
+
+  """Razão social, ou o nome do autônomo."""
+  name: String!
+
+  """Nome fantasia."""
+  tradeName: String
+
+  """O que o fornecedor atende (ao menos uma)."""
+  categories: [Category!]!
+
+  """
+  Com OTHER entre as categorias: o que ele atende, digitado (ex.: dedetização).
+  """
+  categoryOther: String
+  contactName: String
+  email: String
+  phone: String
+  city: String
+
+  """UF (ex.: GO)."""
+  state: String
+  pixKeyType: PixKeyType
+  pixKey: String
+  notes: String
 }
 
 input SupportRequestInput {

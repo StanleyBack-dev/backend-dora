@@ -22,6 +22,9 @@ export const STAMP_SCOPE: Record<StampedEntity, StampScope> = {
   enrollment_request: "condominium",
   event: "condominium",
   supplier: "condominium",
+  purchase_request: "condominium",
+  product: "condominium",
+  brand: "condominium",
   support_request: "owner",
 };
 
@@ -44,5 +47,8 @@ export const STAMP_READ_PERMISSION: Partial<Record<StampedEntity, Permission>> =
     space_block: Permission.BOOKINGS_MANAGE,
     event: Permission.EVENTS_MANAGE,
     supplier: Permission.PURCHASES_MANAGE,
+    purchase_request: Permission.PURCHASES_MANAGE,
+    product: Permission.PURCHASES_MANAGE,
+    brand: Permission.PURCHASES_MANAGE,
     condominium: Permission.CONDOMINIUMS_MANAGE,
   };

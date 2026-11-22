@@ -38,6 +38,7 @@ describe("group defaults", () => {
       Permission.PARCELS_MANAGE,
       Permission.LOST_FOUND_MANAGE,
       Permission.PURCHASES_MANAGE,
+      Permission.PURCHASES_REQUEST,
     ]);
   });
 
@@ -47,6 +48,7 @@ describe("group defaults", () => {
       Permission.RESIDENTS_READ,
       Permission.PARCELS_MANAGE,
       Permission.LOST_FOUND_MANAGE,
+      Permission.PURCHASES_REQUEST,
     ]);
   });
 

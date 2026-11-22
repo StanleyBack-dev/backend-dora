@@ -37,6 +37,8 @@ import { ProfilePhotosModule } from "@/modules/profile-photos/profile-photos.mod
 import { OutboxModule } from "@/modules/outbox/outbox.module";
 import { LostAndFoundModule } from "@/modules/lost-and-found/lost-and-found.module";
 import { PurchasesModule } from "@/modules/purchases/purchases.module";
+import { CatalogModule } from "@/modules/catalog/catalog.module";
+import { SuppliersModule } from "@/modules/suppliers/suppliers.module";
 import { ParcelsModule } from "@/modules/parcels/parcels.module";
 import { ResidentsDirectoryModule } from "@/modules/residents-directory/residents-directory.module";
 import { SpacesModule } from "@/modules/spaces/spaces.module";
@@ -59,6 +61,8 @@ import { SharedModule } from "@/shared/shared.module";
     BookingsModule,
     ParcelsModule,
     LostAndFoundModule,
+    CatalogModule,
+    SuppliersModule,
     PurchasesModule,
     ResidentsDirectoryModule,
     ProfilePhotosModule,

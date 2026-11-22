@@ -1,15 +1,17 @@
 import { registerEnumType } from "@nestjs/graphql";
-import "@/common/graphql/pix-key-type.enum";
-import { PurchaseCategory } from "@/modules/purchases/domain/purchase-category";
-import { SupplierDocumentType } from "@/modules/purchases/domain/supplier";
+import "@/modules/catalog/presentation/graphql/catalog.graphql-enums";
+import {
+  PurchasePriority,
+  PurchaseRequestStatus,
+} from "@/modules/purchases/domain/purchase-request";
 
-registerEnumType(PurchaseCategory, {
-  name: "PurchaseCategory",
+registerEnumType(PurchaseRequestStatus, {
+  name: "PurchaseRequestStatus",
   description:
-    "Categoria de uma compra ou do que um fornecedor atende (manutenção, elétrica, limpeza, alimentação…); o que não estiver na lista é OTHER, com o texto digitado.",
+    "Solicitação de compra: aguardando cotação, em cotação, aguardando aprovação, aprovada, pedido feito, recebida, concluída, reprovada ou cancelada.",
 });
 
-registerEnumType(SupplierDocumentType, {
-  name: "SupplierDocumentType",
-  description: "Fornecedor com CNPJ (empresa) ou CPF (autônomo).",
+registerEnumType(PurchasePriority, {
+  name: "PurchasePriority",
+  description: "Prioridade de uma solicitação de compra.",
 });
