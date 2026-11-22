@@ -37,6 +37,7 @@ describe("group defaults", () => {
       Permission.PAYMENTS_MANAGE,
       Permission.PARCELS_MANAGE,
       Permission.LOST_FOUND_MANAGE,
+      Permission.PURCHASES_MANAGE,
     ]);
   });
 

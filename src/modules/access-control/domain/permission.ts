@@ -34,6 +34,11 @@ export enum Permission {
    * contracted apart).
    */
   LOST_FOUND_MANAGE = "LOST_FOUND_MANAGE",
+  /**
+   * Purchases: suppliers, purchase requests and quotes (module contracted
+   * apart).
+   */
+  PURCHASES_MANAGE = "PURCHASES_MANAGE",
   /** Create, publish and cancel events (module contracted apart). */
   EVENTS_MANAGE = "EVENTS_MANAGE",
   /** The condominium's PIX and the review of payment receipts (e.g. event tickets). */
