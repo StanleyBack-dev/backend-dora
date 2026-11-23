@@ -17,9 +17,11 @@ import { addDays, toLocalDate } from "@/shared/domain/local-date";
 /** "Prazo próximo": needed within this many days. */
 const DUE_SOON_DAYS = 7;
 
-// The purchase requests the caller sees (every one for the management,
-// their own otherwise), filtered and paged here; one of them; what the
-// filters offer; and the numbers of the page's cards.
+/**
+ * The purchase requests the caller sees (every one for the management,
+ * their own otherwise), filtered and paged here; one of them; what the
+ * filters offer; and the numbers of the page's cards.
+ */
 @Injectable()
 export class ListPurchaseRequestsUseCase {
   constructor(

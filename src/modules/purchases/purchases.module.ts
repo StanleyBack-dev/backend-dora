@@ -36,11 +36,32 @@ import { PurchaseRequestSqlRepository } from "@/modules/purchases/infrastructure
 import { PurchaseQuotesResolver } from "@/modules/purchases/presentation/graphql/purchase-quotes.resolver";
 import { QuoteBoardResolver } from "@/modules/purchases/presentation/graphql/quote-board.resolver";
 import { PurchaseRequestsResolver } from "@/modules/purchases/presentation/graphql/purchase-requests.resolver";
+import { PURCHASE_ORDER_REPOSITORY } from "@/modules/purchases/application/ports/purchase-order-repository.port";
+import { PURCHASE_ORDER_RENDERER } from "@/modules/purchases/application/ports/purchase-order-renderer.port";
+import { PurchaseOrderFiles } from "@/modules/purchases/application/purchase-order-files";
+import { ListPurchaseOrdersUseCase } from "@/modules/purchases/application/use-cases/list-purchase-orders.use-case";
+import { PayPurchaseInstallmentUseCase } from "@/modules/purchases/application/use-cases/pay-purchase-installment.use-case";
+import { PlacePurchaseOrderUseCase } from "@/modules/purchases/application/use-cases/place-purchase-order.use-case";
+import { PurchaseOrderPdfUseCase } from "@/modules/purchases/application/use-cases/purchase-order-pdf.use-case";
+import { RatePurchaseSupplierUseCase } from "@/modules/purchases/application/use-cases/rate-purchase-supplier.use-case";
+import { RecordPurchaseReceiptUseCase } from "@/modules/purchases/application/use-cases/record-purchase-receipt.use-case";
+import { PdfLibPurchaseOrderRenderer } from "@/modules/purchases/infrastructure/pdf/pdf-lib-purchase-order.renderer";
+import { PurchaseOrderSqlRepository } from "@/modules/purchases/infrastructure/persistence/purchase-order-sql.repository";
+import { PurchaseOrdersResolver } from "@/modules/purchases/presentation/graphql/purchase-orders.resolver";
+import { PurchasePaymentsResolver } from "@/modules/purchases/presentation/graphql/purchase-payments.resolver";
+import { PurchaseDocumentMailer } from "@/modules/purchases/application/purchase-document-mailer";
+import { CancelPurchaseOrderUseCase } from "@/modules/purchases/application/use-cases/cancel-purchase-order.use-case";
+import { ListPurchasePaymentsUseCase } from "@/modules/purchases/application/use-cases/list-purchase-payments.use-case";
+import { ReschedulePurchaseInstallmentUseCase } from "@/modules/purchases/application/use-cases/reschedule-purchase-installment.use-case";
+import { SendPurchaseOrderEmailUseCase } from "@/modules/purchases/application/use-cases/send-purchase-order-email.use-case";
 
-// Purchases (compras do condomínio), a module contracted apart: purchase
-// requests, quotes and their approval, on the shared catalog (products,
-// brands, categories) and suppliers registry. Purchases between
-// residents will be a module of their own (marketplace).
+/**
+ * Purchases (compras do condomínio), a module contracted apart: purchase
+ * requests, quotes, their approval, the orders (deliveries and payments,
+ * rating the supplier), on the shared catalog (products,
+ * brands, categories) and suppliers registry. Purchases between
+ * residents will be a module of their own (marketplace).
+ */
 @Module({
   imports: [
     AccessControlModule,
@@ -72,6 +93,25 @@ import { PurchaseRequestsResolver } from "@/modules/purchases/presentation/graph
     DecidePurchaseApprovalUseCase,
     PurchaseApprovalsResolver,
     PurchaseSummaryPdfUseCase,
+    PurchaseOrderFiles,
+    ListPurchaseOrdersUseCase,
+    PlacePurchaseOrderUseCase,
+    RecordPurchaseReceiptUseCase,
+    PayPurchaseInstallmentUseCase,
+    RatePurchaseSupplierUseCase,
+    PurchaseOrderPdfUseCase,
+    PurchaseOrdersResolver,
+    PurchaseDocumentMailer,
+    CancelPurchaseOrderUseCase,
+    SendPurchaseOrderEmailUseCase,
+    ListPurchasePaymentsUseCase,
+    ReschedulePurchaseInstallmentUseCase,
+    PurchasePaymentsResolver,
+    { provide: PURCHASE_ORDER_RENDERER, useClass: PdfLibPurchaseOrderRenderer },
+    {
+      provide: PURCHASE_ORDER_REPOSITORY,
+      useClass: PurchaseOrderSqlRepository,
+    },
     {
       provide: PURCHASE_SUMMARY_RENDERER,
       useClass: PdfLibPurchaseSummaryRenderer,

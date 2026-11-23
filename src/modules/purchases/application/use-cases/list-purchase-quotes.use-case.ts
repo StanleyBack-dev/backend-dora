@@ -1,3 +1,4 @@
+import { formatQuantity } from "@/modules/catalog/domain/unit";
 import { Inject, Injectable } from "@nestjs/common";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { APP_ERRORS } from "@/common/exceptions/app-errors.catalog";
@@ -41,6 +42,8 @@ import {
   OBJECT_STORAGE,
   type ObjectStoragePort,
 } from "@/shared/application/ports/object-storage.port";
+import { formatCents } from "@/shared/domain/money";
+import { formatLocalDate } from "@/shared/domain/local-date";
 
 /** A quote with its totals, as the comparison shows it. */
 export type QuoteView = PurchaseQuote &
@@ -75,9 +78,6 @@ export type QuoteMapFile = {
   chosen: string | null;
 };
 
-const money = (cents: number) =>
-  (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
 /** How a quote is paid, as a line ("Cartão de crédito · 3x de R$ 56,60"). */
 export function paymentLine(
   quote: Pick<
@@ -99,20 +99,19 @@ export function paymentLine(
   const last = parts[parts.length - 1];
   const split =
     last === parts[0]
-      ? `${quote.installments}x de ${money(parts[0])}`
-      : `${quote.installments}x de ${money(parts[0])} (última de ${money(last)})`;
+      ? `${quote.installments}x de ${formatCents(parts[0])}`
+      : `${quote.installments}x de ${formatCents(parts[0])} (última de ${formatCents(last)})`;
   const interest = quote.interestRateBp
     ? ` com juros de ${(quote.interestRateBp / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}% a.m.`
     : " sem juros";
   return `${method} · ${split}${interest}`;
 }
 
-/** "21/11/2026" from "2026-11-21". */
-const day = (value: string) => value.split("-").reverse().join("/");
-
-// The quotes of a request for the management: totals, the cheapest
-// complete one and the chosen one, in the request's item order; and the
-// comparison map as a PDF.
+/**
+ * The quotes of a request for the management: totals, the cheapest
+ * complete one and the chosen one, in the request's item order; and the
+ * comparison map as a PDF.
+ */
 @Injectable()
 export class ListPurchaseQuotesUseCase {
   constructor(
@@ -129,7 +128,6 @@ export class ListPurchaseQuotesUseCase {
     private readonly approvals: PurchaseApprovalRepositoryPort,
   ) {}
 
-  // The management and the approvers read the quotes.
   private async load(actor: AuthenticatedUser, requestId: string) {
     const condominiumId = await this.access.condominiumWithAny(
       actor,
@@ -227,7 +225,6 @@ export class ListPurchaseQuotesUseCase {
       timeZone: this.clock.timeZone,
     }).format(now);
     const code = requestCode(request.number);
-    // The decision that stands (none once sent back to quotes).
     const decided =
       request.status === PurchaseRequestStatus.APPROVED ||
       request.status === PurchaseRequestStatus.REJECTED;
@@ -245,14 +242,14 @@ export class ListPurchaseQuotesUseCase {
       title: request.title,
       condominiumName: condominium?.name ?? "Condomínio",
       requestedByName: request.requestedByName,
-      neededBy: request.neededBy ? day(request.neededBy) : null,
+      neededBy: request.neededBy ? formatLocalDate(request.neededBy) : null,
       location: request.location,
       generatedAt,
       items: request.items.map((item) => ({
         label: [item.productName, item.brandName, item.note]
           .filter(Boolean)
           .join(" · "),
-        quantity: `${item.quantity.toLocaleString("pt-BR")} ${item.unit}`,
+        quantity: formatQuantity(item.quantity, item.unit),
       })),
       quotes: views.map((view) => ({
         supplierName: view.supplierName,
@@ -274,7 +271,7 @@ export class ListPurchaseQuotesUseCase {
         chosen: view.chosen,
         deliveryDays: view.deliveryDays,
         payment: paymentLine(view),
-        validUntil: view.validUntil ? day(view.validUntil) : null,
+        validUntil: view.validUntil ? formatLocalDate(view.validUntil) : null,
         notes: view.notes,
         file: view.fileKey ? (view.fileIsPdf ? "PDF" : "Imagem") : null,
       })),
@@ -291,7 +288,7 @@ export class ListPurchaseQuotesUseCase {
         : null,
     });
     const pick = (view: QuoteView | undefined) =>
-      view ? `${view.supplierName} · ${money(view.totalCents)}` : null;
+      view ? `${view.supplierName} · ${formatCents(view.totalCents)}` : null;
     return {
       fileName: `mapa-de-cotacao-${code}.pdf`,
       content,

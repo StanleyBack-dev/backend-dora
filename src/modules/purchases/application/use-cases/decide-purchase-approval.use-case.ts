@@ -16,6 +16,10 @@ import {
   PURCHASE_REQUEST_REPOSITORY,
   type PurchaseRequestRepositoryPort,
 } from "@/modules/purchases/application/ports/purchase-request-repository.port";
+import {
+  boundedText,
+  requestInvalid,
+} from "@/modules/purchases/application/purchase-errors";
 import { approvalDecidedNotices } from "@/modules/purchases/application/purchase-approval-notices";
 import { PurchasesAccessService } from "@/modules/purchases/application/purchases-access.service";
 import {
@@ -41,17 +45,13 @@ const OUTCOME: Record<Decision, ApprovalOutcome> = {
   [ApprovalDecision.REJECTED]: PurchaseRequestStatus.REJECTED,
 };
 
-/** The note as kept: spaces collapsed, null when empty. */
-const cleanNote = (value: string | null | undefined) => {
-  const text = (value ?? "").replace(/\s+/g, " ").trim();
-  return text ? text : null;
-};
-
-// An approver decides on a chosen quote waiting for approval: approve it
-// (an optional note), send it back to quotes (the choice is undone) or
-// reject it (the request ends); the last two need the reason. Whoever chose
-// it may also approve it: the record keeps who chose and who decided.
-// Whoever asked for it and the managers are told.
+/**
+ * An approver decides on a chosen quote waiting for approval: approve it
+ * (an optional note), send it back to quotes (the choice is undone) or
+ * reject it (the request ends); the last two need the reason. Whoever chose
+ * it may also approve it: the record keeps who chose and who decided.
+ * Whoever asked for it and the managers are told.
+ */
 @Injectable()
 export class DecidePurchaseApprovalUseCase {
   constructor(
@@ -89,16 +89,13 @@ export class DecidePurchaseApprovalUseCase {
     if (!request) {
       throw AppException.from(APP_ERRORS.purchases.requestNotFound, undefined);
     }
-    const note = cleanNote(noteInput);
-    if (note && note.length > APPROVAL_LIMITS.note) {
-      throw AppException.from(APP_ERRORS.purchases.requestInvalid, {
-        reason: `A observação vai até ${APPROVAL_LIMITS.note} caracteres.`,
-      });
-    }
+    const note = boundedText(noteInput, APPROVAL_LIMITS.note, () =>
+      requestInvalid(
+        `A observação vai até ${APPROVAL_LIMITS.note} caracteres.`,
+      ),
+    );
     if (decision !== ApprovalDecision.APPROVED && (!note || note.length < 3)) {
-      throw AppException.from(APP_ERRORS.purchases.requestInvalid, {
-        reason: "Diga o motivo (ao menos 3 letras).",
-      });
+      throw requestInvalid("Diga o motivo (ao menos 3 letras).");
     }
     const chosen =
       request.status === PurchaseRequestStatus.AWAITING_APPROVAL &&

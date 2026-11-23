@@ -40,10 +40,12 @@ export type QuoteFileChange =
 const locked = () =>
   AppException.from(APP_ERRORS.purchases.quotesLocked, undefined);
 
-// The management records the quotes of a request (one per supplier): adds
-// them while the request waits for or is in quotes (the first one moves it
-// to "Em cotação"), edits and removes them while it is in quotes (the last
-// one removed moves it back). The supplier's document is stored apart.
+/**
+ * The management records the quotes of a request (one per supplier): adds
+ * them while the request waits for or is in quotes (the first one moves it
+ * to "Em cotação"), edits and removes them while it is in quotes (the last
+ * one removed moves it back). The supplier's document is stored apart.
+ */
 @Injectable()
 export class SavePurchaseQuoteUseCase {
   private readonly logger = new Logger(SavePurchaseQuoteUseCase.name);

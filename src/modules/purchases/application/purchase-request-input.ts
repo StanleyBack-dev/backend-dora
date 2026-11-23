@@ -1,5 +1,4 @@
-import { APP_ERRORS } from "@/common/exceptions/app-errors.catalog";
-import { AppException } from "@/common/exceptions/app-exception";
+import { requestInvalid as invalid } from "@/modules/purchases/application/purchase-errors";
 import type { PurchaseRequestData } from "@/modules/purchases/application/ports/purchase-request-repository.port";
 import {
   CATEGORY_OTHER_MAX,
@@ -37,9 +36,6 @@ export type PurchaseRequestInput = {
     note?: string | null;
   }[];
 };
-
-const invalid = (reason: string) =>
-  AppException.from(APP_ERRORS.purchases.requestInvalid, { reason });
 
 /** An optional text, or the error saying how long it may be. */
 function text(value: string | null | undefined, max: number, label: string) {

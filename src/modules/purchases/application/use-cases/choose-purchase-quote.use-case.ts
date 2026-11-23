@@ -33,13 +33,15 @@ import {
 import type { PurchaseRequest } from "@/modules/purchases/domain/purchase-request";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
 
-// The management chooses the winning quote. A justification is required
-// when it isn't the cheapest complete quote or there are fewer than three
-// quotes. Then the condominium's approval settings decide: within the
-// limit (LIMIT mode) it is approved at once ("dentro da alçada", told to
-// whoever asked and the managers); otherwise it waits for an approver (told
-// to the approvers). While waiting, the choice can be undone (back to "Em
-// cotação").
+/**
+ * The management chooses the winning quote. A justification is required
+ * when it isn't the cheapest complete quote or there are fewer than three
+ * quotes. Then the condominium's approval settings decide: within the
+ * limit (LIMIT mode) it is approved at once ("dentro da alçada", told to
+ * whoever asked and the managers); otherwise it waits for an approver (told
+ * to the approvers). While waiting, the choice can be undone (back to "Em
+ * cotação").
+ */
 @Injectable()
 export class ChoosePurchaseQuoteUseCase {
   constructor(

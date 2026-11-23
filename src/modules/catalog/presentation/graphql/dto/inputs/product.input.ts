@@ -2,7 +2,7 @@ import { Field, InputType } from "@nestjs/graphql";
 import { IsOptional, IsString, MaxLength } from "class-validator";
 import { CATALOG_LIMITS as LIMITS } from "@/modules/catalog/domain/catalog";
 
-// Lengths here only stop abuse; the use case checks and normalizes it.
+/** Lengths here only stop abuse; the use case checks and normalizes it. */
 @InputType({ description: "Dados de um produto do catálogo." })
 export class ProductInput {
   @Field()

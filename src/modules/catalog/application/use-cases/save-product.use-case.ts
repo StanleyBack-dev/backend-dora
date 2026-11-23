@@ -14,10 +14,12 @@ import {
 } from "@/modules/catalog/application/product-input";
 import type { Product } from "@/modules/catalog/domain/catalog";
 
-// Registers a product (from the management's page or while filling
-// something in, by whoever uses the catalog: it is chosen right away),
-// edits it and activates or deactivates it (the management). A name once
-// per condominium, whatever the case.
+/**
+ * Registers a product (from the management's page or while filling
+ * something in, by whoever uses the catalog: it is chosen right away),
+ * edits it and activates or deactivates it (the management). A name once
+ * per condominium, whatever the case.
+ */
 @Injectable()
 export class SaveProductUseCase {
   constructor(

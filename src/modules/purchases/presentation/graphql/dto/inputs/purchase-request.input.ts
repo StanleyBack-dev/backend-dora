@@ -19,8 +19,10 @@ import {
 import { PurchaseRequestItemInput } from "@/modules/purchases/presentation/graphql/dto/inputs/purchase-request-item.input";
 import "@/modules/purchases/presentation/graphql/purchases.graphql-enums";
 
-// Lengths here only stop abuse; the use case checks and normalizes each
-// field (with the messages the form shows).
+/**
+ * Lengths here only stop abuse; the use case checks and normalizes each
+ * field (with the messages the form shows).
+ */
 @InputType({ description: "Dados de uma solicitação de compra." })
 export class PurchaseRequestInput {
   @Field({ description: "O que precisa ser comprado ou contratado." })

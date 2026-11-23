@@ -16,9 +16,11 @@ import {
 } from "@/modules/purchases/domain/purchase-request";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
 
-// Whoever made the request, or the management, cancels it with a reason
-// while it still waits for quotes; when it was someone else, the requester
-// is told why.
+/**
+ * Whoever made the request, or the management, cancels it with a reason
+ * while it still waits for quotes; when it was someone else, the requester
+ * is told why.
+ */
 @Injectable()
 export class CancelPurchaseRequestUseCase {
   constructor(

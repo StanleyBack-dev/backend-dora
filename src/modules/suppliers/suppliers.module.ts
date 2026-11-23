@@ -11,11 +11,13 @@ import { UpdateSupplierUseCase } from "@/modules/suppliers/application/use-cases
 import { SupplierSqlRepository } from "@/modules/suppliers/infrastructure/persistence/supplier-sql.repository";
 import { SuppliersResolver } from "@/modules/suppliers/presentation/graphql/suppliers.resolver";
 
-// The condominium's suppliers (who it buys from or hires), shared by the
-// modules that work with them: purchases now (quotes), maintenance or
-// events later. It is no paid module of its own; it opens to the modules
-// listed in SuppliersAccessService. The repository is exported so those
-// modules check (and read) the suppliers their records point to.
+/**
+ * The condominium's suppliers (who it buys from or hires), shared by the
+ * modules that work with them: purchases now (quotes), maintenance or
+ * events later. It is no paid module of its own; it opens to the modules
+ * listed in SuppliersAccessService. The repository is exported so those
+ * modules check (and read) the suppliers their records point to.
+ */
 @Module({
   imports: [AccessControlModule, AuditModule, CondominiumsModule],
   providers: [

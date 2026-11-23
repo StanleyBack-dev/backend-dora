@@ -22,12 +22,17 @@ import { startOfLocalDate, toLocalDate } from "@/shared/domain/local-date";
 export const APPROVAL_BOARD_STATUSES: readonly PurchaseRequestStatus[] = [
   PurchaseRequestStatus.AWAITING_APPROVAL,
   PurchaseRequestStatus.APPROVED,
+  PurchaseRequestStatus.ORDERED,
+  PurchaseRequestStatus.RECEIVED,
+  PurchaseRequestStatus.COMPLETED,
   PurchaseRequestStatus.REJECTED,
 ];
 
-// The approvals page (Compras > Aprovações, the approvers): the requests
-// waiting for approval, approved or rejected, as on the quotes page; the
-// page's cards; and a request's decisions (read by the management too).
+/**
+ * The approvals page (Compras > Aprovações, the approvers): the requests
+ * waiting for approval, approved or rejected, as on the quotes page; the
+ * page's cards; and a request's decisions (read by the management too).
+ */
 @Injectable()
 export class ListPurchaseApprovalsUseCase {
   constructor(

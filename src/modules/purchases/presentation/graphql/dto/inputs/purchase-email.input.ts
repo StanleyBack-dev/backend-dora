@@ -7,19 +7,22 @@ import {
   IsString,
   MaxLength,
 } from "class-validator";
-import { SHARE_LIMITS } from "@/modules/purchases/application/use-cases/share-quote-map.use-case";
+import { EMAIL_LIMITS } from "@/modules/purchases/application/purchase-document-mailer";
 
-@InputType({ description: "Envio do mapa de cotação por e-mail." })
-export class ShareQuoteMapInput {
+@InputType({
+  description:
+    "Envio de um documento da compra (mapa, ordem de compra) por e-mail.",
+})
+export class PurchaseEmailInput {
   @Field(() => [String], { description: "De 1 a 5 e-mails." })
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayMaxSize(SHARE_LIMITS.maxRecipients)
+  @ArrayMaxSize(EMAIL_LIMITS.maxRecipients)
   @IsEmail({}, { each: true })
   emails!: string[];
 
   @Field({ description: "A mensagem que vai no e-mail." })
   @IsString()
-  @MaxLength(SHARE_LIMITS.message)
+  @MaxLength(EMAIL_LIMITS.message)
   message!: string;
 }

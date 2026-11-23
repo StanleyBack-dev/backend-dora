@@ -10,7 +10,7 @@ import {
 import { SuppliersAccessService } from "@/modules/suppliers/application/suppliers-access.service";
 import type { Supplier } from "@/modules/suppliers/domain/supplier";
 
-// Inactive: no longer offered for new quotes; its history stays.
+/** Inactive: no longer offered for new quotes; its history stays. */
 @Injectable()
 export class SetSupplierActiveUseCase {
   constructor(

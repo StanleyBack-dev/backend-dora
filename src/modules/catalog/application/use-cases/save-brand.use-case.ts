@@ -22,10 +22,12 @@ const brandName = (value: string) => {
   return name;
 };
 
-// Registers a brand (from the management's page or while filling something
-// in, by whoever uses the catalog: it is chosen right away), renames it and
-// activates or deactivates it (the management). A name once per
-// condominium, whatever the case.
+/**
+ * Registers a brand (from the management's page or while filling something
+ * in, by whoever uses the catalog: it is chosen right away), renames it and
+ * activates or deactivates it (the management). A name once per
+ * condominium, whatever the case.
+ */
 @Injectable()
 export class SaveBrandUseCase {
   constructor(

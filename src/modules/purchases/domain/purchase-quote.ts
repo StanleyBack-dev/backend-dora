@@ -1,5 +1,7 @@
-// A quote (cotação) of a purchase request: one supplier's prices for the
-// request's items, plus shipping and terms. Money in cents.
+/**
+ * A quote (cotação) of a purchase request: one supplier's prices for the
+ * request's items, plus shipping and terms. Money in cents.
+ */
 
 /** How the supplier is paid (OTHER: the terms typed). */
 export enum PaymentMethod {

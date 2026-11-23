@@ -50,8 +50,10 @@ type ApprovalRow = Omit<PurchaseApproval, "totalCents" | "limitCents"> & {
   limitCents: string | null;
 };
 
-// The approval settings of each condominium and the decisions on each
-// request (names from the users, read-only).
+/**
+ * The approval settings of each condominium and the decisions on each
+ * request (names from the users, read-only).
+ */
 @Injectable()
 export class PurchaseApprovalSqlRepository implements PurchaseApprovalRepositoryPort {
   constructor(
@@ -127,20 +129,20 @@ export class PurchaseApprovalSqlRepository implements PurchaseApprovalRepository
     }));
   }
 
+  /** Sent back to quotes, the choice is undone (as reopening does). */
   decide(
     requestId: string,
     outcome: ApprovalOutcome,
     approval: NewApproval,
     notices: OutboxDraft[],
   ): Promise<boolean> {
-    // Back to quotes, the choice is undone (as reopening does).
     const undoChoice =
       outcome === PurchaseRequestStatus.QUOTING
         ? `, chosen_quote_id = NULL, choice_justification = NULL,
              chosen_by = NULL, chosen_at = NULL`
         : "";
     return this.dataSource.transaction(async (manager) => {
-      const changed = await manager.query<{ id: string }[]>(
+      const [changed] = await manager.query<[{ id: string }[], number]>(
         `UPDATE tb_purchase_requests
             SET status = $2${undoChoice}, updated_at = now()
           WHERE idtb_purchase_requests = $1 AND status = '${AWAITING}'

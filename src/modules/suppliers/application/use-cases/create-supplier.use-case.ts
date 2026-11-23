@@ -14,7 +14,7 @@ import {
 } from "@/modules/suppliers/application/supplier-input";
 import type { Supplier } from "@/modules/suppliers/domain/supplier";
 
-// Registers a supplier of the condominium (one per CNPJ/CPF there).
+/** Registers a supplier of the condominium (one per CNPJ/CPF there). */
 @Injectable()
 export class CreateSupplierUseCase {
   constructor(

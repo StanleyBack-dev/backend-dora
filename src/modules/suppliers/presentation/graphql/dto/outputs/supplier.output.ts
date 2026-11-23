@@ -1,4 +1,4 @@
-import { Field, ID, ObjectType } from "@nestjs/graphql";
+import { Field, Float, ID, Int, ObjectType } from "@nestjs/graphql";
 import { Category } from "@/modules/catalog/domain/category";
 import { SupplierDocumentType } from "@/modules/suppliers/domain/supplier";
 import "@/modules/suppliers/presentation/graphql/suppliers.graphql-enums";
@@ -61,6 +61,15 @@ export class SupplierType {
 
   @Field()
   active!: boolean;
+
+  @Field(() => Float, {
+    nullable: true,
+    description: "A média das avaliações, de 1 a 5 (null: nunca avaliado).",
+  })
+  ratingAverage!: number | null;
+
+  @Field(() => Int, { description: "Quantas avaliações recebeu." })
+  ratingCount!: number;
 
   @Field()
   createdAt!: Date;

@@ -15,10 +15,12 @@ import type { Paginated } from "@/shared/application/pagination";
 
 const DEFAULT_PAGE = { page: 1, limit: 20 };
 
-// The catalog's products. Whoever uses the catalog in a module (e.g. asks
-// for purchases) reads the select and registers a product from there; who
-// manages it there lists, edits and deactivates. The use cases check the
-// module and the permissions (CatalogAccessService).
+/**
+ * The catalog's products. Whoever uses the catalog in a module (e.g. asks
+ * for purchases) reads the select and registers a product from there; who
+ * manages it there lists, edits and deactivates. The use cases check the
+ * module and the permissions (CatalogAccessService).
+ */
 @Resolver()
 export class ProductsResolver {
   constructor(

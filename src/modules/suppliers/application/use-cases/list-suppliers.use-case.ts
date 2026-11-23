@@ -14,7 +14,7 @@ import { SuppliersAccessService } from "@/modules/suppliers/application/supplier
 import type { Supplier } from "@/modules/suppliers/domain/supplier";
 import type { PageRequest, Paginated } from "@/shared/application/pagination";
 
-// The condominium's suppliers (filtered and paged here), and one of them.
+/** The condominium's suppliers (filtered and paged here), and one of them. */
 @Injectable()
 export class ListSuppliersUseCase {
   constructor(

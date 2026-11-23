@@ -16,8 +16,10 @@ import {
 import "@/modules/suppliers/presentation/graphql/suppliers.graphql-enums";
 import { PixKeyType } from "@/shared/domain/pix";
 
-// Lengths here only stop abuse; the use case checks and normalizes each
-// field (with the messages the form shows).
+/**
+ * Lengths here only stop abuse; the use case checks and normalizes each
+ * field (with the messages the form shows).
+ */
 @InputType({ description: "Dados de um fornecedor." })
 export class SupplierInput {
   @Field(() => SupplierDocumentType)

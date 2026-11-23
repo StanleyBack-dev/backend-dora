@@ -18,9 +18,11 @@ import type { Paginated } from "@/shared/application/pagination";
 
 const DEFAULT_PAGE = { page: 1, limit: 20 };
 
-// The condominium's suppliers (Compras > Fornecedores): who it buys from
-// or hires. The use cases check the module and the permission
-// (SuppliersAccessService), so other modules can work with suppliers too.
+/**
+ * The condominium's suppliers (Compras > Fornecedores): who it buys from
+ * or hires. The use cases check the module and the permission
+ * (SuppliersAccessService), so other modules can work with suppliers too.
+ */
 @Resolver()
 export class SuppliersResolver {
   constructor(

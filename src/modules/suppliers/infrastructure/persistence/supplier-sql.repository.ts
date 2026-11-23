@@ -12,12 +12,22 @@ import type {
 import type {
   Supplier,
   SupplierDocumentType,
+  SupplierRating,
+  SupplierRatingSource,
 } from "@/modules/suppliers/domain/supplier";
 import {
   paginate,
   type PageRequest,
   type Paginated,
 } from "@/shared/application/pagination";
+
+/** Each supplier's ratings: the average (one decimal) and how many. */
+const RATINGS = `
+  LEFT JOIN LATERAL (
+    SELECT round(avg(r.rating), 1)::float8 AS average, count(*)::int AS count
+      FROM tb_supplier_ratings r
+     WHERE r.idtb_suppliers = s.idtb_suppliers
+  ) rt ON rt.count > 0`;
 
 const SELECT = `
   SELECT s.idtb_suppliers AS id, s.idtb_condominiums AS "condominiumId",
@@ -26,8 +36,11 @@ const SELECT = `
          s.category_other AS "categoryOther",
          s.contact_name AS "contactName", s.email, s.phone, s.city, s.state,
          s.pix_key_type AS "pixKeyType", s.pix_key AS "pixKey", s.notes,
-         s.active, s.created_at AS "createdAt", s.updated_at AS "updatedAt"
-    FROM tb_suppliers s`;
+         s.active, rt.average AS "ratingAverage",
+         coalesce(rt.count, 0) AS "ratingCount",
+         s.created_at AS "createdAt", s.updated_at AS "updatedAt"
+    FROM tb_suppliers s
+    ${RATINGS}`;
 
 /** The form's values in the order of the INSERT/UPDATE columns. */
 const values = (data: SupplierData) => [
@@ -138,11 +151,14 @@ export class SupplierSqlRepository implements SupplierRepositoryPort {
 
   activeOptions(condominiumId: string): Promise<SupplierOption[]> {
     return this.dataSource.query<SupplierOption[]>(
-      `SELECT idtb_suppliers AS id, coalesce(trade_name, name) AS name,
-              categories, category_other AS "categoryOther"
-         FROM tb_suppliers
-        WHERE idtb_condominiums = $1 AND active
-        ORDER BY unaccent(coalesce(trade_name, name)), name`,
+      `SELECT s.idtb_suppliers AS id, coalesce(s.trade_name, s.name) AS name,
+              s.categories, s.category_other AS "categoryOther",
+              rt.average AS "ratingAverage",
+              coalesce(rt.count, 0) AS "ratingCount"
+         FROM tb_suppliers s
+         ${RATINGS}
+        WHERE s.idtb_condominiums = $1 AND s.active
+        ORDER BY unaccent(coalesce(s.trade_name, s.name)), s.name`,
       [condominiumId],
     );
   }
@@ -220,5 +236,35 @@ export class SupplierSqlRepository implements SupplierRepositoryPort {
       ),
     ]);
     return paginate(items, count?.total ?? 0, page);
+  }
+
+  async rate(
+    supplierId: string,
+    from: SupplierRatingSource,
+    rating: number,
+    comment: string | null,
+    ratedBy: string,
+  ): Promise<void> {
+    await this.dataSource.query(
+      `INSERT INTO tb_supplier_ratings
+         (idtb_suppliers, source, source_id, rating, comment, rated_by, rated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, now())
+       ON CONFLICT (source, source_id) DO UPDATE
+         SET rating = EXCLUDED.rating, comment = EXCLUDED.comment,
+             rated_by = EXCLUDED.rated_by, rated_at = now()`,
+      [supplierId, from.source, from.sourceId, rating, comment, ratedBy],
+    );
+  }
+
+  async ratingFor(from: SupplierRatingSource): Promise<SupplierRating | null> {
+    const [row] = await this.dataSource.query<SupplierRating[]>(
+      `SELECT r.rating, r.comment, u.name AS "ratedByName",
+              r.rated_at AS "ratedAt"
+         FROM tb_supplier_ratings r
+         LEFT JOIN tb_users u ON u.idtb_users = r.rated_by
+        WHERE r.source = $1 AND r.source_id = $2`,
+      [from.source, from.sourceId],
+    );
+    return row ?? null;
   }
 }

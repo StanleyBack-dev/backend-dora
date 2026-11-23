@@ -1,7 +1,9 @@
-// What a record is about (a purchase, a supplier…): part of the catalog,
-// shared by the modules. A fixed list, the same for
-// every condominium, so reports compare like with like; anything else is
-// OTHER with the text typed for it. Codes fit varchar(12).
+/**
+ * What a record is about (a purchase, a supplier…): part of the catalog,
+ * shared by the modules. A fixed list, the same for
+ * every condominium, so reports compare like with like; anything else is
+ * OTHER with the text typed for it. Codes fit varchar(12).
+ */
 export enum Category {
   MAINTENANCE = "MAINTENANCE",
   ELECTRICAL = "ELECTRICAL",

@@ -13,7 +13,7 @@ import {
 } from "@/modules/purchases/application/use-cases/list-purchase-quotes.use-case";
 import { ShareQuoteMapUseCase } from "@/modules/purchases/application/use-cases/share-quote-map.use-case";
 import { SavePurchaseQuoteUseCase } from "@/modules/purchases/application/use-cases/save-purchase-quote.use-case";
-import { ShareQuoteMapInput } from "@/modules/purchases/presentation/graphql/dto/inputs/share-quote-map.input";
+import { PurchaseEmailInput } from "@/modules/purchases/presentation/graphql/dto/inputs/purchase-email.input";
 import { PurchaseQuoteInput } from "@/modules/purchases/presentation/graphql/dto/inputs/purchase-quote.input";
 import { PurchaseQuoteMapFileType } from "@/modules/purchases/presentation/graphql/dto/outputs/purchase-quote-map-file.output";
 import { PurchaseQuoteType } from "@/modules/purchases/presentation/graphql/dto/outputs/purchase-quote.output";
@@ -22,10 +22,12 @@ import { PurchaseRequestType } from "@/modules/purchases/presentation/graphql/dt
 /** Base64 of a PDF or image of up to 1.2 MB (the use case checks it). */
 const FILE_ARG = { type: () => String, nullable: true } as const;
 
-// The quotes of a purchase request: recorded per supplier, compared and
-// one chosen by the management (PURCHASES_MANAGE on each change); read, as
-// the comparison map (screen, PDF, shared by e-mail), by the management and
-// the approvers (checked by the use case).
+/**
+ * The quotes of a purchase request: recorded per supplier, compared and
+ * one chosen by the management (PURCHASES_MANAGE on each change); read, as
+ * the comparison map (screen, PDF, shared by e-mail), by the management and
+ * the approvers (checked by the use case).
+ */
 @RequireModule(AppModule.PURCHASES)
 @Resolver()
 export class PurchaseQuotesResolver {
@@ -43,7 +45,7 @@ export class PurchaseQuotesResolver {
   sharePurchaseQuoteMapByEmail(
     @CurrentUser() actor: AuthenticatedUser,
     @Args("requestId", { type: () => ID }, UuidArg()) requestId: string,
-    @Args("input") input: ShareQuoteMapInput,
+    @Args("input") input: PurchaseEmailInput,
   ): Promise<number> {
     return this.sharing.byEmail(actor, requestId, input.emails, input.message);
   }

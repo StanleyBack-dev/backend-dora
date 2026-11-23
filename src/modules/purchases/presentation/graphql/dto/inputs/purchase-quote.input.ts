@@ -45,8 +45,10 @@ export class QuoteChargeInput {
   amountCents!: number;
 }
 
-// Lengths here only stop abuse; the use case checks each value against the
-// request items.
+/**
+ * Lengths here only stop abuse; the use case checks each value against the
+ * request items.
+ */
 @InputType({ description: "Preços e condições de uma cotação." })
 export class PurchaseQuoteInput {
   @Field(() => [PurchaseQuoteItemInput])
