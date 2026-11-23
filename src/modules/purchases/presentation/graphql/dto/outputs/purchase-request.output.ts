@@ -67,6 +67,25 @@ export class PurchaseRequestType {
   @Field(() => [PurchaseRequestItemType])
   items!: PurchaseRequestItemType[];
 
+  @Field(() => Int, { description: "Quantas cotações tem." })
+  quoteCount!: number;
+
+  @Field(() => ID, {
+    nullable: true,
+    description: "A cotação escolhida pela gestão.",
+  })
+  chosenQuoteId!: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "Por que essa (obrigatório quando não é a mais barata ou há menos de 3 cotações).",
+  })
+  choiceJustification!: string | null;
+
+  @Field(() => Date, { nullable: true })
+  chosenAt!: Date | null;
+
   @Field(() => String, { nullable: true })
   cancelReason!: string | null;
 

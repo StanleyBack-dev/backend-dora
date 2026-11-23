@@ -55,6 +55,15 @@ export type SupplierOverview = {
   categoriesServed: number;
 };
 
+/** An active supplier in a select, with what it serves. */
+export type SupplierOption = {
+  id: string;
+  /** Trade name, or the legal name. */
+  name: string;
+  categories: Category[];
+  categoryOther: string | null;
+};
+
 export interface SupplierRepositoryPort {
   create(condominiumId: string, data: SupplierData): Promise<Supplier>;
   update(id: string, data: SupplierData): Promise<Supplier>;
@@ -67,6 +76,8 @@ export interface SupplierRepositoryPort {
   ): Promise<Supplier | null>;
   /** The filters' options (every supplier, active or not). */
   filterOptions(condominiumId: string): Promise<SupplierFilterOptions>;
+  /** The active suppliers, by name, with what they serve (selects). */
+  activeOptions(condominiumId: string): Promise<SupplierOption[]>;
   /** The suppliers in numbers. */
   overview(condominiumId: string): Promise<SupplierOverview>;
   /** The condominium's suppliers, active first, by name. */

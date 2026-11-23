@@ -56,7 +56,10 @@ export class BrevoMailProvider implements MailProviderPort {
         tags: command.tags,
         attachment: command.attachments?.map((file) => ({
           name: file.name,
-          content: Buffer.from(file.content, "utf8").toString("base64"),
+          content: (Buffer.isBuffer(file.content)
+            ? file.content
+            : Buffer.from(file.content, "utf8")
+          ).toString("base64"),
         })),
       }),
     });

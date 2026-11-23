@@ -9,6 +9,7 @@ import type {
   PurchaseRequestFilter,
   PurchaseRequestFilterOptions,
   PurchaseRequestOverview,
+  QuoteBoardOverview,
   PurchaseRequestRepositoryPort,
   PurchaseRequestScope,
 } from "@/modules/purchases/application/ports/purchase-request-repository.port";
@@ -47,6 +48,12 @@ const SELECT = `
             JOIN tb_products p ON p.idtb_products = i.idtb_products
             LEFT JOIN tb_brands b ON b.idtb_brands = i.idtb_brands
            WHERE i.idtb_purchase_requests = r.idtb_purchase_requests) AS items,
+         (SELECT count(*)::int FROM tb_purchase_quotes q
+           WHERE q.idtb_purchase_requests = r.idtb_purchase_requests)
+           AS "quoteCount",
+         r.chosen_quote_id AS "chosenQuoteId",
+         r.choice_justification AS "choiceJustification",
+         r.chosen_at AS "chosenAt",
          r.cancel_reason AS "cancelReason", r.cancelled_at AS "cancelledAt",
          r.created_at AS "createdAt", r.updated_at AS "updatedAt"
     FROM tb_purchase_requests r
@@ -205,6 +212,24 @@ export class PurchaseRequestSqlRepository implements PurchaseRequestRepositoryPo
     });
   }
 
+  updateDetails(
+    id: string,
+    data: PurchaseRequestData,
+  ): Promise<PurchaseRequest | null> {
+    return this.dataSource.transaction(async (manager) => {
+      const changed = await manager.query<{ id: string }[]>(
+        `UPDATE tb_purchase_requests
+            SET priority = $2, idtb_spaces = $3, location = $4,
+                needed_by = $5, updated_at = now()
+          WHERE idtb_purchase_requests = $1
+            AND status = '${PurchaseRequestStatus.QUOTING}'
+          RETURNING idtb_purchase_requests AS id`,
+        [id, data.priority, data.spaceId, data.location, data.neededBy],
+      );
+      return changed.length ? this.byId(id, manager) : null;
+    });
+  }
+
   cancel(
     id: string,
     cancelledBy: string,
@@ -357,6 +382,31 @@ export class PurchaseRequestSqlRepository implements PurchaseRequestRepositoryPo
          FROM tb_purchase_requests r
         WHERE ${where.join(" AND ")}`,
       params,
+    );
+    return row;
+  }
+
+  async quoteBoardOverview(
+    condominiumId: string,
+    minQuotes: number,
+  ): Promise<QuoteBoardOverview> {
+    const [row] = await this.dataSource.query<QuoteBoardOverview[]>(
+      `SELECT
+         count(*) FILTER (WHERE r.status = '${PurchaseRequestStatus.OPEN}')::int
+           AS "awaitingQuotes",
+         count(*) FILTER (WHERE r.status = '${PurchaseRequestStatus.QUOTING}')::int
+           AS quoting,
+         count(*) FILTER (
+           WHERE r.status = '${PurchaseRequestStatus.QUOTING}'
+             AND (SELECT count(*) FROM tb_purchase_quotes q
+                   WHERE q.idtb_purchase_requests = r.idtb_purchase_requests)
+                 < $2)::int AS "belowMinimum",
+         count(*) FILTER (
+           WHERE r.status = '${PurchaseRequestStatus.AWAITING_APPROVAL}')::int
+           AS "awaitingApproval"
+         FROM tb_purchase_requests r
+        WHERE r.idtb_condominiums = $1`,
+      [condominiumId, minQuotes],
     );
     return row;
   }

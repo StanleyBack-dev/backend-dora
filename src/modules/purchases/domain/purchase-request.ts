@@ -38,6 +38,15 @@ export const ACTIVE_REQUEST_STATUSES: readonly PurchaseRequestStatus[] = [
 export const isEditableRequest = (status: PurchaseRequestStatus) =>
   status === PurchaseRequestStatus.OPEN;
 
+/**
+ * In quotes, only what doesn't change what is quoted may still change: the
+ * place, the date and the priority (the title, the details, the items and
+ * the categories stay, since the quotes were made on them).
+ */
+export const isDetailsEditableRequest = (status: PurchaseRequestStatus) =>
+  status === PurchaseRequestStatus.OPEN ||
+  status === PurchaseRequestStatus.QUOTING;
+
 export enum PurchasePriority {
   LOW = "LOW",
   NORMAL = "NORMAL",
@@ -85,6 +94,13 @@ export type PurchaseRequest = {
   requestedById: string;
   requestedByName: string;
   items: PurchaseRequestItem[];
+  /** How many quotes it has. */
+  quoteCount: number;
+  /** The quote the management chose (null: none yet). */
+  chosenQuoteId: string | null;
+  /** Why that one (required when not the cheapest or too few quotes). */
+  choiceJustification: string | null;
+  chosenAt: Date | null;
   cancelReason: string | null;
   cancelledAt: Date | null;
   createdAt: Date;

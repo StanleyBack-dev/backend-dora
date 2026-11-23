@@ -61,6 +61,18 @@ export type PurchaseRequestOverview = {
   overdue: number;
 };
 
+/** The requests in the quote stages, in numbers (the quotes page's cards). */
+export type QuoteBoardOverview = {
+  /** Waiting for the first quote. */
+  awaitingQuotes: number;
+  /** In quotes. */
+  quoting: number;
+  /** In quotes with fewer quotes than recommended. */
+  belowMinimum: number;
+  /** A quote chosen, waiting for the approval. */
+  awaitingApproval: number;
+};
+
 /** How the catalog is used by the requests (the catalog pages' cards). */
 export type PurchaseCatalogUsage = {
   /** Products in at least one request. */
@@ -84,6 +96,14 @@ export interface PurchaseRequestRepositoryPort {
   ): Promise<PurchaseRequest>;
   /** Replaces the details and the items of an OPEN request. */
   update(id: string, data: PurchaseRequestData): Promise<PurchaseRequest>;
+  /**
+   * Changes only the priority, place and date of a request
+   * in quotes (null: it is no longer in quotes; nothing is written).
+   */
+  updateDetails(
+    id: string,
+    data: PurchaseRequestData,
+  ): Promise<PurchaseRequest | null>;
   /**
    * Cancels an OPEN request with the notices (null: it is no longer open;
    * nothing is written).
@@ -112,6 +132,11 @@ export interface PurchaseRequestRepositoryPort {
     today: string,
     soon: string,
   ): Promise<PurchaseRequestOverview>;
+  /** The quote stages in numbers; "below minimum": fewer than minQuotes. */
+  quoteBoardOverview(
+    condominiumId: string,
+    minQuotes: number,
+  ): Promise<QuoteBoardOverview>;
 }
 
 export const PURCHASE_REQUEST_REPOSITORY = Symbol(

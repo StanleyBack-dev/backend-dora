@@ -6,6 +6,7 @@ import {
   SUPPLIER_REPOSITORY,
   type SupplierFilter,
   type SupplierFilterOptions,
+  type SupplierOption,
   type SupplierOverview,
   type SupplierRepositoryPort,
 } from "@/modules/suppliers/application/ports/supplier-repository.port";
@@ -33,6 +34,12 @@ export class ListSuppliersUseCase {
   }
 
   /** What the filters offer (names, contacts and documents in use). */
+  /** The active suppliers with what they serve (e.g. to quote a purchase). */
+  async activeOptions(actor: AuthenticatedUser): Promise<SupplierOption[]> {
+    const condominiumId = await this.access.managedBy(actor);
+    return this.suppliers.activeOptions(condominiumId);
+  }
+
   async filterOptions(
     actor: AuthenticatedUser,
   ): Promise<SupplierFilterOptions> {

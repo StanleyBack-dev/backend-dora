@@ -68,6 +68,10 @@ const request = (
       note: null,
     },
   ],
+  quoteCount: 0,
+  chosenQuoteId: null,
+  choiceJustification: null,
+  chosenAt: null,
   cancelReason: null,
   cancelledAt: null,
   createdAt: new Date(),
@@ -194,6 +198,9 @@ describe("purchase request use cases", () => {
   const setup = (current: PurchaseRequest) => {
     const repository = {
       update: jest.fn((id: string) => Promise.resolve(request({ id }))),
+      updateDetails: jest.fn((id: string) =>
+        Promise.resolve(request({ id, status: PurchaseRequestStatus.QUOTING })),
+      ),
       cancel: jest.fn(() =>
         Promise.resolve(request({ status: PurchaseRequestStatus.CANCELLED })),
       ),
@@ -207,21 +214,69 @@ describe("purchase request use cases", () => {
     return { repository, access, audit };
   };
 
-  it("edits and cancels only while waiting for quotes", async () => {
+  const updater = (deps: ReturnType<typeof setup>) =>
+    new UpdatePurchaseRequestUseCase(
+      deps.repository,
+      { activeIds: jest.fn() } as never,
+      { activeIds: jest.fn() } as never,
+      deps.access,
+      { find: jest.fn() } as never,
+      deps.audit,
+      clock,
+    );
+  // The request as it was: same title, details, items and categories.
+  const sameScope = input({
+    location: "Garagem",
+    priority: PurchasePriority.HIGH,
+    categories: [Category.ELECTRICAL],
+    categoryOther: null,
+    items: [{ productId: "p1", quantity: 12, unit: "un" }],
+  });
+
+  it("in quotes, edits only what doesn't change the prices", async () => {
     const quoting = setup(request({ status: PurchaseRequestStatus.QUOTING }));
+    await updater(quoting).execute(actor, "r1", sameScope);
+    expect(quoting.repository.updateDetails).toHaveBeenCalledWith(
+      "r1",
+      expect.objectContaining({
+        location: "Garagem",
+        priority: PurchasePriority.HIGH,
+      }),
+    );
+    expect(quoting.repository.update).not.toHaveBeenCalled();
+
+    for (const changed of [
+      { title: "Lâmpadas da garagem" },
+      { description: "Marca Philips." },
+      { items: [{ productId: "p1", quantity: 10, unit: "un" }] },
+      { items: [{ productId: "p2", quantity: 12, unit: "un" }] },
+      { categories: [Category.CLEANING] },
+    ]) {
+      await expect(
+        updater(quoting).execute(actor, "r1", { ...sameScope, ...changed }),
+      ).rejects.toMatchObject({
+        response: expect.objectContaining({
+          code: "PURCHASE_REQUEST_SCOPE_LOCKED",
+        }),
+      });
+    }
+    expect(quoting.repository.updateDetails).toHaveBeenCalledTimes(1);
+  });
+
+  it("edits nothing once the quote is chosen", async () => {
+    const chosen = setup(
+      request({ status: PurchaseRequestStatus.AWAITING_APPROVAL }),
+    );
     await expect(
-      new UpdatePurchaseRequestUseCase(
-        quoting.repository,
-        { activeIds: jest.fn() } as never,
-        { activeIds: jest.fn() } as never,
-        quoting.access,
-        { find: jest.fn() } as never,
-        quoting.audit,
-        clock,
-      ).execute(actor, "r1", input()),
+      updater(chosen).execute(actor, "r1", sameScope),
     ).rejects.toMatchObject({
       response: expect.objectContaining({ code: "PURCHASE_REQUEST_LOCKED" }),
     });
+    expect(chosen.repository.updateDetails).not.toHaveBeenCalled();
+  });
+
+  it("cancels only while waiting for quotes", async () => {
+    const quoting = setup(request({ status: PurchaseRequestStatus.QUOTING }));
     await expect(
       new CancelPurchaseRequestUseCase(
         quoting.repository,
