@@ -1,28 +1,30 @@
-import {
-  rgb,
-  type PDFDocument,
-  type PDFFont,
-  type PDFImage,
-  type PDFPage,
-  type RGB,
-} from "pdf-lib";
+import type { PDFDocument, PDFFont, PDFImage, PDFPage, RGB } from "pdf-lib";
 import {
   LocationStatus,
   type SignatureLocation,
 } from "@/shared/domain/signature/signature-capture";
+import {
+  BRAND_COLORS as C,
+  drawDoraMark,
+  drawWordmark,
+} from "@/shared/infrastructure/pdf/pdf-brand";
+import { fitText, wrapText } from "@/shared/infrastructure/pdf/pdf-text";
 
-// A4 documents written top to bottom with pdf-lib's standard fonts: the
-// signed receipts (parcels, lost and found) share the look and the layout.
+// A4 portrait documents written top to bottom with pdf-lib's standard
+// fonts, in the Dora look (as the quote map): a black header with the mark
+// and the document's name on every page, sections with the orange bar,
+// label/value tables, status boxes, and a footer with the page count. The
+// signed receipts (parcels, lost and found) use it.
 
 export const A4 = { width: 595.28, height: 841.89 };
 const MARGIN = 40;
 const WIDTH = A4.width - MARGIN * 2;
-const INK = rgb(0.07, 0.07, 0.07);
-export const MUTED = rgb(0.42, 0.42, 0.42);
-const LINE = rgb(0.85, 0.85, 0.85);
-const BRAND = rgb(0.76, 0.25, 0.05);
-export const GOOD = rgb(0.08, 0.5, 0.24);
-export const BAD = rgb(0.75, 0.1, 0.1);
+const HEADER = 54;
+const TOP = A4.height - HEADER - 3 - 24;
+const BOTTOM = 54;
+export const MUTED = C.muted;
+export const GOOD = C.success;
+export const BAD = C.danger;
 
 /** Who handed something over, by role. */
 export const ROLE_LABELS: Record<string, string> = {
@@ -53,74 +55,99 @@ type TextOptions = {
   gap?: number;
 };
 
-/** Writes top to bottom, adding pages as needed. */
+/** What every page's header and footer say. */
+export type PdfFrame = {
+  /** The document's kind, in the header ("Comprovante de retirada"). */
+  label: string;
+  /** Under it (the condominium). */
+  subtitle: string;
+  /** The footer's left side ("Emitido em 22/11/2026 10:00"). */
+  footer: string;
+};
+
+/** Writes top to bottom, adding pages (with the header) as needed. */
 export class PdfWriter {
-  private page: PDFPage;
-  private y = A4.height - MARGIN;
+  private readonly pages: PDFPage[] = [];
+  private page!: PDFPage;
+  private y = TOP;
 
   constructor(
     private readonly doc: PDFDocument,
     private readonly font: PDFFont,
     private readonly bold: PDFFont,
+    private readonly frame: PdfFrame,
   ) {
-    this.page = doc.addPage([A4.width, A4.height]);
+    this.addPage();
   }
 
-  /** The standard fonts only encode WinAnsi: anything else becomes "?". */
-  private safe(text: string): string {
-    return [...text.normalize("NFC")]
-      .map((char) => {
-        try {
-          this.font.encodeText(char);
-          return char;
-        } catch {
-          return "?";
-        }
-      })
-      .join("");
+  private addPage() {
+    this.page = this.doc.addPage([A4.width, A4.height]);
+    this.pages.push(this.page);
+    const top = A4.height;
+    this.page.drawRectangle({
+      x: 0,
+      y: top - HEADER,
+      width: A4.width,
+      height: HEADER,
+      color: C.black,
+    });
+    this.page.drawRectangle({
+      x: 0,
+      y: top - HEADER - 3,
+      width: A4.width,
+      height: 3,
+      color: C.orange,
+    });
+    drawDoraMark(this.page, MARGIN, top - 13, 28);
+    drawWordmark(this.page, this.bold, MARGIN + 37, top - 33, 18);
+    this.right(this.frame.label.toUpperCase(), top - 23, {
+      font: this.bold,
+      size: 7.5,
+      color: C.orange,
+    });
+    this.right(this.frame.subtitle, top - 39, {
+      font: this.bold,
+      size: 11,
+      color: C.white,
+      width: 330,
+    });
+    this.y = TOP;
+  }
+
+  private right(
+    value: string,
+    baseline: number,
+    options: { font: PDFFont; size: number; color: RGB; width?: number },
+  ) {
+    const text = fitText(
+      options.font,
+      value,
+      options.size,
+      options.width ?? 330,
+    );
+    this.page.drawText(text, {
+      x: A4.width - MARGIN - options.font.widthOfTextAtSize(text, options.size),
+      y: baseline,
+      size: options.size,
+      font: options.font,
+      color: options.color,
+    });
   }
 
   private ensure(height: number) {
-    if (this.y - height >= MARGIN) return;
-    this.page = this.doc.addPage([A4.width, A4.height]);
-    this.y = A4.height - MARGIN;
+    if (this.y - height >= BOTTOM) return;
+    this.addPage();
   }
 
-  /** Splits text into lines that fit `width` (long words are cut). */
-  private wrap(text: string, font: PDFFont, size: number, width: number) {
-    const fits = (value: string) =>
-      font.widthOfTextAtSize(value, size) <= width;
-    const lines: string[] = [];
-    for (const paragraph of this.safe(text).split("\n")) {
-      let line = "";
-      for (const word of paragraph.split(/\s+/)) {
-        let piece = word;
-        while (!fits(piece)) {
-          let cut = piece.length - 1;
-          while (cut > 1 && !fits(piece.slice(0, cut))) cut -= 1;
-          if (line) lines.push(line);
-          lines.push(piece.slice(0, cut));
-          line = "";
-          piece = piece.slice(cut);
-        }
-        const next = line ? `${line} ${piece}` : piece;
-        if (!fits(next) && line) {
-          lines.push(line);
-          line = piece;
-        } else {
-          line = next;
-        }
-      }
-      lines.push(line);
-    }
-    return lines;
+  private lines(text: string, font: PDFFont, size: number, width: number) {
+    return wrapText(font, text, size, width);
   }
 
   text(value: string, options: TextOptions = {}) {
     const size = options.size ?? 10;
     const font = options.bold ? this.bold : this.font;
-    const lineHeight = size * 1.3;
-    for (const line of this.wrap(value, font, size, options.width ?? WIDTH)) {
+    const lineHeight = size * 1.35;
+    for (const line of this.lines(value, font, size, options.width ?? WIDTH)) {
       this.ensure(lineHeight);
       this.y -= lineHeight;
       this.page.drawText(line, {
@@ -128,7 +155,7 @@ export class PdfWriter {
         y: this.y + size * 0.25,
         size,
         font,
-        color: options.color ?? INK,
+        color: options.color ?? C.ink,
       });
     }
     this.y -= options.gap ?? 0;
@@ -138,6 +165,12 @@ export class PdfWriter {
     this.y -= height;
   }
 
+  /** The document's title and one line under it. */
+  intro(title: string, meta: string) {
+    this.text(title, { size: 18, bold: true, gap: 2 });
+    this.text(meta, { size: 9, color: C.muted, gap: 10 });
+  }
+
   rule() {
     this.ensure(16);
     this.y -= 6;
@@ -145,39 +178,120 @@ export class PdfWriter {
       start: { x: MARGIN, y: this.y },
       end: { x: A4.width - MARGIN, y: this.y },
       thickness: 0.6,
-      color: LINE,
+      color: C.line,
     });
     this.y -= 10;
   }
 
+  /** A section title with the orange bar. */
   heading(value: string) {
-    this.ensure(40);
-    this.space(6);
-    this.text(value.toUpperCase(), {
-      size: 9,
-      bold: true,
-      color: BRAND,
-      gap: 4,
+    this.ensure(52);
+    this.y -= 12;
+    this.page.drawRectangle({
+      x: MARGIN,
+      y: this.y - 13,
+      width: 3,
+      height: 13,
+      color: C.orange,
     });
+    this.page.drawText(this.lines(value, this.bold, 11.5, WIDTH)[0] ?? "", {
+      x: MARGIN + 9,
+      y: this.y - 10.5,
+      size: 11.5,
+      font: this.bold,
+      color: C.ink,
+    });
+    this.y -= 22;
   }
 
-  /** Label/value rows, the label in a fixed column. */
-  facts(rows: [string, string | null | undefined][], valueSize = 10) {
+  /** Label/value rows in a table: labels in a column, rows striped. */
+  facts(rows: [string, string | null | undefined][], valueSize = 9.5) {
     const labelWidth = 150;
-    for (const [label, value] of rows) {
-      if (!value) continue;
-      this.ensure(14);
+    const pad = 6;
+    const shown = rows.filter((row): row is [string, string] =>
+      Boolean(row[1]),
+    );
+    shown.forEach(([label, value], index) => {
+      const labels = this.lines(label, this.bold, 8, labelWidth - pad * 2);
+      const values = this.lines(
+        value,
+        this.font,
+        valueSize,
+        WIDTH - labelWidth - pad,
+      );
+      const lineHeight = valueSize * 1.35;
+      const height =
+        Math.max(labels.length * 10.5, values.length * lineHeight) + pad * 2;
+      this.ensure(height);
       const top = this.y;
-      this.text(label, { size: 9, color: MUTED, width: labelWidth - 8 });
-      const labelBottom = this.y;
-      this.y = top;
-      this.text(value, {
-        x: MARGIN + labelWidth,
-        width: WIDTH - labelWidth,
-        size: valueSize,
+      this.page.drawRectangle({
+        x: MARGIN,
+        y: top - height,
+        width: WIDTH,
+        height,
+        color: index % 2 === 0 ? C.surfaceMuted : C.white,
       });
-      this.y = Math.min(this.y, labelBottom) - 1.5;
-    }
+      this.page.drawLine({
+        start: { x: MARGIN, y: top - height },
+        end: { x: MARGIN + WIDTH, y: top - height },
+        thickness: 0.5,
+        color: C.line,
+      });
+      labels.forEach((line, at) =>
+        this.page.drawText(line, {
+          x: MARGIN + pad,
+          y: top - pad - 8 - at * 10.5,
+          size: 8,
+          font: this.bold,
+          color: C.muted,
+        }),
+      );
+      values.forEach((line, at) =>
+        this.page.drawText(line, {
+          x: MARGIN + labelWidth,
+          y: top - pad - valueSize * 0.95 - at * lineHeight,
+          size: valueSize,
+          font: this.font,
+          color: C.ink,
+        }),
+      );
+      this.y = top - height;
+    });
+    this.y -= 4;
+  }
+
+  /** A highlighted box (a status): tinted, with a bar in its color. */
+  notice(value: string, tone: "good" | "bad") {
+    const color = tone === "good" ? C.success : C.danger;
+    const fill = tone === "good" ? C.successSoft : C.dangerSoft;
+    const lines = this.lines(value, this.bold, 10, WIDTH - 32);
+    const height = lines.length * 13.5 + 18;
+    this.ensure(height + 6);
+    const top = this.y;
+    this.page.drawRectangle({
+      x: MARGIN,
+      y: top - height,
+      width: WIDTH,
+      height,
+      color: fill,
+    });
+    this.page.drawRectangle({
+      x: MARGIN,
+      y: top - height,
+      width: 4,
+      height,
+      color,
+    });
+    lines.forEach((line, at) =>
+      this.page.drawText(line, {
+        x: MARGIN + 18,
+        y: top - 9 - 10 - at * 13.5,
+        size: 10,
+        font: this.bold,
+        color,
+      }),
+    );
+    this.y = top - height - 8;
   }
 
   /** An image centred in a framed box. */
@@ -189,15 +303,16 @@ export class PdfWriter {
     );
     const width = image.width * scale;
     const height = image.height * scale;
-    this.ensure(height + 20);
-    this.y -= height + 8;
+    this.ensure(height + 24);
+    this.y -= height + 10;
     this.page.drawRectangle({
       x: MARGIN,
-      y: this.y - 4,
+      y: this.y - 6,
       width: WIDTH,
-      height: height + 8,
-      borderColor: LINE,
-      borderWidth: 0.6,
+      height: height + 12,
+      color: C.white,
+      borderColor: C.line,
+      borderWidth: 0.75,
     });
     this.page.drawImage(image, {
       x: MARGIN + (WIDTH - width) / 2,
@@ -205,30 +320,77 @@ export class PdfWriter {
       width,
       height,
     });
-    this.y -= 12;
+    this.y -= 14;
   }
 
-  /** The QR beside a short text, the link and a note. */
+  /** The QR beside a short text, the link and a note, in a soft box. */
   qr(image: PDFImage, caption: string, url: string, note: string) {
-    const size = 72;
-    this.ensure(size + 12);
+    const size = 76;
+    const textWidth = WIDTH - size - 36;
+    const noteLines = this.lines(note, this.font, 8, textWidth);
+    const height = Math.max(size + 20, 46 + noteLines.length * 10.8);
+    this.ensure(height + 6);
     const top = this.y;
-    this.page.drawImage(image, {
+    this.page.drawRectangle({
       x: MARGIN,
-      y: top - size,
+      y: top - height,
+      width: WIDTH,
+      height,
+      color: C.orangeSoft,
+      borderColor: C.orangeBorder,
+      borderWidth: 0.75,
+    });
+    this.page.drawImage(image, {
+      x: MARGIN + 10,
+      y: top - 10 - size,
       width: size,
       height: size,
     });
-    const x = MARGIN + size + 12;
-    this.text(caption, { x, width: WIDTH - size - 12, bold: true });
+    const x = MARGIN + size + 24;
+    this.y = top - 6;
+    this.text(caption, { x, width: textWidth, bold: true, size: 10.5 });
     this.text(url, {
       x,
-      width: WIDTH - size - 12,
+      width: textWidth,
       size: 8,
-      color: MUTED,
-      gap: 6,
+      color: C.orangeInk,
+      gap: 4,
     });
-    this.text(note, { x, width: WIDTH - size - 12, size: 8, color: MUTED });
-    this.y = Math.min(this.y, top - size) - 8;
+    this.text(note, { x, width: textWidth, size: 8, color: C.muted });
+    this.y = top - height - 8;
+  }
+
+  /** The footer on every page (call once, at the end). */
+  finish() {
+    const total = this.pages.length;
+    this.pages.forEach((page, index) => {
+      page.drawLine({
+        start: { x: MARGIN, y: BOTTOM - 18 },
+        end: { x: A4.width - MARGIN, y: BOTTOM - 18 },
+        thickness: 0.5,
+        color: C.line,
+      });
+      const left = fitText(
+        this.font,
+        `Gerado pelo Dora · ${this.frame.footer}`,
+        7,
+        WIDTH - 80,
+      );
+      page.drawText(left, {
+        x: MARGIN,
+        y: BOTTOM - 31,
+        size: 7,
+        font: this.font,
+        color: C.soft,
+      });
+      const right = `Página ${index + 1} de ${total}`;
+      page.drawText(right, {
+        x: A4.width - MARGIN - this.font.widthOfTextAtSize(right, 7),
+        y: BOTTOM - 31,
+        size: 7,
+        font: this.font,
+        color: C.soft,
+      });
+    });
   }
 }

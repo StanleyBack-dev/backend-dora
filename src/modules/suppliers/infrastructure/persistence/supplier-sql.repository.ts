@@ -5,6 +5,7 @@ import type {
   SupplierData,
   SupplierFilter,
   SupplierFilterOptions,
+  SupplierOption,
   SupplierOverview,
   SupplierRepositoryPort,
 } from "@/modules/suppliers/application/ports/supplier-repository.port";
@@ -133,6 +134,17 @@ export class SupplierSqlRepository implements SupplierRepositoryPort {
       [condominiumId],
     );
     return row;
+  }
+
+  activeOptions(condominiumId: string): Promise<SupplierOption[]> {
+    return this.dataSource.query<SupplierOption[]>(
+      `SELECT idtb_suppliers AS id, coalesce(trade_name, name) AS name,
+              categories, category_other AS "categoryOther"
+         FROM tb_suppliers
+        WHERE idtb_condominiums = $1 AND active
+        ORDER BY unaccent(coalesce(trade_name, name)), name`,
+      [condominiumId],
+    );
   }
 
   async filterOptions(condominiumId: string): Promise<SupplierFilterOptions> {

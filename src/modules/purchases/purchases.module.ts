@@ -4,16 +4,28 @@ import { AuditModule } from "@/modules/audit/audit.module";
 import { CatalogModule } from "@/modules/catalog/catalog.module";
 import { SpacesModule } from "@/modules/spaces/spaces.module";
 import { SuppliersModule } from "@/modules/suppliers/suppliers.module";
+import { MailModule } from "@/modules/mails/mail.module";
 import { CondominiumsModule } from "@/modules/condominiums/condominiums.module";
 import { IdentityModule } from "@/modules/identity/identity.module";
 import { OutboxModule } from "@/modules/outbox/outbox.module";
+import { PURCHASE_QUOTE_REPOSITORY } from "@/modules/purchases/application/ports/purchase-quote-repository.port";
+import { QUOTE_MAP_RENDERER } from "@/modules/purchases/application/ports/quote-map-renderer.port";
 import { PURCHASE_REQUEST_REPOSITORY } from "@/modules/purchases/application/ports/purchase-request-repository.port";
 import { PurchasesAccessService } from "@/modules/purchases/application/purchases-access.service";
+import { ChoosePurchaseQuoteUseCase } from "@/modules/purchases/application/use-cases/choose-purchase-quote.use-case";
+import { ListPurchaseQuotesUseCase } from "@/modules/purchases/application/use-cases/list-purchase-quotes.use-case";
+import { ListQuoteBoardUseCase } from "@/modules/purchases/application/use-cases/list-quote-board.use-case";
+import { SavePurchaseQuoteUseCase } from "@/modules/purchases/application/use-cases/save-purchase-quote.use-case";
 import { CancelPurchaseRequestUseCase } from "@/modules/purchases/application/use-cases/cancel-purchase-request.use-case";
 import { CreatePurchaseRequestUseCase } from "@/modules/purchases/application/use-cases/create-purchase-request.use-case";
 import { ListPurchaseRequestsUseCase } from "@/modules/purchases/application/use-cases/list-purchase-requests.use-case";
 import { UpdatePurchaseRequestUseCase } from "@/modules/purchases/application/use-cases/update-purchase-request.use-case";
+import { ShareQuoteMapUseCase } from "@/modules/purchases/application/use-cases/share-quote-map.use-case";
+import { PdfLibQuoteMapRenderer } from "@/modules/purchases/infrastructure/pdf/pdf-lib-quote-map.renderer";
+import { PurchaseQuoteSqlRepository } from "@/modules/purchases/infrastructure/persistence/purchase-quote-sql.repository";
 import { PurchaseRequestSqlRepository } from "@/modules/purchases/infrastructure/persistence/purchase-request-sql.repository";
+import { PurchaseQuotesResolver } from "@/modules/purchases/presentation/graphql/purchase-quotes.resolver";
+import { QuoteBoardResolver } from "@/modules/purchases/presentation/graphql/quote-board.resolver";
 import { PurchaseRequestsResolver } from "@/modules/purchases/presentation/graphql/purchase-requests.resolver";
 
 // Purchases (compras do condomínio), a module contracted apart: purchase
@@ -30,14 +42,27 @@ import { PurchaseRequestsResolver } from "@/modules/purchases/presentation/graph
     CondominiumsModule,
     IdentityModule,
     OutboxModule,
+    MailModule,
   ],
   providers: [
     PurchasesAccessService,
+    ShareQuoteMapUseCase,
     ListPurchaseRequestsUseCase,
     CreatePurchaseRequestUseCase,
     UpdatePurchaseRequestUseCase,
     CancelPurchaseRequestUseCase,
     PurchaseRequestsResolver,
+    ListPurchaseQuotesUseCase,
+    ListQuoteBoardUseCase,
+    SavePurchaseQuoteUseCase,
+    ChoosePurchaseQuoteUseCase,
+    PurchaseQuotesResolver,
+    QuoteBoardResolver,
+    {
+      provide: PURCHASE_QUOTE_REPOSITORY,
+      useClass: PurchaseQuoteSqlRepository,
+    },
+    { provide: QUOTE_MAP_RENDERER, useClass: PdfLibQuoteMapRenderer },
     {
       provide: PURCHASE_REQUEST_REPOSITORY,
       useClass: PurchaseRequestSqlRepository,

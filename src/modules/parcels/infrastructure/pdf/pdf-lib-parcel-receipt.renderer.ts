@@ -11,8 +11,6 @@ import {
 } from "@/modules/parcels/domain/parcel-signature";
 import { formatDateTime } from "@/shared/domain/local-date";
 import {
-  BAD,
-  GOOD,
   locationText,
   MUTED,
   PdfWriter,
@@ -39,19 +37,16 @@ export class PdfLibParcelReceiptRenderer implements ParcelReceiptRendererPort {
     doc.setCreator("Dora");
     const font = await doc.embedFont(StandardFonts.Helvetica);
     const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-    const out = new PdfWriter(doc, font, bold);
-
-    out.text(input.condominiumName, { size: 10, color: MUTED });
-    out.text("Comprovante de retirada de encomenda", {
-      size: 17,
-      bold: true,
-      gap: 2,
+    const out = new PdfWriter(doc, font, bold, {
+      label: "Comprovante de retirada",
+      subtitle: input.condominiumName,
+      footer: `Encomenda ${spacedCode(parcel.pickupCode)} · emitido em ${when(input.issuedAt)}`,
     });
-    out.text(
+
+    out.intro(
+      "Comprovante de retirada de encomenda",
       `Código ${spacedCode(parcel.pickupCode)} · emitido em ${when(input.issuedAt)}`,
-      { size: 9, color: MUTED },
     );
-    out.rule();
 
     out.heading("Encomenda");
     out.facts([
@@ -117,11 +112,11 @@ export class PdfLibParcelReceiptRenderer implements ParcelReceiptRendererPort {
     }
 
     out.heading("Integridade");
-    out.text(
+    out.notice(
       signature.intact
         ? "Registro íntegro: as provas guardadas conferem com o código gravado na assinatura."
         : "Registro alterado: as provas guardadas não conferem com o código gravado na assinatura.",
-      { bold: true, color: signature.intact ? GOOD : BAD, gap: 4 },
+      signature.intact ? "good" : "bad",
     );
     out.facts(
       [
@@ -146,6 +141,7 @@ export class PdfLibParcelReceiptRenderer implements ParcelReceiptRendererPort {
       "Assinatura eletrônica feita na tela de quem entregou a encomenda, registrada pelo Dora com a data e a hora, o endereço IP, o aparelho, a localização (quando permitida) e quem entregou. Os códigos SHA-256 permitem conferir que o registro não foi alterado.",
     );
 
+    out.finish();
     return Buffer.from(await doc.save());
   }
 }

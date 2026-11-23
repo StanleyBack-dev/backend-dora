@@ -20,18 +20,22 @@ import {
   validatePurchaseRequestInput,
 } from "@/modules/purchases/application/purchase-request-input";
 import { assertCatalogAvailable } from "@/modules/purchases/application/purchase-request-catalog";
+import { keepsQuotedScope } from "@/modules/purchases/application/purchase-request-scope";
 import { withSpace } from "@/modules/purchases/application/purchase-request-space";
 import { PurchasesAccessService } from "@/modules/purchases/application/purchases-access.service";
 import {
-  isEditableRequest,
+  isDetailsEditableRequest,
   type PurchaseRequest,
+  PurchaseRequestStatus,
 } from "@/modules/purchases/domain/purchase-request";
 import { SpaceLookupService } from "@/modules/spaces/application/space-lookup.service";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
 import { toLocalDate } from "@/shared/domain/local-date";
 
-// Whoever made the request, or the management, edits it (details and
-// items) while it still waits for quotes.
+// Whoever made the request, or the management, edits it: everything while
+// it waits for quotes; in quotes, only what doesn't change the prices
+// (place, date, priority), the title, details, items and categories as
+// they were.
 @Injectable()
 export class UpdatePurchaseRequestUseCase {
   constructor(
@@ -52,7 +56,7 @@ export class UpdatePurchaseRequestUseCase {
     input: PurchaseRequestInput,
   ): Promise<PurchaseRequest> {
     const current = await this.access.loadRequest(actor, id);
-    if (!isEditableRequest(current.status)) {
+    if (!isDetailsEditableRequest(current.status)) {
       throw AppException.from(APP_ERRORS.purchases.requestLocked, undefined);
     }
     const today = toLocalDate(this.clock.now(), this.clock.timeZone);
@@ -62,6 +66,20 @@ export class UpdatePurchaseRequestUseCase {
       validatePurchaseRequestInput(input, today, current.neededBy),
       current.spaceId,
     );
+    if (current.status === PurchaseRequestStatus.QUOTING) {
+      if (!keepsQuotedScope(current, data)) {
+        throw AppException.from(
+          APP_ERRORS.purchases.requestScopeLocked,
+          undefined,
+        );
+      }
+      const updated = await this.requests.updateDetails(id, data);
+      if (!updated) {
+        throw AppException.from(APP_ERRORS.purchases.requestLocked, undefined);
+      }
+      await this.stamp(actor, id);
+      return updated;
+    }
     // Products and brands it already had stay valid even if deactivated.
     await assertCatalogAvailable(
       { products: this.products, brands: this.brands },
@@ -70,11 +88,15 @@ export class UpdatePurchaseRequestUseCase {
       current.items,
     );
     const updated = await this.requests.update(id, data);
-    await this.audit.stamp({
+    await this.stamp(actor, id);
+    return updated;
+  }
+
+  private stamp(actor: AuthenticatedUser, id: string) {
+    return this.audit.stamp({
       actorId: actor.id,
       entity: "purchase_request",
       entityId: id,
     });
-    return updated;
   }
 }

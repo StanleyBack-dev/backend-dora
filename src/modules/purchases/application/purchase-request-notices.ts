@@ -6,9 +6,13 @@ import {
   requestCode,
 } from "@/modules/purchases/domain/purchase-request";
 
-/** A request's page in the app. */
+/** The request's quote page (the management's). */
+const quoteLink = (request: PurchaseRequest) =>
+  `/compras/cotacoes/${request.id}`;
+
+/** The requests list showing that one request, open. */
 const requestLink = (request: PurchaseRequest) =>
-  `/compras/solicitacoes/${request.id}`;
+  `/compras/solicitacoes?solicitacao=${request.id}&situacao=todas`;
 
 const itemsLine = (request: PurchaseRequest) =>
   request.items.length === 1 ? "1 item" : `${request.items.length} itens`;
@@ -28,7 +32,7 @@ export function requestCreatedNotices(
           type: NotificationType.PURCHASE_REQUEST_CREATED,
           title: `Nova solicitação de compra ${code}`,
           body: `${request.requestedByName} pediu “${request.title}” (${itemsLine(request)}).`,
-          link: requestLink(request),
+          link: quoteLink(request),
           email: {
             subject: `Nova solicitação de compra ${code}: ${request.title}`,
             intro: `${request.requestedByName} fez uma solicitação de compra. Confira os itens e comece as cotações no app.`,

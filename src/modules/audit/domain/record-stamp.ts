@@ -24,6 +24,10 @@ export const STAMPED_TABLES = {
   supplier: { table: "tb_suppliers", key: "idtb_suppliers" },
   product: { table: "tb_products", key: "idtb_products" },
   brand: { table: "tb_brands", key: "idtb_brands" },
+  purchase_quote: {
+    table: "tb_purchase_quotes",
+    key: "idtb_purchase_quotes",
+  },
   purchase_request: {
     table: "tb_purchase_requests",
     key: "idtb_purchase_requests",

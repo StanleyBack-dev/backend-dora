@@ -2553,40 +2553,112 @@ type PlatformMetrics {
   health: HealthMetrics!
 }
 
-"""Uma solicitação no filtro (número e título)."""
-type PurchaseRequestOption {
-  id: ID!
-  number: Int!
-  title: String!
+"""Mapa de cotação de uma solicitação, em PDF."""
+type PurchaseQuoteMapFile {
+  """Nome sugerido do arquivo."""
+  fileName: String!
+
+  """application/pdf"""
+  mimeType: String!
+
+  """O PDF em base64."""
+  base64Content: String!
 }
 
-"""Quem fez solicitações (filtro “Solicitante”)."""
-type PurchaseRequesterOption {
-  id: ID!
-  name: String!
+"""O preço de um item numa cotação (na ordem dos itens)."""
+type PurchaseQuoteLine {
+  requestItemId: ID!
+
+  """Preço unitário em centavos (vazio: não cotou)."""
+  unitPriceCents: Float
+
+  """Quantidade × preço, em centavos."""
+  lineCents: Float
 }
 
-"""O que os filtros das solicitações oferecem (as que a pessoa vê)."""
-type PurchaseRequestFilterOptions {
-  requests: [PurchaseRequestOption!]!
-  requesters: [PurchaseRequesterOption!]!
+"""Um dos outros encargos de uma cotação."""
+type QuoteCharge {
+  label: String!
+
+  """Valor em centavos."""
+  amountCents: Float!
+}
+
+"""Cotação de um fornecedor para uma solicitação de compra."""
+type PurchaseQuote {
+  id: ID!
+  supplierId: ID!
+  supplierName: String!
+  lines: [PurchaseQuoteLine!]!
+
+  """Frete em centavos."""
+  shippingCents: Float!
+  charges: [QuoteCharge!]!
+
+  """A soma dos encargos, em centavos."""
+  chargesCents: Float!
+
+  """Desconto, em centavos."""
+  discountCents: Float!
+
+  """Desconto em centésimos de % (vazio: valor fixo)."""
+  discountPercentBp: Int
+
+  """Juros ao mês, em centésimos de % (vazio: sem juros)."""
+  interestRateBp: Int
+
+  """Itens cotados, em centavos."""
+  itemsCents: Float!
+
+  """Itens + frete + encargos − desconto (à vista), em centavos."""
+  cashCents: Float!
+
+  """O valor final pago (com juros, a soma das parcelas), em centavos."""
+  totalCents: Float!
+
+  """Juros do parcelamento, em centavos."""
+  interestCents: Float!
+
+  """O valor de cada parcela (vazio: à vista)."""
+  installmentValues: [Float!]!
+
+  """Todos os itens têm preço."""
+  complete: Boolean!
+
+  """A cotação completa mais barata (empates também)."""
+  cheapest: Boolean!
+
+  """A escolhida pela gestão."""
+  chosen: Boolean!
+  deliveryDays: Int
+  paymentMethod: PaymentMethod
+
+  """Parcelas (vazio: à vista)."""
+  installments: Int
+
+  """Com OTHER: a forma de pagamento digitada."""
+  paymentTerms: String
+  validUntil: String
+  notes: String
+
+  """Link temporário do orçamento do fornecedor."""
+  fileUrl: String
+  fileIsPdf: Boolean
+  createdAt: DateTime!
 }
 
 """
-As solicitações em números (os cards da página), independente dos filtros.
+Forma de pagamento de uma cotação: PIX, dinheiro, cartão de débito ou de crédito, boleto, transferência, faturado ou outra (digitada).
 """
-type PurchaseRequestOverview {
-  """Aguardando cotação."""
-  open: Int!
-
-  """Em andamento e urgentes."""
-  urgent: Int!
-
-  """Em andamento e precisam em até 7 dias."""
-  dueSoon: Int!
-
-  """Em andamento e com a data em que precisavam já passada."""
-  overdue: Int!
+enum PaymentMethod {
+  PIX
+  CASH
+  DEBIT_CARD
+  CREDIT_CARD
+  BOLETO
+  BANK_TRANSFER
+  INVOICE
+  OTHER
 }
 
 """Um item de uma solicitação de compra."""
@@ -2629,6 +2701,18 @@ type PurchaseRequest {
   requestedById: ID!
   requestedByName: String!
   items: [PurchaseRequestItem!]!
+
+  """Quantas cotações tem."""
+  quoteCount: Int!
+
+  """A cotação escolhida pela gestão."""
+  chosenQuoteId: ID
+
+  """
+  Por que essa (obrigatório quando não é a mais barata ou há menos de 3 cotações).
+  """
+  choiceJustification: String
+  chosenAt: DateTime
   cancelReason: String
   cancelledAt: DateTime
   createdAt: DateTime!
@@ -2684,6 +2768,42 @@ enum PurchaseRequestStatus {
   CANCELLED
 }
 
+"""Uma solicitação no filtro (número e título)."""
+type PurchaseRequestOption {
+  id: ID!
+  number: Int!
+  title: String!
+}
+
+"""Quem fez solicitações (filtro “Solicitante”)."""
+type PurchaseRequesterOption {
+  id: ID!
+  name: String!
+}
+
+"""O que os filtros das solicitações oferecem (as que a pessoa vê)."""
+type PurchaseRequestFilterOptions {
+  requests: [PurchaseRequestOption!]!
+  requesters: [PurchaseRequesterOption!]!
+}
+
+"""
+As solicitações em números (os cards da página), independente dos filtros.
+"""
+type PurchaseRequestOverview {
+  """Aguardando cotação."""
+  open: Int!
+
+  """Em andamento e urgentes."""
+  urgent: Int!
+
+  """Em andamento e precisam em até 7 dias."""
+  dueSoon: Int!
+
+  """Em andamento e com a data em que precisavam já passada."""
+  overdue: Int!
+}
+
 type PurchaseRequestPage {
   items: [PurchaseRequest!]!
   total: Int!
@@ -2709,6 +2829,52 @@ type PurchaseCatalogUsage {
   """Marcas em ao menos uma solicitação."""
   brandsInUse: Int!
   topBrand: PurchaseCatalogTop
+}
+
+"""Um fornecedor e o valor final da cotação dele."""
+type QuoteBoardPick {
+  supplierName: String!
+
+  """Valor final pago, em centavos."""
+  totalCents: Float!
+}
+
+"""Uma solicitação na página de cotações."""
+type QuoteBoardRow {
+  request: PurchaseRequest!
+  quoteCount: Int!
+
+  """Cotações com preço para todos os itens."""
+  completeCount: Int!
+
+  """A cotação completa mais barata."""
+  cheapest: QuoteBoardPick
+
+  """A cotação escolhida."""
+  chosen: QuoteBoardPick
+}
+
+type QuoteBoardPage {
+  items: [QuoteBoardRow!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+"""As cotações em números (os cards da página)."""
+type QuoteBoardOverview {
+  """Aguardando a primeira cotação."""
+  awaitingQuotes: Int!
+
+  """Em cotação."""
+  quoting: Int!
+
+  """Em cotação com menos cotações que o recomendado."""
+  belowMinimum: Int!
+
+  """Com cotação escolhida, aguardando aprovação."""
+  awaitingApproval: Int!
 }
 
 """Dependente aprovado de um morador."""
@@ -2896,6 +3062,16 @@ type SupplierOverview {
 
   """Categorias atendidas por ao menos um fornecedor ativo."""
   categoriesServed: Int!
+}
+
+"""Um fornecedor ativo num select, com o que atende."""
+type SupplierOption {
+  id: ID!
+
+  """Nome fantasia, ou a razão social."""
+  name: String!
+  categories: [Category!]!
+  categoryOther: String
 }
 
 """Fornecedor do condomínio (empresa ou autônomo)."""
@@ -3402,6 +3578,14 @@ type Query {
   platformMetrics(filter: PlatformMetricsFilterInput): PlatformMetrics!
 
   """
+  As cotações de uma solicitação, com os totais, a mais barata e a escolhida.
+  """
+  purchaseQuotes(requestId: ID!): [PurchaseQuote!]!
+
+  """O mapa de cotação da solicitação, em PDF."""
+  purchaseQuoteMapPdf(requestId: ID!): PurchaseQuoteMapFile!
+
+  """
   Solicitações de compra (todas para a gestão; as próprias para quem só solicita), as mais novas primeiro.
   """
   purchaseRequests(filter: PurchaseRequestFilterInput, page: PageInput): PurchaseRequestPage!
@@ -3423,6 +3607,14 @@ type Query {
   purchaseCatalogUsage: PurchaseCatalogUsage!
 
   """
+  Solicitações aguardando cotação, em cotação ou aguardando aprovação, com o andamento das cotações.
+  """
+  quoteBoard(filter: PurchaseRequestFilterInput, page: PageInput): QuoteBoardPage!
+
+  """As cotações em números (os cards da página)."""
+  quoteBoardOverview: QuoteBoardOverview!
+
+  """
   Moradores ativos do condomínio, por nome, com filtros e por página (somente leitura).
   """
   residentsDirectory(filter: ResidentsFilterInput, page: PageInput): ResidentListingPage!
@@ -3438,6 +3630,11 @@ type Query {
 
   """Fornecedores do condomínio (ativos primeiro, por nome)."""
   suppliers(filter: SupplierFilterInput, page: PageInput): SupplierPage!
+
+  """
+  Os fornecedores ativos, por nome, com o que atendem (ex.: para cotar uma compra).
+  """
+  supplierOptions: [SupplierOption!]!
 
   """
   O que os filtros dos fornecedores oferecem (nomes, contatos e CNPJ/CPF em uso).
@@ -4092,6 +4289,36 @@ type Mutation {
 
   """Remove a própria foto de perfil."""
   removeMyPhoto: Boolean!
+
+  """
+  Envia o mapa de cotação em PDF por e-mail (um e-mail por endereço); devolve quantos foram.
+  """
+  sharePurchaseQuoteMapByEmail(requestId: ID!, input: ShareQuoteMapInput!): Int!
+
+  """
+  Registra a cotação de um fornecedor (a primeira põe a solicitação em cotação).
+  """
+  addPurchaseQuote(requestId: ID!, supplierId: ID!, input: PurchaseQuoteInput!, file: String): PurchaseQuote!
+
+  """
+  Altera uma cotação (preços, condições e o orçamento: novo arquivo, mantido ou removido).
+  """
+  updatePurchaseQuote(id: ID!, input: PurchaseQuoteInput!, file: String, removeFile: Boolean! = false): PurchaseQuote!
+
+  """
+  Remove uma cotação (sem nenhuma, a solicitação volta a aguardar cotação).
+  """
+  removePurchaseQuote(id: ID!): Boolean!
+
+  """
+  Escolhe a cotação vencedora (justificativa obrigatória se não for a mais barata ou houver menos de 3); a solicitação passa a aguardar aprovação.
+  """
+  choosePurchaseQuote(id: ID!, justification: String): PurchaseRequest!
+
+  """
+  Desfaz a escolha enquanto aguarda aprovação: a solicitação volta para cotação.
+  """
+  reopenPurchaseQuotes(requestId: ID!): PurchaseRequest!
 
   """
   Faz uma solicitação de compra (numerada no condomínio); a gestão é avisada.
@@ -4888,6 +5115,72 @@ input AuthorizeParcelPickupInput {
 
   """CPF ou RG (opcional)."""
   document: String
+}
+
+"""Envio do mapa de cotação por e-mail."""
+input ShareQuoteMapInput {
+  """De 1 a 5 e-mails."""
+  emails: [String!]!
+
+  """A mensagem que vai no e-mail."""
+  message: String!
+}
+
+"""Preços e condições de uma cotação."""
+input PurchaseQuoteInput {
+  items: [PurchaseQuoteItemInput!]!
+
+  """Frete em centavos."""
+  shippingCents: Float
+
+  """Outros encargos (instalação, taxas…), cada um com o valor."""
+  charges: [QuoteChargeInput!]
+
+  """Desconto fixo, em centavos (ignorado com porcentagem)."""
+  discountCents: Float
+
+  """
+  Desconto em porcentagem de itens + frete + encargos, em centésimos de % (5% = 500; até 10000).
+  """
+  discountPercentBp: Int
+
+  """
+  Juros do parcelamento ao mês, em centésimos de % (1,99% = 199; até 2000). Só parcelado.
+  """
+  interestRateBp: Int
+
+  """Prazo de entrega em dias."""
+  deliveryDays: Int
+  paymentMethod: PaymentMethod
+
+  """
+  Parcelas (2 a 60; vazio ou 1: à vista). Cartão de crédito, boleto, faturado ou outro.
+  """
+  installments: Int
+
+  """Com OTHER: a forma de pagamento digitada."""
+  paymentTerms: String
+
+  """Último dia em que os preços valem (AAAA-MM-DD)."""
+  validUntil: String
+  notes: String
+}
+
+"""O preço de um item da solicitação numa cotação."""
+input PurchaseQuoteItemInput {
+  requestItemId: ID!
+
+  """Preço unitário em centavos (vazio: o fornecedor não tem)."""
+  unitPriceCents: Float
+}
+
+"""Um dos outros encargos de uma cotação."""
+input QuoteChargeInput {
+  """O que é (instalação, taxa…)."""
+  label: String!
+
+  """Valor em centavos."""
+  amountCents: Float!
 }
 
 """Dados de uma solicitação de compra."""

@@ -5,8 +5,8 @@ export interface MailAddress {
 
 export interface MailAttachment {
   name: string;
-  /** Raw file content (UTF-8 text, e.g. an .ics calendar). */
-  content: string;
+  /** The file: UTF-8 text (an .ics calendar) or bytes (a PDF). */
+  content: string | Buffer;
   contentType: string;
 }
 

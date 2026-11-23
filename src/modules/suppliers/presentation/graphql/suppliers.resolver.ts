@@ -11,6 +11,7 @@ import { SupplierFilterInput } from "@/modules/suppliers/presentation/graphql/dt
 import { SupplierInput } from "@/modules/suppliers/presentation/graphql/dto/inputs/supplier.input";
 import { SupplierFilterOptionsType } from "@/modules/suppliers/presentation/graphql/dto/outputs/supplier-filter-options.output";
 import { SupplierOverviewType } from "@/modules/suppliers/presentation/graphql/dto/outputs/supplier-overview.output";
+import { SupplierOptionType } from "@/modules/suppliers/presentation/graphql/dto/outputs/supplier-option.output";
 import { SupplierPage } from "@/modules/suppliers/presentation/graphql/dto/outputs/supplier-page.output";
 import { SupplierType } from "@/modules/suppliers/presentation/graphql/dto/outputs/supplier.output";
 import type { Paginated } from "@/shared/application/pagination";
@@ -38,6 +39,16 @@ export class SuppliersResolver {
     @Args("page", { nullable: true }) page?: PageInput,
   ): Promise<Paginated<SupplierType>> {
     return this.listing.list(actor, filter ?? {}, page ?? DEFAULT_PAGE);
+  }
+
+  @Query(() => [SupplierOptionType], {
+    description:
+      "Os fornecedores ativos, por nome, com o que atendem (ex.: para cotar uma compra).",
+  })
+  supplierOptions(
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<SupplierOptionType[]> {
+    return this.listing.activeOptions(actor);
   }
 
   @Query(() => SupplierFilterOptionsType, {
