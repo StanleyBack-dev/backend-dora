@@ -48,6 +48,8 @@ const supplier = (overrides: Partial<Supplier> = {}): Supplier => ({
   pixKey: null,
   notes: null,
   active: true,
+  ratingAverage: null,
+  ratingCount: 0,
   createdAt: new Date(),
   updatedAt: new Date(),
   ...overrides,

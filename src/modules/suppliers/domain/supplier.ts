@@ -3,9 +3,11 @@ import { isValidCnpj } from "@/shared/domain/cnpj";
 import { normalizeCpf } from "@/shared/domain/identity-document";
 import type { PixKeyType } from "@/shared/domain/pix";
 
-// A supplier of the condominium: a company (CNPJ) or a self-employed person
-// (CPF). The document is unique in the condominium; once used a supplier is
-// deactivated, never deleted.
+/**
+ * A supplier of the condominium: a company (CNPJ) or a self-employed person
+ * (CPF). The document is unique in the condominium; once used a supplier is
+ * deactivated, never deleted.
+ */
 
 export enum SupplierDocumentType {
   CNPJ = "CNPJ",
@@ -36,6 +38,9 @@ export type Supplier = {
   pixKey: string | null;
   notes: string | null;
   active: boolean;
+  /** The average of its ratings, one decimal (null: never rated). */
+  ratingAverage: number | null;
+  ratingCount: number;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -71,3 +76,14 @@ export function supplierText(
   if (!text) return null;
   return text.length <= max ? text : undefined;
 }
+
+/** A rating given to a supplier (1 to 5), once per source record. */
+export type SupplierRating = {
+  rating: number;
+  comment: string | null;
+  ratedByName: string | null;
+  ratedAt: Date;
+};
+
+/** Where a rating comes from and which record (one rating each). */
+export type SupplierRatingSource = { source: string; sourceId: string };

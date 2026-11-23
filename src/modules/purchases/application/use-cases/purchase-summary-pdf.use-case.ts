@@ -1,3 +1,4 @@
+import { formatQuantity } from "@/modules/catalog/domain/unit";
 import { Inject, Injectable } from "@nestjs/common";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { APP_ERRORS } from "@/common/exceptions/app-errors.catalog";
@@ -28,37 +29,23 @@ import {
   type PurchaseApproval,
 } from "@/modules/purchases/domain/purchase-approval";
 import {
-  PurchasePriority,
+  PRIORITY_LABELS,
+  REQUEST_STATUS_LABELS,
   type PurchaseRequest,
   PurchaseRequestStatus,
   requestCode,
 } from "@/modules/purchases/domain/purchase-request";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
+import { formatCents } from "@/shared/domain/money";
+import { formatLocalDate } from "@/shared/domain/local-date";
 
-const money = (cents: number) =>
-  (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-/** "21/11/2026" from "2026-11-21". */
-const day = (value: string) => value.split("-").reverse().join("/");
-
-const PRIORITY_LABELS: Record<PurchasePriority, string> = {
-  [PurchasePriority.LOW]: "Baixa",
-  [PurchasePriority.NORMAL]: "Normal",
-  [PurchasePriority.HIGH]: "Alta",
-  [PurchasePriority.URGENT]: "Urgente",
-};
-
-const STATUS_LABELS: Record<PurchaseRequestStatus, string> = {
-  [PurchaseRequestStatus.OPEN]: "Aguardando cotação",
-  [PurchaseRequestStatus.QUOTING]: "Em cotação",
-  [PurchaseRequestStatus.AWAITING_APPROVAL]: "Aguardando aprovação",
-  [PurchaseRequestStatus.APPROVED]: "Aprovada",
-  [PurchaseRequestStatus.ORDERED]: "Pedido feito",
-  [PurchaseRequestStatus.RECEIVED]: "Recebida",
-  [PurchaseRequestStatus.COMPLETED]: "Concluída",
-  [PurchaseRequestStatus.REJECTED]: "Reprovada",
-  [PurchaseRequestStatus.CANCELLED]: "Cancelada",
-};
+/** Approved, and the order, the deliveries and the payment after it. */
+const AFTER_APPROVAL: readonly PurchaseRequestStatus[] = [
+  PurchaseRequestStatus.APPROVED,
+  PurchaseRequestStatus.ORDERED,
+  PurchaseRequestStatus.RECEIVED,
+  PurchaseRequestStatus.COMPLETED,
+];
 
 const delivery = (days: number | null) =>
   days === null
@@ -70,12 +57,14 @@ const delivery = (days: number | null) =>
         : `${days} dias`;
 
 const quoteName = (quote: { supplierName: string; totalCents: number }) =>
-  `${quote.supplierName} (${money(quote.totalCents)})`;
+  `${quote.supplierName} (${formatCents(quote.totalCents)})`;
 
-// The purchase summary (resumo da compra) as a PDF: where the purchase
-// stands, the request, every quote in one line, the chosen one, the
-// timeline (asked, quoted, chosen, returned, decided) and lines to sign.
-// Read by the management and the approvers.
+/**
+ * The purchase summary (resumo da compra) as a PDF: where the purchase
+ * stands, the request, every quote in one line, the chosen one, the
+ * timeline (asked, quoted, chosen, returned, decided) and lines to sign.
+ * Read by the management and the approvers.
+ */
 @Injectable()
 export class PurchaseSummaryPdfUseCase {
   constructor(
@@ -142,7 +131,7 @@ export class PurchaseSummaryPdfUseCase {
     );
 
     const approvedBy =
-      request.status === PurchaseRequestStatus.APPROVED ||
+      AFTER_APPROVAL.includes(request.status) ||
       request.status === PurchaseRequestStatus.REJECTED
         ? latest
         : null;
@@ -152,13 +141,16 @@ export class PurchaseSummaryPdfUseCase {
       title: request.title,
       condominiumName: meta.condominiumName,
       generatedAt: this.when(this.clock.now()),
-      statusLabel: STATUS_LABELS[request.status],
+      statusLabel: REQUEST_STATUS_LABELS[request.status],
       status: this.status(request, chosen, latest, quotes.length),
       facts: [
         ["Solicitada por", request.requestedByName],
         ["Em", this.when(request.createdAt)],
         ["Prioridade", PRIORITY_LABELS[request.priority]],
-        ["Precisa até", request.neededBy ? day(request.neededBy) : null],
+        [
+          "Precisa até",
+          request.neededBy ? formatLocalDate(request.neededBy) : null,
+        ],
         ["Onde vai ser usado", request.location],
       ],
       details: request.description,
@@ -166,12 +158,12 @@ export class PurchaseSummaryPdfUseCase {
         label: [item.productName, item.brandName, item.note]
           .filter(Boolean)
           .join(" · "),
-        quantity: `${item.quantity.toLocaleString("pt-BR")} ${item.unit}`,
+        quantity: formatQuantity(item.quantity, item.unit),
       })),
       quotes: ranked.map((quote) => ({
         supplier: quote.supplierName,
         line: [
-          money(quote.totalCents),
+          formatCents(quote.totalCents),
           quote.complete ? "completa" : "parcial (faltam itens)",
           quote.cheapest ? "mais barata" : null,
           quote.chosen ? "escolhida" : null,
@@ -187,10 +179,13 @@ export class PurchaseSummaryPdfUseCase {
         ? {
             supplier: chosen.supplierName,
             facts: [
-              ["Total", money(chosen.totalCents)],
+              ["Total", formatCents(chosen.totalCents)],
               ["Pagamento", paymentLine(chosen)],
               ["Entrega", delivery(chosen.deliveryDays)],
-              ["Validade", chosen.validUntil ? day(chosen.validUntil) : null],
+              [
+                "Validade",
+                chosen.validUntil ? formatLocalDate(chosen.validUntil) : null,
+              ],
               [
                 "Escolhida por",
                 request.chosenByName
@@ -231,17 +226,24 @@ export class PurchaseSummaryPdfUseCase {
       `${approval.decidedByName ?? "—"} em ${this.when(approval.decidedAt)}`;
     const note = (label: string, text: string | null) =>
       text ? ` ${label}: ${text}` : "";
+    const stage =
+      request.status === PurchaseRequestStatus.APPROVED
+        ? ""
+        : `${REQUEST_STATUS_LABELS[request.status]} · `;
     switch (request.status) {
       case PurchaseRequestStatus.APPROVED:
+      case PurchaseRequestStatus.ORDERED:
+      case PurchaseRequestStatus.RECEIVED:
+      case PurchaseRequestStatus.COMPLETED:
         if (latest?.decision === ApprovalDecision.AUTO_APPROVED) {
           return {
             tone: "good",
-            line: `Aprovada na alçada${latest.limitCents !== null ? ` (até ${money(latest.limitCents)})` : ""}: ${quoteName(latest)}, ao ser escolhida em ${this.when(latest.decidedAt)}.`,
+            line: `${stage}Aprovada na alçada${latest.limitCents !== null ? ` (até ${formatCents(latest.limitCents)})` : ""}: ${quoteName(latest)}, ao ser escolhida em ${this.when(latest.decidedAt)}.`,
           };
         }
         return {
           tone: "good",
-          line: `Aprovada${latest ? ` por ${by(latest)}` : ""}: ${chosen ? quoteName(chosen) : "—"}.${note("Observação", latest?.note ?? null)}`,
+          line: `${stage}Aprovada${latest ? ` por ${by(latest)}` : ""}: ${chosen ? quoteName(chosen) : "—"}.${note("Observação", latest?.note ?? null)}`,
         };
       case PurchaseRequestStatus.REJECTED:
         return {
@@ -269,7 +271,7 @@ export class PurchaseSummaryPdfUseCase {
               line: `Em cotação: ${quoteCount} ${quoteCount === 1 ? "cotação registrada" : "cotações registradas"}, nenhuma escolhida ainda.`,
             };
       default:
-        return { tone: "info", line: STATUS_LABELS[request.status] };
+        return { tone: "info", line: REQUEST_STATUS_LABELS[request.status] };
     }
   }
 
@@ -291,7 +293,7 @@ export class PurchaseSummaryPdfUseCase {
       ...history.map((approval) => {
         const chose = `escolhida por ${approval.chosenByName ?? "—"}`;
         const event = {
-          [ApprovalDecision.AUTO_APPROVED]: `${quoteName(approval)} ${chose} e aprovada na alçada${approval.limitCents !== null ? ` (até ${money(approval.limitCents)})` : ""}.`,
+          [ApprovalDecision.AUTO_APPROVED]: `${quoteName(approval)} ${chose} e aprovada na alçada${approval.limitCents !== null ? ` (até ${formatCents(approval.limitCents)})` : ""}.`,
           [ApprovalDecision.APPROVED]: `${quoteName(approval)} (${chose}) aprovada por ${approval.decidedByName ?? "—"}.${approval.note ? ` Observação: ${approval.note}` : ""}`,
           [ApprovalDecision.RETURNED]: `${quoteName(approval)} (${chose}) devolvida para cotação por ${approval.decidedByName ?? "—"}. Motivo: ${approval.note ?? "—"}`,
           [ApprovalDecision.REJECTED]: `${quoteName(approval)} (${chose}) reprovada por ${approval.decidedByName ?? "—"}. Motivo: ${approval.note ?? "—"}`,

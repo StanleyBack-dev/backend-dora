@@ -14,8 +14,10 @@ import {
 } from "@/modules/suppliers/application/supplier-input";
 import type { Supplier } from "@/modules/suppliers/domain/supplier";
 
-// Edits a supplier's details (the CNPJ/CPF may be corrected, as long as no
-// other supplier there has it).
+/**
+ * Edits a supplier's details (the CNPJ/CPF may be corrected, as long as no
+ * other supplier there has it).
+ */
 @Injectable()
 export class UpdateSupplierUseCase {
   constructor(

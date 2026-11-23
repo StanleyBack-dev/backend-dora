@@ -18,9 +18,11 @@ const SUPPLIER_USERS: readonly {
   manage: readonly Permission[];
 }[] = [{ module: AppModule.PURCHASES, manage: [Permission.PURCHASES_MANAGE] }];
 
-// Suppliers belong to no paid module: the registry opens to whoever manages
-// them in a module that works with suppliers (contracted by the
-// condominium).
+/**
+ * Suppliers belong to no paid module: the registry opens to whoever manages
+ * them in a module that works with suppliers (contracted by the
+ * condominium).
+ */
 @Injectable()
 export class SuppliersAccessService {
   constructor(

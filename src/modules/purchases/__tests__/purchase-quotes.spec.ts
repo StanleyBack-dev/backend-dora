@@ -6,6 +6,7 @@ import {
   type PurchaseSettings,
 } from "@/modules/purchases/domain/purchase-approval";
 import type { SendDocumentEmailUseCase } from "@/modules/mails/application/use-cases/send-document-email.use-case";
+import { PurchaseDocumentMailer } from "@/modules/purchases/application/purchase-document-mailer";
 import { ShareQuoteMapUseCase } from "@/modules/purchases/application/use-cases/share-quote-map.use-case";
 import type { RateLimitPort } from "@/shared/application/ports/rate-limit.port";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
@@ -551,6 +552,9 @@ describe("ListQuoteBoardUseCase", () => {
       "QUOTING",
       "AWAITING_APPROVAL",
       "APPROVED",
+      "ORDERED",
+      "RECEIVED",
+      "COMPLETED",
       "REJECTED",
     ]);
     expect(page.items[0]).toMatchObject({
@@ -601,7 +605,10 @@ describe("ShareQuoteMapUseCase", () => {
     } as unknown as RateLimitPort;
     return {
       documents,
-      share: new ShareQuoteMapUseCase(listing, documents, limits),
+      share: new ShareQuoteMapUseCase(
+        listing,
+        new PurchaseDocumentMailer(documents, limits),
+      ),
     };
   };
 

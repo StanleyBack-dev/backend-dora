@@ -6,11 +6,13 @@ import type {
 } from "@/modules/purchases/application/ports/purchase-summary-renderer.port";
 import { PdfWriter } from "@/shared/infrastructure/pdf/pdf-writer";
 
-// The purchase summary (resumo da compra) as an A4 portrait PDF, in the
-// Dora look: where it stands, the request and its items, every quote in one
-// line, the chosen one with the justification, what happened (the
-// timeline) and lines to sign. One document for any outcome, to file or to
-// account for the purchase; the comparison map has the prices side by side.
+/**
+ * The purchase summary (resumo da compra) as an A4 portrait PDF, in the
+ * Dora look: where it stands, the request and its items, every quote in one
+ * line, the chosen one with the justification, what happened (the
+ * timeline) and lines to sign. One document for any outcome, to file or to
+ * account for the purchase; the comparison map has the prices side by side.
+ */
 @Injectable()
 export class PdfLibPurchaseSummaryRenderer implements PurchaseSummaryRendererPort {
   async render(input: PurchaseSummaryInput): Promise<Buffer> {

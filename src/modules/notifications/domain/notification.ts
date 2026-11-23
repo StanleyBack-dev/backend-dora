@@ -79,6 +79,14 @@ export enum NotificationType {
   PURCHASE_RETURNED = "PURCHASE_RETURNED",
   /** Purchases: the approver rejected the purchase. */
   PURCHASE_REJECTED = "PURCHASE_REJECTED",
+  /** Purchases: the order was placed with the supplier (to the requester). */
+  PURCHASE_ORDERED = "PURCHASE_ORDERED",
+  /** Purchases: a delivery arrived (to the managers and the requester). */
+  PURCHASE_RECEIVED = "PURCHASE_RECEIVED",
+  /** Purchases: received and paid in full (to the requester). */
+  PURCHASE_COMPLETED = "PURCHASE_COMPLETED",
+  /** Purchases: the order was cancelled (to the requester and the managers). */
+  PURCHASE_ORDER_CANCELLED = "PURCHASE_ORDER_CANCELLED",
 }
 
 export const ALL_NOTIFICATION_TYPES: readonly NotificationType[] =

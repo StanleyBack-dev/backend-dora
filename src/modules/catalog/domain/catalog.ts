@@ -1,7 +1,9 @@
-// The condominium's catalog: the products and brands the modules that deal
-// with things share (purchases now; stock or maintenance later). A name
-// once per condominium (whatever the case); deactivated, never deleted,
-// so what used them keeps them.
+/**
+ * The condominium's catalog: the products and brands the modules that deal
+ * with things share (purchases now; stock or maintenance later). A name
+ * once per condominium (whatever the case); deactivated, never deleted,
+ * so what used them keeps them.
+ */
 
 export type Product = {
   id: string;

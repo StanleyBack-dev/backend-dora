@@ -33,10 +33,12 @@ import type { Paginated } from "@/shared/application/pagination";
 const DEFAULT_PAGE = { page: 1, limit: 20 };
 const NOTE_ARG = { type: () => String, nullable: true } as const;
 
-// The approval of the chosen quotes (aprovação por alçada): the settings
-// (read by the management and the approvers, changed by the approvers),
-// the approvals page, a request's decisions, and the decisions themselves
-// (approvers only).
+/**
+ * The approval of the chosen quotes (aprovação por alçada): the settings
+ * (read by the management and the approvers, changed by the approvers),
+ * the approvals page, a request's decisions, and the decisions themselves
+ * (approvers only).
+ */
 @RequireModule(AppModule.PURCHASES)
 @Resolver()
 export class PurchaseApprovalsResolver {

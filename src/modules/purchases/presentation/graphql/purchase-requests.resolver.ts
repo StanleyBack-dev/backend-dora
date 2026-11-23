@@ -22,10 +22,12 @@ import type { Paginated } from "@/shared/application/pagination";
 
 const DEFAULT_PAGE = { page: 1, limit: 20 };
 
-// Purchase requests (Compras > Solicitações). Who asks for purchases
-// (PURCHASES_REQUEST) sees and edits their own; the management
-// (PURCHASES_MANAGE) every one. Either permission is checked by the use
-// cases (the access service's scope), so one resolver serves both.
+/**
+ * Purchase requests (Compras > Solicitações). Who asks for purchases
+ * (PURCHASES_REQUEST) sees and edits their own; the management
+ * (PURCHASES_MANAGE) every one. Either permission is checked by the use
+ * cases (the access service's scope), so one resolver serves both.
+ */
 @RequireModule(AppModule.PURCHASES)
 @Resolver()
 export class PurchaseRequestsResolver {

@@ -9,9 +9,7 @@ import {
   type PurchaseRequest,
   requestCode,
 } from "@/modules/purchases/domain/purchase-request";
-
-const money = (cents: number) =>
-  (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+import { formatCents } from "@/shared/domain/money";
 
 /** The purchase's approval page (the management and the approvers). */
 const approvalLink = (request: PurchaseRequest) =>
@@ -54,7 +52,7 @@ export function approvalRequestedNotices(
   const why =
     approval.limitCents === null
       ? "Toda compra passa por aprovação."
-      : `Acima da alçada de ${money(approval.limitCents)}.`;
+      : `Acima da alçada de ${formatCents(approval.limitCents)}.`;
   return approvers
     .filter((userId) => userId !== chosenBy.id)
     .map((userId) =>
@@ -63,7 +61,7 @@ export function approvalRequestedNotices(
           userId,
           type: NotificationType.PURCHASE_APPROVAL_REQUESTED,
           title: `Compra ${code} aguarda a sua aprovação`,
-          body: `${chosenBy.name} escolheu ${approval.supplierName} (${money(approval.totalCents)}) para “${request.title}”. ${why}`,
+          body: `${chosenBy.name} escolheu ${approval.supplierName} (${formatCents(approval.totalCents)}) para “${request.title}”. ${why}`,
           link: approvalLink(request),
           email: {
             subject: `Compra aguardando aprovação: ${request.title}`,
@@ -71,7 +69,7 @@ export function approvalRequestedNotices(
             details: [
               { label: "Solicitação", value: `${code} · ${request.title}` },
               { label: "Fornecedor", value: approval.supplierName },
-              { label: "Total", value: money(approval.totalCents) },
+              { label: "Total", value: formatCents(approval.totalCents) },
             ],
             ctaLabel: "Ver e decidir",
           },
@@ -104,8 +102,8 @@ export function approvalDecidedNotices(
     (userId) => userId !== decidedBy.id,
   );
   const body = auto
-    ? `“${request.title}” foi aprovada dentro da alçada: ${approval.supplierName}, ${money(approval.totalCents)}.`
-    : `${decidedBy.name} ${words.verb} “${request.title}” (${approval.supplierName}, ${money(approval.totalCents)}).${approval.note ? ` ${approval.decision === ApprovalDecision.APPROVED ? "Observação" : "Motivo"}: ${approval.note}` : ""}`;
+    ? `“${request.title}” foi aprovada dentro da alçada: ${approval.supplierName}, ${formatCents(approval.totalCents)}.`
+    : `${decidedBy.name} ${words.verb} “${request.title}” (${approval.supplierName}, ${formatCents(approval.totalCents)}).${approval.note ? ` ${approval.decision === ApprovalDecision.APPROVED ? "Observação" : "Motivo"}: ${approval.note}` : ""}`;
   return recipients.map((userId) =>
     deliveryDraft(
       {
@@ -123,7 +121,7 @@ export function approvalDecidedNotices(
           details: [
             { label: "Solicitação", value: `${code} · ${request.title}` },
             { label: "Fornecedor", value: approval.supplierName },
-            { label: "Total", value: money(approval.totalCents) },
+            { label: "Total", value: formatCents(approval.totalCents) },
             ...(approval.note
               ? [
                   {

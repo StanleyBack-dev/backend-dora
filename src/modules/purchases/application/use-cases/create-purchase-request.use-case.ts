@@ -26,8 +26,10 @@ import { SpaceLookupService } from "@/modules/spaces/application/space-lookup.se
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
 import { toLocalDate } from "@/shared/domain/local-date";
 
-// Someone of the team asks for a purchase: the request is numbered in the
-// condominium (SC-0001…) and the managers are told.
+/**
+ * Someone of the team asks for a purchase: the request is numbered in the
+ * condominium (SC-0001…) and the managers are told.
+ */
 @Injectable()
 export class CreatePurchaseRequestUseCase {
   constructor(
@@ -46,7 +48,6 @@ export class CreatePurchaseRequestUseCase {
     actor: AuthenticatedUser,
     input: PurchaseRequestInput,
   ): Promise<PurchaseRequest> {
-    // Asking for purchases or managing them (checked by the scope).
     const { condominiumId } = await this.access.scopeOf(actor);
     const today = toLocalDate(this.clock.now(), this.clock.timeZone);
     const data = await withSpace(

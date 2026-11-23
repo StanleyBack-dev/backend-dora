@@ -8,7 +8,7 @@ import {
 } from "class-validator";
 import { PURCHASE_REQUEST_LIMITS } from "@/modules/purchases/domain/purchase-request";
 
-// Lengths here only stop abuse; the use case checks and normalizes it.
+/** Lengths here only stop abuse; the use case checks and normalizes it. */
 @InputType({ description: "Um item de uma solicitação de compra." })
 export class PurchaseRequestItemInput {
   @Field(() => ID, { description: "Um produto do catálogo do condomínio." })

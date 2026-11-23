@@ -2040,6 +2040,10 @@ enum NotificationType {
   PURCHASE_APPROVED
   PURCHASE_RETURNED
   PURCHASE_REJECTED
+  PURCHASE_ORDERED
+  PURCHASE_RECEIVED
+  PURCHASE_COMPLETED
+  PURCHASE_ORDER_CANCELLED
 }
 
 type NotificationPage {
@@ -2792,6 +2796,301 @@ type QuoteBoardOverview {
   awaitingApproval: Int!
 }
 
+"""O que chegou de um item numa entrega."""
+type PurchaseReceiptItem {
+  requestItemId: ID!
+  quantity: Float!
+}
+
+"""Uma entrega do pedido (toda ou em parte), com a nota fiscal."""
+type PurchaseReceipt {
+  id: ID!
+
+  """O dia em que chegou (AAAA-MM-DD)."""
+  receivedOn: String!
+  items: [PurchaseReceiptItem!]!
+  invoiceNumber: String
+
+  """Valor da nota em centavos (null: não informado ou oculto)."""
+  invoiceCents: Float
+  invoiceDate: String
+
+  """Link temporário da nota fiscal (null: sem arquivo)."""
+  fileUrl: String
+  fileIsPdf: Boolean
+  note: String
+  receivedById: ID
+  receivedByName: String
+  createdAt: DateTime!
+}
+
+"""Uma parcela a pagar ao fornecedor (ou o pagamento à vista)."""
+type PurchaseInstallment {
+  id: ID!
+  number: Int!
+
+  """Em centavos."""
+  amountCents: Float!
+  dueOn: String!
+
+  """null: não paga."""
+  paidOn: String
+  paidByName: String
+
+  """Link temporário do comprovante (null: sem arquivo)."""
+  proofUrl: String
+  proofIsPdf: Boolean
+  note: String
+}
+
+"""A avaliação do fornecedor nesta compra."""
+type PurchaseOrderRating {
+  """De 1 a 5."""
+  rating: Int!
+  comment: String
+  ratedByName: String
+  ratedAt: DateTime!
+}
+
+"""
+A ordem de compra (OC) de uma compra aprovada, com as entregas e as parcelas.
+"""
+type PurchaseOrder {
+  id: ID!
+
+  """Sequencial no condomínio (OC-0001)."""
+  number: Int!
+  supplierName: String!
+
+  """Para enviar o pedido (null: sem e-mail ou oculto)."""
+  supplierEmail: String
+
+  """Para o WhatsApp (null: sem telefone ou oculto)."""
+  supplierPhone: String
+
+  """null: oculto."""
+  itemsCents: Float
+
+  """null: oculto."""
+  totalCents: Float
+  paymentMethod: PaymentMethod
+  paymentTerms: String
+  expectedOn: String
+  notes: String
+  orderedByName: String
+  orderedAt: DateTime!
+  completedAt: DateTime
+  receipts: [PurchaseReceipt!]!
+
+  """Vazio para quem não vê os valores."""
+  installments: [PurchaseInstallment!]!
+  rating: PurchaseOrderRating
+}
+
+"""
+Forma de pagamento de uma cotação: PIX, dinheiro, cartão de débito ou de crédito, boleto, transferência, faturado ou outra (digitada).
+"""
+enum PaymentMethod {
+  PIX
+  CASH
+  DEBIT_CARD
+  CREDIT_CARD
+  BOLETO
+  BANK_TRANSFER
+  INVOICE
+  OTHER
+}
+
+"""Um item da compra e como está a entrega dele."""
+type PurchaseOrderLine {
+  requestItemId: ID!
+  productName: String!
+  brandName: String
+  note: String
+  unit: String!
+  quantity: Float!
+
+  """Quanto já chegou."""
+  received: Float!
+
+  """Quanto falta chegar."""
+  pending: Float!
+  unitPriceCents: Float
+  lineCents: Float
+}
+
+"""Como fica o pedido de uma compra aprovada (da cotação escolhida)."""
+type PurchaseOrderPlan {
+  supplierName: String!
+  itemsCents: Float!
+  totalCents: Float!
+  paymentMethod: PaymentMethod
+  paymentTerms: String
+  deliveryDays: Int
+
+  """Cada parcela (uma: à vista)."""
+  installmentValues: [Float!]!
+}
+
+"""Um pedido cancelado antes de chegar ou ser pago algo."""
+type CancelledPurchaseOrder {
+  number: Int!
+  supplierName: String!
+
+  """null: oculto."""
+  totalCents: Float
+  orderedAt: DateTime!
+  cancelledAt: DateTime!
+  cancelledByName: String
+  reason: String!
+}
+
+"""A página do pedido de uma compra."""
+type PurchaseOrderView {
+  request: PurchaseRequest!
+
+  """null: aprovada, o pedido ainda por fazer."""
+  order: PurchaseOrder
+  lines: [PurchaseOrderLine!]!
+  plan: PurchaseOrderPlan
+
+  """Pedidos cancelados antes, do mais recente."""
+  cancelledOrders: [CancelledPurchaseOrder!]!
+
+  """Faz o pedido, paga, avalia e desfaz."""
+  canManage: Boolean!
+
+  """Vê os valores."""
+  canSeeMoney: Boolean!
+}
+
+"""Uma compra na página de pedidos."""
+type OrderBoardRow {
+  request: PurchaseRequest!
+
+  """null: pedido por fazer."""
+  orderNumber: Int
+  supplierName: String
+
+  """null: oculto."""
+  totalCents: Float
+  expectedOn: String
+
+  """Itens que já chegaram por completo."""
+  itemsReceived: Int!
+  itemCount: Int!
+
+  """Entregas registradas (parciais ou não)."""
+  receiptCount: Int!
+  installmentsPaid: Int!
+  installmentCount: Int!
+
+  """O vencimento da próxima parcela em aberto."""
+  nextDueOn: String
+}
+
+type OrderBoardPage {
+  items: [OrderBoardRow!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+"""Os pedidos em números (os cards da página)."""
+type OrderBoardOverview {
+  """Aprovadas, o pedido por fazer."""
+  toOrder: Int!
+
+  """Pedido feito, aguardando a entrega."""
+  awaitingDelivery: Int!
+
+  """Parcelas em aberto."""
+  unpaidInstallments: Int!
+
+  """Soma das parcelas em aberto."""
+  unpaidCents: Float!
+
+  """Parcelas vencidas."""
+  overdueInstallments: Int!
+
+  """Concluídas neste mês."""
+  completedThisMonth: Int!
+}
+
+"""A ordem de compra em PDF."""
+type PurchaseOrderFile {
+  """Nome sugerido do arquivo."""
+  fileName: String!
+
+  """application/pdf"""
+  mimeType: String!
+
+  """O PDF em base64."""
+  base64Content: String!
+}
+
+"""As entregas em números (os cards da página de recebimentos)."""
+type DeliveryBoardOverview {
+  """Pedidos aguardando a entrega."""
+  awaitingDelivery: Int!
+
+  """Destes, com a entrega prevista vencida."""
+  lateDeliveries: Int!
+
+  """Destes, com parte já entregue."""
+  partialDeliveries: Int!
+
+  """Entregas registradas neste mês."""
+  receiptsThisMonth: Int!
+}
+
+"""Uma parcela a pagar (ou paga), com a compra dela."""
+type PaymentBoardRow {
+  id: ID!
+  number: Int!
+
+  """Quantas parcelas o pedido tem."""
+  installmentCount: Int!
+
+  """Em centavos."""
+  amountCents: Float!
+  dueOn: String!
+  paidOn: String
+  paidByName: String
+  proofUrl: String
+  proofIsPdf: Boolean
+  note: String
+  requestId: ID!
+  requestNumber: Int!
+  requestTitle: String!
+  orderNumber: Int!
+  orderedAt: DateTime!
+  supplierName: String!
+}
+
+type PaymentBoardPage {
+  items: [PaymentBoardRow!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+"""As contas a pagar em números (os cards da página)."""
+type PaymentBoardOverview {
+  openCents: Float!
+  openCount: Int!
+  overdueCents: Float!
+  overdueCount: Int!
+
+  """Vencem em até 7 dias."""
+  dueSoonCents: Float!
+  dueSoonCount: Int!
+  paidThisMonthCents: Float!
+  paidThisMonthCount: Int!
+}
+
 """Mapa de cotação de uma solicitação, em PDF."""
 type PurchaseQuoteMapFile {
   """Nome sugerido do arquivo."""
@@ -2884,20 +3183,6 @@ type PurchaseQuote {
   fileUrl: String
   fileIsPdf: Boolean
   createdAt: DateTime!
-}
-
-"""
-Forma de pagamento de uma cotação: PIX, dinheiro, cartão de débito ou de crédito, boleto, transferência, faturado ou outra (digitada).
-"""
-enum PaymentMethod {
-  PIX
-  CASH
-  DEBIT_CARD
-  CREDIT_CARD
-  BOLETO
-  BANK_TRANSFER
-  INVOICE
-  OTHER
 }
 
 """Uma solicitação no filtro (número e título)."""
@@ -3158,6 +3443,12 @@ type SupplierOption {
   name: String!
   categories: [Category!]!
   categoryOther: String
+
+  """A média das avaliações, de 1 a 5 (null: nunca avaliado)."""
+  ratingAverage: Float
+
+  """Quantas avaliações recebeu."""
+  ratingCount: Int!
 }
 
 """Fornecedor do condomínio (empresa ou autônomo)."""
@@ -3186,6 +3477,12 @@ type Supplier {
   pixKey: String
   notes: String
   active: Boolean!
+
+  """A média das avaliações, de 1 a 5 (null: nunca avaliado)."""
+  ratingAverage: Float
+
+  """Quantas avaliações recebeu."""
+  ratingCount: Int!
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -3683,6 +3980,29 @@ type Query {
   approvalBoardOverview: PurchaseApprovalOverview!
 
   """
+  Compras aprovadas, com pedido feito, recebidas ou concluídas (para a portaria, só as com pedido, sem valores).
+  """
+  orderBoard(filter: PurchaseRequestFilterInput, page: PageInput): OrderBoardPage!
+
+  """Os pedidos em números (os cards da página)."""
+  orderBoardOverview: OrderBoardOverview!
+
+  """As entregas em números (os cards da página de recebimentos)."""
+  deliveryBoardOverview: DeliveryBoardOverview!
+
+  """O pedido de uma compra: itens, entregas e parcelas."""
+  purchaseOrder(requestId: ID!): PurchaseOrderView!
+
+  """A ordem de compra em PDF, para enviar ao fornecedor."""
+  purchaseOrderPdf(requestId: ID!): PurchaseOrderFile!
+
+  """As parcelas dos pedidos, pelo vencimento."""
+  paymentBoard(filter: PaymentFilterInput, page: PageInput): PaymentBoardPage!
+
+  """As contas a pagar em números (os cards da página)."""
+  paymentBoardOverview: PaymentBoardOverview!
+
+  """
   As cotações de uma solicitação, com os totais, a mais barata e a escolhida.
   """
   purchaseQuotes(requestId: ID!): [PurchaseQuote!]!
@@ -4041,6 +4361,21 @@ input PurchaseRequestFilterInput {
   category: Category
   priority: PurchasePriority
   statuses: [PurchaseRequestStatus!]
+}
+
+"""Filtros da página de pagamentos."""
+input PaymentFilterInput {
+  states: [PurchaseInstallmentState!]
+  requestId: ID
+  supplierId: ID
+}
+
+"""Parcela a pagar: em aberto, vencida, vencendo em até 7 dias ou paga."""
+enum PurchaseInstallmentState {
+  OPEN
+  OVERDUE
+  DUE_SOON
+  PAID
 }
 
 """Filtros da consulta de moradores."""
@@ -4408,9 +4743,46 @@ type Mutation {
   rejectPurchase(requestId: ID!, reason: String!): PurchaseRequest!
 
   """
+  Faz o pedido de uma compra aprovada (gera a OC e as parcelas da cotação escolhida).
+  """
+  placePurchaseOrder(requestId: ID!, input: PlacePurchaseOrderInput!): PurchaseOrderView!
+
+  """
+  Registra uma entrega (toda ou em parte), com a nota fiscal (PDF ou imagem em base64).
+  """
+  recordPurchaseReceipt(requestId: ID!, input: PurchaseReceiptInput!, file: String): PurchaseOrderView!
+
+  """Remove uma entrega registrada por engano."""
+  removePurchaseReceipt(requestId: ID!, receiptId: ID!): PurchaseOrderView!
+
+  """
+  Cancela um pedido sem entrega nem pagamento, com o motivo: a compra volta a aprovada ou, com backToQuotes, às cotações (então devolve null).
+  """
+  cancelPurchaseOrder(requestId: ID!, reason: String!, backToQuotes: Boolean! = false): PurchaseOrderView
+
+  """
+  Envia a ordem de compra por e-mail (PDF anexado); devolve quantos e-mails saíram.
+  """
+  sendPurchaseOrderByEmail(requestId: ID!, input: PurchaseEmailInput!): Int!
+
+  """Avalia o fornecedor de uma compra concluída (1 a 5 e um comentário)."""
+  ratePurchaseSupplier(requestId: ID!, rating: Int!, comment: String): PurchaseOrderView!
+
+  """
+  Marca uma parcela como paga, com o comprovante (PDF ou imagem em base64).
+  """
+  payPurchaseInstallment(requestId: ID!, installmentId: ID!, input: PurchasePaymentInput!, file: String): PurchaseOrderView!
+
+  """Desfaz o pagamento de uma parcela marcada por engano."""
+  unpayPurchaseInstallment(requestId: ID!, installmentId: ID!): PurchaseOrderView!
+
+  """Muda o vencimento de uma parcela ainda não paga."""
+  reschedulePurchaseInstallment(requestId: ID!, installmentId: ID!, dueOn: String!): PurchaseOrderView!
+
+  """
   Envia o mapa de cotação em PDF por e-mail (um e-mail por endereço); devolve quantos foram.
   """
-  sharePurchaseQuoteMapByEmail(requestId: ID!, input: ShareQuoteMapInput!): Int!
+  sharePurchaseQuoteMapByEmail(requestId: ID!, input: PurchaseEmailInput!): Int!
 
   """
   Registra a cotação de um fornecedor (a primeira põe a solicitação em cotação).
@@ -5242,13 +5614,51 @@ input PurchaseSettingsInput {
   approvalLimitCents: Float
 }
 
-"""Envio do mapa de cotação por e-mail."""
-input ShareQuoteMapInput {
+"""O pedido de uma compra aprovada."""
+input PlacePurchaseOrderInput {
+  """Entrega prevista (AAAA-MM-DD)."""
+  expectedOn: String
+
+  """
+  Vencimento da primeira parcela (ou do pagamento à vista); as demais, mês a mês.
+  """
+  firstDueOn: String!
+  notes: String
+}
+
+"""Uma entrega do pedido (toda ou em parte)."""
+input PurchaseReceiptInput {
+  """O dia em que chegou (AAAA-MM-DD)."""
+  receivedOn: String!
+  items: [PurchaseReceiptItemInput!]!
+  invoiceNumber: String
+
+  """Em centavos."""
+  invoiceCents: Float
+  invoiceDate: String
+  note: String
+}
+
+"""O que chegou de um item."""
+input PurchaseReceiptItemInput {
+  requestItemId: ID!
+  quantity: Float!
+}
+
+"""Envio de um documento da compra (mapa, ordem de compra) por e-mail."""
+input PurchaseEmailInput {
   """De 1 a 5 e-mails."""
   emails: [String!]!
 
   """A mensagem que vai no e-mail."""
   message: String!
+}
+
+"""O pagamento de uma parcela."""
+input PurchasePaymentInput {
+  """O dia em que foi paga (AAAA-MM-DD)."""
+  paidOn: String!
+  note: String
 }
 
 """Preços e condições de uma cotação."""

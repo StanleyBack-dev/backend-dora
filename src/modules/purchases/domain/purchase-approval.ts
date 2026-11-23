@@ -1,4 +1,4 @@
-// The approval of a chosen quote (aprovação por alçada).
+/** The approval of a chosen quote (aprovação por alçada). */
 
 /** How a condominium approves its purchases. */
 export enum ApprovalMode {

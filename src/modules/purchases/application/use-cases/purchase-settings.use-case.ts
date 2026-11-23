@@ -14,10 +14,12 @@ import {
   type PurchaseSettings,
 } from "@/modules/purchases/domain/purchase-approval";
 
-// How the condominium approves its purchases: read by the management and
-// the approvers; changed only by the approvers (whoever chooses the quotes
-// can't raise the limit to skip the approval). Takes effect on the next
-// choice: what already waits keeps waiting.
+/**
+ * How the condominium approves its purchases: read by the management and
+ * the approvers; changed only by the approvers (whoever chooses the quotes
+ * can't raise the limit to skip the approval). Takes effect on the next
+ * choice: what already waits keeps waiting.
+ */
 @Injectable()
 export class PurchaseSettingsUseCase {
   constructor(
@@ -56,7 +58,6 @@ export class PurchaseSettingsUseCase {
       }
       limit = limitCents;
     }
-    // The table keeps who changed it last and when.
     return this.approvals.saveSettings(condominiumId, mode, limit, actor.id);
   }
 }

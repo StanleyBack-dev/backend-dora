@@ -9,8 +9,10 @@ import {
 import type { CatalogOption, Product } from "@/modules/catalog/domain/catalog";
 import type { PageRequest, Paginated } from "@/shared/application/pagination";
 
-// The condominium's products: the management's list (filtered and paged
-// here) and counts; the selects of whoever uses the catalog.
+/**
+ * The condominium's products: the management's list (filtered and paged
+ * here) and counts; the selects of whoever uses the catalog.
+ */
 @Injectable()
 export class ListProductsUseCase {
   constructor(

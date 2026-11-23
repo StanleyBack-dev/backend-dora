@@ -4,6 +4,7 @@ import {
   ApprovalDecision,
   ApprovalMode,
 } from "@/modules/purchases/domain/purchase-approval";
+import { InstallmentState } from "@/modules/purchases/domain/purchase-order";
 import { PaymentMethod } from "@/modules/purchases/domain/purchase-quote";
 import {
   PurchasePriority,
@@ -37,4 +38,10 @@ registerEnumType(ApprovalDecision, {
 registerEnumType(PurchasePriority, {
   name: "PurchasePriority",
   description: "Prioridade de uma solicitação de compra.",
+});
+
+registerEnumType(InstallmentState, {
+  name: "PurchaseInstallmentState",
+  description:
+    "Parcela a pagar: em aberto, vencida, vencendo em até 7 dias ou paga.",
 });

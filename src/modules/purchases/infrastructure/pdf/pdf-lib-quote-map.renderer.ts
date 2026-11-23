@@ -22,12 +22,13 @@ import {
   winAnsi,
   wrapText,
 } from "@/shared/infrastructure/pdf/pdf-text";
+import { formatCents } from "@/shared/domain/money";
 
 type Quote = QuoteMapInput["quotes"][number];
 type Fonts = { regular: PDFFont; bold: PDFFont; italic: PDFFont };
 type Align = "left" | "right";
 
-// A4 landscape: a comparison reads across.
+/** A4 landscape: a comparison reads across. */
 const PAGE = { width: 841.89, height: 595.28 };
 const MARGIN = 32;
 const WIDTH = PAGE.width - MARGIN * 2;
@@ -39,8 +40,6 @@ const MAX_COLUMNS = 5;
 const ITEM_MIN = 210;
 const PAD = 7;
 
-const money = (cents: number) =>
-  (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const percent = (bp: number) =>
   `${(bp / 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
 const delivery = (days: number | null) =>
@@ -64,11 +63,13 @@ const rank = (quotes: Quote[]) =>
 /** One column block of the tables: the item column and the suppliers. */
 type Columns = { itemWidth: number; width: number; quotes: Quote[] };
 
-// The comparison map (mapa de cotação) as the management files it: a dark
-// header with the Dora mark, the request, four numbers at a glance, the
-// price of each item side by side (lowest in green, chosen column in
-// orange) down to each total, each supplier's terms, and the result (the
-// chosen quote and why, or which one the lowest-price rule points to).
+/**
+ * The comparison map (mapa de cotação) as the management files it: a dark
+ * header with the Dora mark, the request, four numbers at a glance, the
+ * price of each item side by side (lowest in green, chosen column in
+ * orange) down to each total, each supplier's terms, and the result (the
+ * chosen quote and why, or which one the lowest-price rule points to).
+ */
 @Injectable()
 export class PdfLibQuoteMapRenderer implements QuoteMapRendererPort {
   async render(input: QuoteMapInput): Promise<Buffer> {
@@ -121,8 +122,6 @@ class MapWriter {
     this.approval();
     this.footers();
   }
-
-  // ---- page --------------------------------------------------------------
 
   private addPage() {
     this.page = this.doc.addPage([PAGE.width, PAGE.height]);
@@ -267,8 +266,6 @@ class MapWriter {
     this.y -= 22;
   }
 
-  // ---- intro and summary ---------------------------------------------------
-
   private intro() {
     const { bold } = this.fonts;
     const lines = clampLines(
@@ -314,13 +311,13 @@ class MapWriter {
     const cards: { label: string; value: string; hint: string; tone: RGB }[] = [
       {
         label: "MENOR TOTAL",
-        value: cheapest ? money(cheapest.totalCents) : "—",
+        value: cheapest ? formatCents(cheapest.totalCents) : "—",
         hint: cheapest?.supplierName ?? "Nenhuma cotação completa",
         tone: C.success,
       },
       {
         label: "ECONOMIA",
-        value: money(savings),
+        value: formatCents(savings),
         hint: "Da mais cara para a mais barata",
         tone: C.orange,
       },
@@ -365,8 +362,6 @@ class MapWriter {
     });
     this.y -= height + 16;
   }
-
-  // ---- tables ---------------------------------------------------------------
 
   private columns(quotes: Quote[]): Columns {
     const width = Math.min(135, (WIDTH - ITEM_MIN) / quotes.length);
@@ -442,7 +437,6 @@ class MapWriter {
     this.section(
       "Preço por item",
       `O menor preço de cada item em verde${part}`,
-      // The head and the first row.
       36 + 44,
     );
     const head = () => this.tableHead(columns, "ITEM", "right");
@@ -520,13 +514,13 @@ class MapWriter {
               borderWidth: 0.75,
             });
           }
-          this.text(money(line.lineCents), right, top - 15, {
+          this.text(formatCents(line.lineCents), right, top - 15, {
             font: bold,
             size: 9.5,
             color: best ? C.success : C.ink,
             align: "right",
           });
-          this.text(`${money(line.unitCents)} / un.`, right, top - 26, {
+          this.text(`${formatCents(line.unitCents)} / un.`, right, top - 26, {
             size: 7,
             color: best ? C.success : C.soft,
             align: "right",
@@ -548,13 +542,16 @@ class MapWriter {
       {
         label: "Subtotal dos itens",
         tone: C.ink,
-        cell: (quote) => ({ value: money(quote.itemsCents), detail: null }),
+        cell: (quote) => ({
+          value: formatCents(quote.itemsCents),
+          detail: null,
+        }),
       },
       {
         label: "Frete",
         tone: C.ink,
         cell: (quote) => ({
-          value: quote.shippingCents ? money(quote.shippingCents) : null,
+          value: quote.shippingCents ? formatCents(quote.shippingCents) : null,
           detail: null,
         }),
       },
@@ -563,11 +560,13 @@ class MapWriter {
         tone: C.ink,
         cell: (quote) => ({
           value: quote.charges.length
-            ? money(quote.charges.reduce((sum, c) => sum + c.amountCents, 0))
+            ? formatCents(
+                quote.charges.reduce((sum, c) => sum + c.amountCents, 0),
+              )
             : null,
           detail: quote.charges.length
             ? quote.charges
-                .map((c) => `${c.label}: ${money(c.amountCents)}`)
+                .map((c) => `${c.label}: ${formatCents(c.amountCents)}`)
                 .join(" · ")
             : null,
         }),
@@ -576,7 +575,9 @@ class MapWriter {
         label: "Desconto",
         tone: C.success,
         cell: (quote) => ({
-          value: quote.discountCents ? `- ${money(quote.discountCents)}` : null,
+          value: quote.discountCents
+            ? `- ${formatCents(quote.discountCents)}`
+            : null,
           detail:
             quote.discountCents && quote.discountPercentBp
               ? `${percent(quote.discountPercentBp)} sobre o valor`
@@ -587,7 +588,9 @@ class MapWriter {
         label: "Juros",
         tone: C.danger,
         cell: (quote) => ({
-          value: quote.interestCents ? `+ ${money(quote.interestCents)}` : null,
+          value: quote.interestCents
+            ? `+ ${formatCents(quote.interestCents)}`
+            : null,
           detail:
             quote.interestCents && quote.interestRateBp
               ? `${percent(quote.interestRateBp)} a.m.`
@@ -646,14 +649,14 @@ class MapWriter {
       this.text("TOTAL", MARGIN + PAD + 2, top - 20, { font: bold, size: 10 });
       columns.quotes.forEach((quote, at) => {
         const right = this.columnX(columns, at) + columns.width - PAD;
-        this.text(money(quote.totalCents), right, top - 17, {
+        this.text(formatCents(quote.totalCents), right, top - 17, {
           font: bold,
           size: 12,
           color: quote.cheapest ? C.success : C.ink,
           align: "right",
         });
         const note = quote.interestCents
-          ? `${money(quote.cashCents)} à vista`
+          ? `${formatCents(quote.cashCents)} à vista`
           : quote.complete
             ? null
             : "Parcial: faltam itens";
@@ -727,7 +730,6 @@ class MapWriter {
     this.section(
       "Condições",
       `Prazo, pagamento e validade de cada fornecedor${part}`,
-      // The head and the first rows.
       36 + 66,
     );
     const head = () => this.tableHead(columns, "CONDIÇÃO", "left");
@@ -780,8 +782,6 @@ class MapWriter {
     this.y -= 14;
   }
 
-  // ---- result ---------------------------------------------------------------
-
   private result() {
     const { regular, bold } = this.fonts;
     const chosen = this.input.quotes.find((quote) => quote.chosen) ?? null;
@@ -811,7 +811,7 @@ class MapWriter {
         size: 14,
         width: inner - 160,
       });
-      this.text(money(chosen.totalCents), right, this.y - 33, {
+      this.text(formatCents(chosen.totalCents), right, this.y - 33, {
         font: bold,
         size: 14,
         color: chosen.cheapest ? C.success : C.ink,
@@ -852,7 +852,7 @@ class MapWriter {
       });
       this.text(
         cheapest
-          ? `Pelo menor preço, a indicada é ${cheapest.supplierName}: ${money(cheapest.totalCents)}.`
+          ? `Pelo menor preço, a indicada é ${cheapest.supplierName}: ${formatCents(cheapest.totalCents)}.`
           : "Nenhuma cotação tem preço para todos os itens.",
         x,
         this.y - 36,
@@ -869,7 +869,7 @@ class MapWriter {
     if (!chosen) return;
     const decision = this.input.decision;
     const limit = (cents: number | null) =>
-      cents === null ? "" : ` (alçada de ${money(cents)})`;
+      cents === null ? "" : ` (alçada de ${formatCents(cents)})`;
     const look =
       decision === null
         ? {
@@ -932,7 +932,6 @@ class MapWriter {
     }
     this.y -= height + 14;
 
-    // Lines to sign the printed map.
     const approver =
       decision &&
       decision.kind !== ApprovalDecision.AUTO_APPROVED &&

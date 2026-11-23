@@ -1,9 +1,11 @@
 import type { Category } from "@/modules/catalog/domain/category";
 
-// A purchase request (solicitação de compra): what someone of the team
-// (gate, caretaker, management) needs bought or contracted, with its items.
-// It goes through quotes and the síndico's approval up to the delivery;
-// the statuses after OPEN arrive with the next phases of the module.
+/**
+ * A purchase request (solicitação de compra): what someone of the team
+ * (gate, caretaker, management) needs bought or contracted, with its items.
+ * It goes through quotes and the síndico's approval up to the delivery;
+ * the statuses after OPEN arrive with the next phases of the module.
+ */
 
 export enum PurchaseRequestStatus {
   /** Waiting for quotes. */
@@ -123,6 +125,27 @@ export const PURCHASE_REQUEST_LIMITS = {
   cancelReasonMin: 3,
   cancelReasonMax: 300,
 } as const;
+
+/** How a status reads in documents and messages. */
+export const REQUEST_STATUS_LABELS: Record<PurchaseRequestStatus, string> = {
+  [PurchaseRequestStatus.OPEN]: "Aguardando cotação",
+  [PurchaseRequestStatus.QUOTING]: "Em cotação",
+  [PurchaseRequestStatus.AWAITING_APPROVAL]: "Aguardando aprovação",
+  [PurchaseRequestStatus.APPROVED]: "Aprovada",
+  [PurchaseRequestStatus.ORDERED]: "Pedido feito",
+  [PurchaseRequestStatus.RECEIVED]: "Recebida",
+  [PurchaseRequestStatus.COMPLETED]: "Concluída",
+  [PurchaseRequestStatus.REJECTED]: "Reprovada",
+  [PurchaseRequestStatus.CANCELLED]: "Cancelada",
+};
+
+/** How a priority reads in documents and messages. */
+export const PRIORITY_LABELS: Record<PurchasePriority, string> = {
+  [PurchasePriority.LOW]: "Baixa",
+  [PurchasePriority.NORMAL]: "Normal",
+  [PurchasePriority.HIGH]: "Alta",
+  [PurchasePriority.URGENT]: "Urgente",
+};
 
 /** "SC-0007". */
 export const requestCode = (number: number) =>

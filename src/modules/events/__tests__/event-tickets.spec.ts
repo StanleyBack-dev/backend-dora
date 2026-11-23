@@ -14,7 +14,6 @@ import {
 import {
   EventPixSource,
   fitsAge,
-  formatCents,
   needsProof,
   normalizeTicketing,
   priceOf,
@@ -23,6 +22,7 @@ import {
   type TicketType,
 } from "@/modules/events/domain/event-tickets";
 import { ageOn, normalizeBirthDate } from "@/shared/domain/birth-date";
+import { formatCents } from "@/shared/domain/money";
 import {
   crc16,
   normalizePixKey,

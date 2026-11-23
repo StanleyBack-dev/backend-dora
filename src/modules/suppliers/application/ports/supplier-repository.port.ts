@@ -2,6 +2,8 @@ import type { Category } from "@/modules/catalog/domain/category";
 import type {
   Supplier,
   SupplierDocumentType,
+  SupplierRating,
+  SupplierRatingSource,
 } from "@/modules/suppliers/domain/supplier";
 import type { PageRequest, Paginated } from "@/shared/application/pagination";
 import type { PixKeyType } from "@/shared/domain/pix";
@@ -62,6 +64,9 @@ export type SupplierOption = {
   name: string;
   categories: Category[];
   categoryOther: string | null;
+  /** The average of its ratings (null: never rated). */
+  ratingAverage: number | null;
+  ratingCount: number;
 };
 
 export interface SupplierRepositoryPort {
@@ -86,6 +91,19 @@ export interface SupplierRepositoryPort {
     filter: SupplierFilter,
     page: PageRequest,
   ): Promise<Paginated<Supplier>>;
+  /**
+   * Rates a supplier for a record of another module (e.g. a completed
+   * purchase); rating it again replaces it.
+   */
+  rate(
+    supplierId: string,
+    from: SupplierRatingSource,
+    rating: number,
+    comment: string | null,
+    ratedBy: string,
+  ): Promise<void>;
+  /** The rating given for a record (null: not rated). */
+  ratingFor(from: SupplierRatingSource): Promise<SupplierRating | null>;
 }
 
 export const SUPPLIER_REPOSITORY = Symbol("SUPPLIER_REPOSITORY");

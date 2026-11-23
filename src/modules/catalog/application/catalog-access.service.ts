@@ -25,9 +25,11 @@ const CATALOG_USERS: readonly {
   },
 ];
 
-// The catalog belongs to no paid module: it opens to whoever works in a
-// module that uses it (contracted by the condominium) with one of that
-// module's permissions.
+/**
+ * The catalog belongs to no paid module: it opens to whoever works in a
+ * module that uses it (contracted by the condominium) with one of that
+ * module's permissions.
+ */
 @Injectable()
 export class CatalogAccessService {
   constructor(

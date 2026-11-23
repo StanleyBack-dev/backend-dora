@@ -14,9 +14,11 @@ import type { Paginated } from "@/shared/application/pagination";
 
 const DEFAULT_PAGE = { page: 1, limit: 20 };
 
-// The catalog's brands, as its products: whoever uses the catalog reads the
-// select and registers a brand from there; who manages it lists, renames
-// and deactivates (checked by the use cases).
+/**
+ * The catalog's brands, as its products: whoever uses the catalog reads the
+ * select and registers a brand from there; who manages it lists, renames
+ * and deactivates (checked by the use cases).
+ */
 @Resolver()
 export class BrandsResolver {
   constructor(

@@ -14,13 +14,25 @@ import {
   type PurchaseRequestRepositoryPort,
   type PurchaseRequestScope,
 } from "@/modules/purchases/application/ports/purchase-request-repository.port";
+import { missingPermission } from "@/modules/purchases/application/purchase-errors";
 import type { PurchaseRequest } from "@/modules/purchases/domain/purchase-request";
 
-// Every purchases operation starts here: the caller's condominium must have
-// the module (contracted apart). The resolvers check the permissions; here,
-// whose requests the caller sees: the management (PURCHASES_MANAGE) and the
-// approvers (PURCHASES_APPROVE) every one, whoever only asks for purchases
-// (PURCHASES_REQUEST) their own.
+/** What the caller may do with the orders. */
+export type OrderAccess = {
+  condominiumId: string;
+  /** Places orders, pays, rates and undoes (PURCHASES_MANAGE). */
+  manage: boolean;
+  /** Sees the values (the management and the approvers). */
+  money: boolean;
+};
+
+/**
+ * Every purchases operation starts here: the caller's condominium must have
+ * the module (contracted apart). The resolvers check the permissions; here,
+ * whose requests the caller sees: the management (PURCHASES_MANAGE) and the
+ * approvers (PURCHASES_APPROVE) every one, whoever only asks for purchases
+ * (PURCHASES_REQUEST) their own.
+ */
 @Injectable()
 export class PurchasesAccessService {
   constructor(
@@ -54,10 +66,7 @@ export class PurchasesAccessService {
     if (granted.has(Permission.PURCHASES_REQUEST)) {
       return { condominiumId, requesterId: actor.id };
     }
-    throw AppException.from(
-      APP_ERRORS.accessControl.missingPermission,
-      undefined,
-    );
+    throw missingPermission();
   }
 
   /**
@@ -71,12 +80,28 @@ export class PurchasesAccessService {
     const condominiumId = await this.condominiumOf(actor);
     const granted = await this.permissions.effectiveFor(actor);
     if (!permissions.some((permission) => granted.has(permission))) {
-      throw AppException.from(
-        APP_ERRORS.accessControl.missingPermission,
-        undefined,
-      );
+      throw missingPermission();
     }
     return condominiumId;
+  }
+
+  /**
+   * Who works with the orders: the management places them, pays and rates;
+   * the approvers follow them with the values; whoever asks for purchases
+   * (the gate, the caretaker) receives the deliveries, without values.
+   * `need` refuses whoever falls short of it.
+   */
+  async orderAccess(
+    actor: AuthenticatedUser,
+    need: "view" | "money" | "manage" = "view",
+  ): Promise<OrderAccess> {
+    const condominiumId = await this.condominiumOf(actor);
+    const granted = await this.permissions.effectiveFor(actor);
+    const manage = granted.has(Permission.PURCHASES_MANAGE);
+    const money = manage || granted.has(Permission.PURCHASES_APPROVE);
+    const view = money || granted.has(Permission.PURCHASES_REQUEST);
+    if (!{ view, money, manage }[need]) throw missingPermission();
+    return { condominiumId, manage, money };
   }
 
   /** A request of the caller's condominium the caller may see. */

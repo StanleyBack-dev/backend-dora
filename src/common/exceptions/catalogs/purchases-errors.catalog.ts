@@ -86,4 +86,38 @@ export const purchasesErrors = {
     message:
       "Em cotação, só dá para mudar a prioridade, o local e a data: o título, os detalhes, os itens e as categorias ficam como estão.",
   },
+  orderNotFound: {
+    code: "PURCHASE_ORDER_NOT_FOUND",
+    status: HttpStatus.NOT_FOUND,
+    message: "Esta compra ainda não tem pedido.",
+  },
+  notApproved: {
+    code: "PURCHASE_NOT_APPROVED",
+    status: HttpStatus.CONFLICT,
+    message:
+      "Só dá para fazer o pedido de uma compra aprovada (e sem pedido ainda).",
+  },
+  orderInvalid: {
+    code: "PURCHASE_ORDER_INVALID",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: (params: { reason: string }) => params.reason,
+  },
+  orderInvalidFile: {
+    code: "PURCHASE_ORDER_INVALID_FILE",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message:
+      "O arquivo deve ser um PDF ou uma imagem (JPEG, PNG ou WebP) de até 1,2 MB.",
+  },
+  orderChanged: {
+    code: "PURCHASE_ORDER_CHANGED",
+    status: HttpStatus.CONFLICT,
+    message:
+      "O pedido mudou enquanto você registrava (alguém já marcou ou desfez). Atualize a página e tente de novo.",
+  },
+  notCompleted: {
+    code: "PURCHASE_NOT_COMPLETED",
+    status: HttpStatus.CONFLICT,
+    message:
+      "A avaliação do fornecedor fica para quando a compra for concluída (recebida e paga).",
+  },
 };

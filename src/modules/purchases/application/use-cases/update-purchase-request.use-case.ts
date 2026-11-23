@@ -32,10 +32,12 @@ import { SpaceLookupService } from "@/modules/spaces/application/space-lookup.se
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
 import { toLocalDate } from "@/shared/domain/local-date";
 
-// Whoever made the request, or the management, edits it: everything while
-// it waits for quotes; in quotes, only what doesn't change the prices
-// (place, date, priority), the title, details, items and categories as
-// they were.
+/**
+ * Whoever made the request, or the management, edits it: everything while
+ * it waits for quotes; in quotes, only what doesn't change the prices
+ * (place, date, priority), the title, details, items and categories as
+ * they were.
+ */
 @Injectable()
 export class UpdatePurchaseRequestUseCase {
   constructor(
@@ -80,7 +82,6 @@ export class UpdatePurchaseRequestUseCase {
       await this.stamp(actor, id);
       return updated;
     }
-    // Products and brands it already had stay valid even if deactivated.
     await assertCatalogAvailable(
       { products: this.products, brands: this.brands },
       current.condominiumId,

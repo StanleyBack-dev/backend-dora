@@ -13,3 +13,7 @@ export function isValidCnpj(digits: string): boolean {
   };
   return check(12) === Number(digits[12]) && check(13) === Number(digits[13]);
 }
+
+/** "12.345.678/0001-90" from the 14 digits. */
+export const formatCnpj = (digits: string) =>
+  digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");

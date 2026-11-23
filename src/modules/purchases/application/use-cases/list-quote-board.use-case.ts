@@ -27,8 +27,14 @@ export const QUOTE_BOARD_STATUSES: readonly PurchaseRequestStatus[] = [
   PurchaseRequestStatus.OPEN,
   PurchaseRequestStatus.QUOTING,
   PurchaseRequestStatus.AWAITING_APPROVAL,
-  // Decided: kept on the page so a quote doesn't vanish once approved.
+  /**
+   * Decided: kept on the page so a quote doesn't vanish once approved
+   * (nor once ordered, received or completed).
+   */
   PurchaseRequestStatus.APPROVED,
+  PurchaseRequestStatus.ORDERED,
+  PurchaseRequestStatus.RECEIVED,
+  PurchaseRequestStatus.COMPLETED,
   PurchaseRequestStatus.REJECTED,
 ];
 
@@ -47,10 +53,12 @@ export type QuoteBoardRow = {
   chosen: QuoteBoardPick | null;
 };
 
-// The management's quotes page: the requests in the quote stages (waiting
-// for quotes, in quotes, waiting for the approval), filtered and paged
-// here, each with its number of quotes, the cheapest complete one and the
-// chosen one; and the page's cards.
+/**
+ * The management's quotes page: the requests in the quote stages (waiting
+ * for quotes, in quotes, waiting for the approval), filtered and paged
+ * here, each with its number of quotes, the cheapest complete one and the
+ * chosen one; and the page's cards.
+ */
 @Injectable()
 export class ListQuoteBoardUseCase {
   constructor(

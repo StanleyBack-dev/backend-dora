@@ -19,8 +19,10 @@ import type { Paginated } from "@/shared/application/pagination";
 
 const DEFAULT_PAGE = { page: 1, limit: 20 };
 
-// The quotes page (Compras > Cotações, management only): the requests in
-// the quote stages with how their quotes stand, and the page's cards.
+/**
+ * The quotes page (Compras > Cotações, management only): the requests in
+ * the quote stages with how their quotes stand, and the page's cards.
+ */
 @RequireModule(AppModule.PURCHASES)
 @RequirePermissions(Permission.PURCHASES_MANAGE)
 @Resolver()

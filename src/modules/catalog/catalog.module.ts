@@ -14,11 +14,13 @@ import { BrandsResolver } from "@/modules/catalog/presentation/graphql/brands.re
 import { ProductsResolver } from "@/modules/catalog/presentation/graphql/products.resolver";
 import { CondominiumsModule } from "@/modules/condominiums/condominiums.module";
 
-// The condominium's catalog (products and brands), shared by the modules
-// that deal with things: purchases now, stock or maintenance later. It is
-// no paid module of its own; it opens to the modules listed in
-// CatalogAccessService. The repositories are exported so those modules
-// check what their records point to.
+/**
+ * The condominium's catalog (products and brands), shared by the modules
+ * that deal with things: purchases now, stock or maintenance later. It is
+ * no paid module of its own; it opens to the modules listed in
+ * CatalogAccessService. The repositories are exported so those modules
+ * check what their records point to.
+ */
 @Module({
   imports: [AccessControlModule, AuditModule, CondominiumsModule],
   providers: [

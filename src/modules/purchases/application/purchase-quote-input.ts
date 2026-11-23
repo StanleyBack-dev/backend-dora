@@ -1,5 +1,4 @@
-import { APP_ERRORS } from "@/common/exceptions/app-errors.catalog";
-import { AppException } from "@/common/exceptions/app-exception";
+import { quoteInvalid as invalid } from "@/modules/purchases/application/purchase-errors";
 import {
   INSTALLMENT_METHODS,
   lineCents,
@@ -48,9 +47,6 @@ export type PurchaseQuoteTerms = {
   validUntil: string | null;
   notes: string | null;
 };
-
-const invalid = (reason: string) =>
-  AppException.from(APP_ERRORS.purchases.quoteInvalid, { reason });
 
 const cents = (value: number) =>
   Number.isInteger(value) && value >= 0 && value <= LIMITS.maxPriceCents;
