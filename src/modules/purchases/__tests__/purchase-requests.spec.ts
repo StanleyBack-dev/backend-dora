@@ -72,6 +72,8 @@ const request = (
   chosenQuoteId: null,
   choiceJustification: null,
   chosenAt: null,
+  chosenById: null,
+  chosenByName: null,
   cancelReason: null,
   cancelledAt: null,
   createdAt: new Date(),

@@ -21,6 +21,15 @@ import { CreatePurchaseRequestUseCase } from "@/modules/purchases/application/us
 import { ListPurchaseRequestsUseCase } from "@/modules/purchases/application/use-cases/list-purchase-requests.use-case";
 import { UpdatePurchaseRequestUseCase } from "@/modules/purchases/application/use-cases/update-purchase-request.use-case";
 import { ShareQuoteMapUseCase } from "@/modules/purchases/application/use-cases/share-quote-map.use-case";
+import { PURCHASE_APPROVAL_REPOSITORY } from "@/modules/purchases/application/ports/purchase-approval-repository.port";
+import { DecidePurchaseApprovalUseCase } from "@/modules/purchases/application/use-cases/decide-purchase-approval.use-case";
+import { ListPurchaseApprovalsUseCase } from "@/modules/purchases/application/use-cases/list-purchase-approvals.use-case";
+import { PurchaseSettingsUseCase } from "@/modules/purchases/application/use-cases/purchase-settings.use-case";
+import { PurchaseApprovalSqlRepository } from "@/modules/purchases/infrastructure/persistence/purchase-approval-sql.repository";
+import { PurchaseApprovalsResolver } from "@/modules/purchases/presentation/graphql/purchase-approvals.resolver";
+import { PURCHASE_SUMMARY_RENDERER } from "@/modules/purchases/application/ports/purchase-summary-renderer.port";
+import { PurchaseSummaryPdfUseCase } from "@/modules/purchases/application/use-cases/purchase-summary-pdf.use-case";
+import { PdfLibPurchaseSummaryRenderer } from "@/modules/purchases/infrastructure/pdf/pdf-lib-purchase-summary.renderer";
 import { PdfLibQuoteMapRenderer } from "@/modules/purchases/infrastructure/pdf/pdf-lib-quote-map.renderer";
 import { PurchaseQuoteSqlRepository } from "@/modules/purchases/infrastructure/persistence/purchase-quote-sql.repository";
 import { PurchaseRequestSqlRepository } from "@/modules/purchases/infrastructure/persistence/purchase-request-sql.repository";
@@ -58,6 +67,19 @@ import { PurchaseRequestsResolver } from "@/modules/purchases/presentation/graph
     ChoosePurchaseQuoteUseCase,
     PurchaseQuotesResolver,
     QuoteBoardResolver,
+    PurchaseSettingsUseCase,
+    ListPurchaseApprovalsUseCase,
+    DecidePurchaseApprovalUseCase,
+    PurchaseApprovalsResolver,
+    PurchaseSummaryPdfUseCase,
+    {
+      provide: PURCHASE_SUMMARY_RENDERER,
+      useClass: PdfLibPurchaseSummaryRenderer,
+    },
+    {
+      provide: PURCHASE_APPROVAL_REPOSITORY,
+      useClass: PurchaseApprovalSqlRepository,
+    },
     {
       provide: PURCHASE_QUOTE_REPOSITORY,
       useClass: PurchaseQuoteSqlRepository,

@@ -1,3 +1,10 @@
+import type { PurchaseApprovalRepositoryPort } from "@/modules/purchases/application/ports/purchase-approval-repository.port";
+import {
+  ApprovalDecision,
+  ApprovalMode,
+  DEFAULT_PURCHASE_SETTINGS,
+  type PurchaseSettings,
+} from "@/modules/purchases/domain/purchase-approval";
 import type { SendDocumentEmailUseCase } from "@/modules/mails/application/use-cases/send-document-email.use-case";
 import { ShareQuoteMapUseCase } from "@/modules/purchases/application/use-cases/share-quote-map.use-case";
 import type { RateLimitPort } from "@/shared/application/ports/rate-limit.port";
@@ -158,15 +165,24 @@ describe("validateQuoteInput", () => {
 });
 
 describe("ChoosePurchaseQuoteUseCase", () => {
-  const actor = { id: "m1" } as AuthenticatedUser;
+  const actor = { id: "m1", name: "Ana" } as AuthenticatedUser;
   const request = {
     id: "r1",
+    condominiumId: "c1",
+    number: 1,
+    title: "Lâmpadas",
+    requestedById: "gate",
     items: [
       { id: "i1", quantity: 12 },
       { id: "i2", quantity: 2.5 },
     ],
   };
-  const setup = () => {
+  const setup = (
+    settings: Pick<
+      PurchaseSettings,
+      "approvalMode" | "approvalLimitCents"
+    > = DEFAULT_PURCHASE_SETTINGS,
+  ) => {
     const quotes = {
       find: jest.fn().mockResolvedValue(quote("b", [1000, 900])),
       listFor: jest
@@ -182,9 +198,14 @@ describe("ChoosePurchaseQuoteUseCase", () => {
       requests,
       {
         condominiumOf: jest.fn().mockResolvedValue("c1"),
+        managers: jest.fn().mockResolvedValue(["m1", "m2"]),
+        approvers: jest.fn().mockResolvedValue(["m1", "m2"]),
       } as unknown as PurchasesAccessService,
       { stamp: jest.fn() } as unknown as AuditTrailService,
       { now: () => new Date() } as ClockPort,
+      {
+        settings: jest.fn().mockResolvedValue(settings),
+      } as unknown as PurchaseApprovalRepositoryPort,
     );
     return { quotes, useCase };
   };
@@ -208,7 +229,35 @@ describe("ChoosePurchaseQuoteUseCase", () => {
       "Entrega em 2 dias",
       "m1",
       expect.any(Date),
+      expect.objectContaining({ autoApproval: null }),
     );
+    // Waits: the other approver is told (not whoever chose).
+    const outcome = quotes.choose.mock.calls[0][5];
+    expect(outcome.notices.map((notice) => notice.payload.userId)).toEqual([
+      "m2",
+    ]);
+  });
+
+  it("approves on choosing within the limit, waits above it", async () => {
+    // b totals 12 × 10,00 + 2,5 × 9,00 = R$ 142,50.
+    const within = setup({
+      approvalMode: ApprovalMode.LIMIT,
+      approvalLimitCents: 14_250,
+    });
+    await within.useCase.choose(actor, "b", "Entrega em 2 dias");
+    expect(within.quotes.choose.mock.calls[0][5].autoApproval).toMatchObject({
+      decision: ApprovalDecision.AUTO_APPROVED,
+      totalCents: 14_250,
+      limitCents: 14_250,
+      decidedById: "m1",
+    });
+
+    const above = setup({
+      approvalMode: ApprovalMode.LIMIT,
+      approvalLimitCents: 14_249,
+    });
+    await above.useCase.choose(actor, "b", "Entrega em 2 dias");
+    expect(above.quotes.choose.mock.calls[0][5].autoApproval).toBeNull();
   });
 });
 
@@ -245,6 +294,14 @@ describe("PdfLibQuoteMapRenderer", () => {
     generatedAt: "22/11/2026 10:00",
     items: [{ label: "Lâmpada LED 9W · Philips", quantity: "12 un" }],
     justification: "Entrega mais rápida.",
+    chosenByName: "Ana",
+    decision: {
+      kind: ApprovalDecision.APPROVED,
+      byName: "Carlos Síndico",
+      at: "22/11/2026 15:00",
+      note: "Pode comprar.",
+      limitCents: 10_000,
+    },
   };
 
   it("writes a PDF", async () => {
@@ -493,6 +550,8 @@ describe("ListQuoteBoardUseCase", () => {
       "OPEN",
       "QUOTING",
       "AWAITING_APPROVAL",
+      "APPROVED",
+      "REJECTED",
     ]);
     expect(page.items[0]).toMatchObject({
       quoteCount: 3,

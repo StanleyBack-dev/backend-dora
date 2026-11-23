@@ -1,3 +1,5 @@
+import type { OutboxDraft } from "@/modules/outbox/domain/outbox";
+import type { NewApproval } from "@/modules/purchases/domain/purchase-approval";
 import type {
   PaymentMethod,
   PurchaseQuote,
@@ -24,6 +26,13 @@ export type PurchaseQuoteData = {
   fileIsPdf: boolean | null;
 };
 
+/** Where choosing takes the request, and what it records and sends. */
+export type ChoiceOutcome = {
+  /** Approved within the limit (the decision), or null: it waits. */
+  autoApproval: NewApproval | null;
+  notices: OutboxDraft[];
+};
+
 export interface PurchaseQuoteRepositoryPort {
   /** The request's quotes, oldest first. */
   listFor(requestId: string): Promise<PurchaseQuote[]>;
@@ -48,8 +57,10 @@ export interface PurchaseQuoteRepositoryPort {
    */
   remove(id: string): Promise<string | null | undefined>;
   /**
-   * Chooses the quote: the request leaves QUOTING for AWAITING_APPROVAL
-   * (false: it wasn't in quotes; nothing is written).
+   * Chooses the quote: the request leaves QUOTING for AWAITING_APPROVAL, or
+   * straight for APPROVED within the limit (with that decision recorded),
+   * with the notices, in one transaction (false: it wasn't in quotes;
+   * nothing is written).
    */
   choose(
     requestId: string,
@@ -57,6 +68,7 @@ export interface PurchaseQuoteRepositoryPort {
     justification: string | null,
     chosenBy: string,
     at: Date,
+    outcome: ChoiceOutcome,
   ): Promise<boolean>;
   /**
    * Undoes the choice while waiting for the approval: back to QUOTING

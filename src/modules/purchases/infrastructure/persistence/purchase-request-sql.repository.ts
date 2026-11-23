@@ -14,7 +14,7 @@ import type {
   PurchaseRequestScope,
 } from "@/modules/purchases/application/ports/purchase-request-repository.port";
 import {
-  ACTIVE_REQUEST_STATUSES,
+  PENDING_REQUEST_STATUSES,
   PurchasePriority,
   type PurchaseRequest,
   PurchaseRequestStatus,
@@ -54,6 +54,9 @@ const SELECT = `
          r.chosen_quote_id AS "chosenQuoteId",
          r.choice_justification AS "choiceJustification",
          r.chosen_at AS "chosenAt",
+         r.chosen_by AS "chosenById",
+         (SELECT cu.name FROM tb_users cu WHERE cu.idtb_users = r.chosen_by)
+           AS "chosenByName",
          r.cancel_reason AS "cancelReason", r.cancelled_at AS "cancelledAt",
          r.created_at AS "createdAt", r.updated_at AS "updatedAt"
     FROM tb_purchase_requests r
@@ -80,7 +83,7 @@ const toRequest = (row: Row): PurchaseRequest => ({
   })),
 });
 
-const ACTIVE = ACTIVE_REQUEST_STATUSES.map((status) => `'${status}'`).join(
+const PENDING = PENDING_REQUEST_STATUSES.map((status) => `'${status}'`).join(
   ", ",
 );
 
@@ -369,14 +372,14 @@ export class PurchaseRequestSqlRepository implements PurchaseRequestRepositoryPo
       `SELECT
          count(*) FILTER (WHERE r.status = '${PurchaseRequestStatus.OPEN}')::int
            AS open,
-         count(*) FILTER (WHERE r.status IN (${ACTIVE})
+         count(*) FILTER (WHERE r.status IN (${PENDING})
                             AND r.priority = '${PurchasePriority.URGENT}')::int
            AS urgent,
-         count(*) FILTER (WHERE r.status IN (${ACTIVE})
+         count(*) FILTER (WHERE r.status IN (${PENDING})
                             AND r.needed_by BETWEEN $${params.length - 1}::date
                                                 AND $${params.length}::date)::int
            AS "dueSoon",
-         count(*) FILTER (WHERE r.status IN (${ACTIVE})
+         count(*) FILTER (WHERE r.status IN (${PENDING})
                             AND r.needed_by < $${params.length - 1}::date)::int
            AS overdue
          FROM tb_purchase_requests r

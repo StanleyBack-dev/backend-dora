@@ -18,8 +18,9 @@ import type { PurchaseRequest } from "@/modules/purchases/domain/purchase-reques
 
 // Every purchases operation starts here: the caller's condominium must have
 // the module (contracted apart). The resolvers check the permissions; here,
-// whose requests the caller sees: the management (PURCHASES_MANAGE) every
-// one, whoever only asks for purchases (PURCHASES_REQUEST) their own.
+// whose requests the caller sees: the management (PURCHASES_MANAGE) and the
+// approvers (PURCHASES_APPROVE) every one, whoever only asks for purchases
+// (PURCHASES_REQUEST) their own.
 @Injectable()
 export class PurchasesAccessService {
   constructor(
@@ -44,7 +45,10 @@ export class PurchasesAccessService {
   async scopeOf(actor: AuthenticatedUser): Promise<PurchaseRequestScope> {
     const condominiumId = await this.condominiumOf(actor);
     const granted = await this.permissions.effectiveFor(actor);
-    if (granted.has(Permission.PURCHASES_MANAGE)) {
+    if (
+      granted.has(Permission.PURCHASES_MANAGE) ||
+      granted.has(Permission.PURCHASES_APPROVE)
+    ) {
       return { condominiumId, requesterId: null };
     }
     if (granted.has(Permission.PURCHASES_REQUEST)) {
@@ -54,6 +58,25 @@ export class PurchasesAccessService {
       APP_ERRORS.accessControl.missingPermission,
       undefined,
     );
+  }
+
+  /**
+   * The condominium, once the caller has at least one of the permissions
+   * (e.g. the quotes are read by the management and the approvers).
+   */
+  async condominiumWithAny(
+    actor: AuthenticatedUser,
+    ...permissions: Permission[]
+  ): Promise<string> {
+    const condominiumId = await this.condominiumOf(actor);
+    const granted = await this.permissions.effectiveFor(actor);
+    if (!permissions.some((permission) => granted.has(permission))) {
+      throw AppException.from(
+        APP_ERRORS.accessControl.missingPermission,
+        undefined,
+      );
+    }
+    return condominiumId;
   }
 
   /** A request of the caller's condominium the caller may see. */
@@ -78,5 +101,14 @@ export class PurchasesAccessService {
    */
   managers(condominiumId: string): Promise<string[]> {
     return this.users.activeMemberIds(condominiumId, UserGroup.ADMIN);
+  }
+
+  /**
+   * Who is told a purchase waits for approval: the managers too (by role;
+   * deciding itself checks PURCHASES_APPROVE, so one who lost it is told
+   * but can't decide).
+   */
+  approvers(condominiumId: string): Promise<string[]> {
+    return this.managers(condominiumId);
   }
 }

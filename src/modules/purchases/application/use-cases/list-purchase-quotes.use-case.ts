@@ -15,6 +15,11 @@ import {
   type QuoteMapRendererPort,
 } from "@/modules/purchases/application/ports/quote-map-renderer.port";
 import { CondominiumLookupService } from "@/modules/condominiums/application/condominium-lookup.service";
+import { Permission } from "@/modules/access-control/domain/permission";
+import {
+  PURCHASE_APPROVAL_REPOSITORY,
+  type PurchaseApprovalRepositoryPort,
+} from "@/modules/purchases/application/ports/purchase-approval-repository.port";
 import { PurchasesAccessService } from "@/modules/purchases/application/purchases-access.service";
 import {
   cheapestQuoteIds,
@@ -28,6 +33,7 @@ import {
 } from "@/modules/purchases/domain/purchase-quote";
 import {
   type PurchaseRequest,
+  PurchaseRequestStatus,
   requestCode,
 } from "@/modules/purchases/domain/purchase-request";
 import { CLOCK, type ClockPort } from "@/shared/application/ports/clock.port";
@@ -119,10 +125,17 @@ export class ListPurchaseQuotesUseCase {
     @Inject(QUOTE_MAP_RENDERER) private readonly renderer: QuoteMapRendererPort,
     @Inject(CLOCK) private readonly clock: ClockPort,
     private readonly condominiums: CondominiumLookupService,
+    @Inject(PURCHASE_APPROVAL_REPOSITORY)
+    private readonly approvals: PurchaseApprovalRepositoryPort,
   ) {}
 
+  // The management and the approvers read the quotes.
   private async load(actor: AuthenticatedUser, requestId: string) {
-    const condominiumId = await this.access.condominiumOf(actor);
+    const condominiumId = await this.access.condominiumWithAny(
+      actor,
+      Permission.PURCHASES_MANAGE,
+      Permission.PURCHASES_APPROVE,
+    );
     const request = await this.requests.find(condominiumId, requestId);
     if (!request) {
       throw AppException.from(APP_ERRORS.purchases.requestNotFound, undefined);
@@ -214,6 +227,19 @@ export class ListPurchaseQuotesUseCase {
       timeZone: this.clock.timeZone,
     }).format(now);
     const code = requestCode(request.number);
+    // The decision that stands (none once sent back to quotes).
+    const decided =
+      request.status === PurchaseRequestStatus.APPROVED ||
+      request.status === PurchaseRequestStatus.REJECTED;
+    const latest = decided
+      ? (await this.approvals.history(request.id))[0]
+      : undefined;
+    const when = (date: Date) =>
+      new Intl.DateTimeFormat("pt-BR", {
+        dateStyle: "short",
+        timeStyle: "short",
+        timeZone: this.clock.timeZone,
+      }).format(date);
     const content = await this.renderer.render({
       code,
       title: request.title,
@@ -253,6 +279,16 @@ export class ListPurchaseQuotesUseCase {
         file: view.fileKey ? (view.fileIsPdf ? "PDF" : "Imagem") : null,
       })),
       justification: request.choiceJustification,
+      chosenByName: request.chosenByName,
+      decision: latest
+        ? {
+            kind: latest.decision,
+            byName: latest.decidedByName,
+            at: when(latest.decidedAt),
+            note: latest.note,
+            limitCents: latest.limitCents,
+          }
+        : null,
     });
     const pick = (view: QuoteView | undefined) =>
       view ? `${view.supplierName} · ${money(view.totalCents)}` : null;

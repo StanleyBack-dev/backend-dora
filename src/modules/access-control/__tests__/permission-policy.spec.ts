@@ -39,6 +39,7 @@ describe("group defaults", () => {
       Permission.LOST_FOUND_MANAGE,
       Permission.PURCHASES_MANAGE,
       Permission.PURCHASES_REQUEST,
+      Permission.PURCHASES_APPROVE,
     ]);
   });
 

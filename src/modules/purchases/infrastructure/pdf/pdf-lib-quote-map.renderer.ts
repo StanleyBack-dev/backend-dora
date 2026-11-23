@@ -10,6 +10,7 @@ import type {
   QuoteMapInput,
   QuoteMapRendererPort,
 } from "@/modules/purchases/application/ports/quote-map-renderer.port";
+import { ApprovalDecision } from "@/modules/purchases/domain/purchase-approval";
 import {
   BRAND_COLORS as C,
   drawDoraMark,
@@ -117,6 +118,7 @@ class MapWriter {
       this.terms(columns, part);
     }
     this.result();
+    this.approval();
     this.footers();
   }
 
@@ -238,8 +240,9 @@ class MapWriter {
     });
   }
 
-  private section(title: string, note = "") {
-    this.ensure(70);
+  /** A section title, kept on the page with `keepWith` points of what follows. */
+  private section(title: string, note = "", keepWith = 60) {
+    this.ensure(28 + keepWith);
     this.y -= 6;
     this.box(MARGIN, this.y, 3, 13, C.orange);
     this.text(title, MARGIN + 9, this.y - 10.5, {
@@ -439,9 +442,10 @@ class MapWriter {
     this.section(
       "Preço por item",
       `O menor preço de cada item em verde${part}`,
+      // The head and the first row.
+      36 + 44,
     );
     const head = () => this.tableHead(columns, "ITEM", "right");
-    this.ensure(36 + 40);
     head();
 
     // Lowest line total of each item among all quotes (not only this block).
@@ -723,9 +727,10 @@ class MapWriter {
     this.section(
       "Condições",
       `Prazo, pagamento e validade de cada fornecedor${part}`,
+      // The head and the first rows.
+      36 + 66,
     );
     const head = () => this.tableHead(columns, "CONDIÇÃO", "left");
-    this.ensure(36 + 30);
     head();
     const cellWidth = columns.width - PAD * 2;
     rows.forEach((row, index) => {
@@ -789,8 +794,7 @@ class MapWriter {
     const height = chosen
       ? 58 + (justification.length ? 16 + justification.length * 12 : 0)
       : 50;
-    this.section("Resultado");
-    this.ensure(height + 4);
+    this.section("Resultado", "", height + 4);
     const tone = chosen ? C.orange : C.info;
     this.box(MARGIN, this.y, WIDTH, height, chosen ? C.orangeSoft : C.infoSoft);
     this.box(MARGIN, this.y, 4, height, tone);
@@ -815,6 +819,9 @@ class MapWriter {
       });
       this.text(
         [
+          this.input.chosenByName
+            ? `Escolhida por ${this.input.chosenByName}`
+            : null,
           chosen.cheapest ? "Menor total entre as completas" : null,
           chosen.payment,
           delivery(chosen.deliveryDays)
@@ -853,5 +860,114 @@ class MapWriter {
       );
     }
     this.y -= height + 10;
+  }
+
+  /** The approval: waiting, approved (by whom, or within the limit) or rejected, and the signature lines. */
+  private approval() {
+    const { regular, bold } = this.fonts;
+    const chosen = this.input.quotes.find((quote) => quote.chosen);
+    if (!chosen) return;
+    const decision = this.input.decision;
+    const limit = (cents: number | null) =>
+      cents === null ? "" : ` (alçada de ${money(cents)})`;
+    const look =
+      decision === null
+        ? {
+            tag: "AGUARDANDO APROVAÇÃO",
+            line: "A cotação escolhida espera a decisão de quem aprova as compras.",
+            fill: C.warningSoft,
+            tone: C.warning,
+          }
+        : decision.kind === ApprovalDecision.AUTO_APPROVED
+          ? {
+              tag: "APROVADA NA ALÇADA",
+              line: `Total dentro do limite${limit(decision.limitCents)}: aprovada ao ser escolhida, em ${decision.at}.`,
+              fill: C.successSoft,
+              tone: C.success,
+            }
+          : decision.kind === ApprovalDecision.APPROVED
+            ? {
+                tag: "APROVADA",
+                line: `Aprovada por ${decision.byName ?? "—"} em ${decision.at}${limit(decision.limitCents)}.`,
+                fill: C.successSoft,
+                tone: C.success,
+              }
+            : {
+                tag: "REPROVADA",
+                line: `Reprovada por ${decision.byName ?? "—"} em ${decision.at}.`,
+                fill: C.dangerSoft,
+                tone: C.danger,
+              };
+    const inner = WIDTH - 32;
+    const noteLabel =
+      decision?.kind === ApprovalDecision.REJECTED ? "Motivo" : "Observação";
+    const note = decision?.note
+      ? wrapText(regular, decision.note, 9, inner)
+      : [];
+    const height = 44 + (note.length ? 14 + note.length * 12 : 0);
+    const signatures = 62;
+    this.section("Aprovação", "", height + signatures + 8);
+    this.box(MARGIN, this.y, WIDTH, height, look.fill);
+    this.box(MARGIN, this.y, 4, height, look.tone);
+    const x = MARGIN + 18;
+    this.text(look.tag, x, this.y - 16, {
+      font: bold,
+      size: 7.5,
+      color: look.tone,
+    });
+    this.text(look.line, x, this.y - 31, {
+      font: bold,
+      size: 10,
+      width: inner,
+    });
+    if (note.length) {
+      this.text(noteLabel, x, this.y - 47, {
+        font: bold,
+        size: 8,
+        color: look.tone,
+      });
+      note.forEach((line, index) =>
+        this.text(line, x, this.y - 60 - index * 12, { size: 9 }),
+      );
+    }
+    this.y -= height + 14;
+
+    // Lines to sign the printed map.
+    const approver =
+      decision &&
+      decision.kind !== ApprovalDecision.AUTO_APPROVED &&
+      decision.byName
+        ? decision.byName
+        : "";
+    const width = (WIDTH - 40) / 2;
+    [
+      { label: "Escolhida por", name: this.input.chosenByName ?? "" },
+      {
+        label:
+          decision?.kind === ApprovalDecision.REJECTED
+            ? "Reprovada por"
+            : "Aprovada por",
+        name: approver,
+      },
+    ].forEach((sign, index) => {
+      const left = MARGIN + index * (width + 40);
+      const line = this.y - 30;
+      this.page.drawLine({
+        start: { x: left, y: line },
+        end: { x: left + width, y: line },
+        thickness: 0.75,
+        color: C.soft,
+      });
+      this.text(sign.name || " ", left, line - 12, {
+        font: bold,
+        size: 9,
+        width,
+      });
+      this.text(sign.label, left, line - 23, {
+        size: 7.5,
+        color: C.muted,
+      });
+    });
+    this.y -= signatures;
   }
 }
