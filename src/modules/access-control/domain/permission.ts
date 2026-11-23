@@ -41,6 +41,12 @@ export enum Permission {
   PURCHASES_MANAGE = "PURCHASES_MANAGE",
   /** Ask for a purchase (purchase requests); gate and managers. */
   PURCHASES_REQUEST = "PURCHASES_REQUEST",
+  /**
+   * Approve, return or reject the chosen quote and set how purchases are
+   * approved (the limit); the managers by default, which the condominium
+   * may leave to the síndico only.
+   */
+  PURCHASES_APPROVE = "PURCHASES_APPROVE",
   /** Create, publish and cancel events (module contracted apart). */
   EVENTS_MANAGE = "EVENTS_MANAGE",
   /** The condominium's PIX and the review of payment receipts (e.g. event tickets). */

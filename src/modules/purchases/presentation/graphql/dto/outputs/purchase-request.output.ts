@@ -86,6 +86,12 @@ export class PurchaseRequestType {
   @Field(() => Date, { nullable: true })
   chosenAt!: Date | null;
 
+  @Field(() => String, {
+    nullable: true,
+    description: "Quem escolheu a cotação.",
+  })
+  chosenByName!: string | null;
+
   @Field(() => String, { nullable: true })
   cancelReason!: string | null;
 

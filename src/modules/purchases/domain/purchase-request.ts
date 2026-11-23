@@ -24,14 +24,14 @@ export enum PurchaseRequestStatus {
   CANCELLED = "CANCELLED",
 }
 
-/** Still going: neither finished, rejected nor cancelled. */
-export const ACTIVE_REQUEST_STATUSES: readonly PurchaseRequestStatus[] = [
+/**
+ * Still waiting on someone (quotes or the approval): what the Solicitações
+ * list shows by default, so its cards count the same requests.
+ */
+export const PENDING_REQUEST_STATUSES: readonly PurchaseRequestStatus[] = [
   PurchaseRequestStatus.OPEN,
   PurchaseRequestStatus.QUOTING,
   PurchaseRequestStatus.AWAITING_APPROVAL,
-  PurchaseRequestStatus.APPROVED,
-  PurchaseRequestStatus.ORDERED,
-  PurchaseRequestStatus.RECEIVED,
 ];
 
 /** Edited (and cancelled) only before the quotes start. */
@@ -101,6 +101,9 @@ export type PurchaseRequest = {
   /** Why that one (required when not the cheapest or too few quotes). */
   choiceJustification: string | null;
   chosenAt: Date | null;
+  /** Who chose it (null: not chosen, or the account was removed). */
+  chosenById: string | null;
+  chosenByName: string | null;
   cancelReason: string | null;
   cancelledAt: Date | null;
   createdAt: Date;

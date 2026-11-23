@@ -53,11 +53,11 @@ export type PurchaseRequestFilterOptions = {
 export type PurchaseRequestOverview = {
   /** Waiting for quotes. */
   open: number;
-  /** Still going and marked urgent. */
+  /** Pending (quotes or approval) and marked urgent. */
   urgent: number;
-  /** Still going and needed within the next 7 days. */
+  /** Pending and needed within the next 7 days. */
   dueSoon: number;
-  /** Still going and past the day they were needed by. */
+  /** Pending and past the day they were needed by. */
   overdue: number;
 };
 

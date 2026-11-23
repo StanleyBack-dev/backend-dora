@@ -46,6 +46,12 @@ export const purchasesErrors = {
     status: HttpStatus.UNPROCESSABLE_ENTITY,
     message: "O fornecedor escolhido não está ativo neste condomínio.",
   },
+  notAwaitingApproval: {
+    code: "PURCHASE_NOT_AWAITING_APPROVAL",
+    status: HttpStatus.CONFLICT,
+    message:
+      "Esta compra não está mais aguardando aprovação (alguém já decidiu ou a escolha foi desfeita).",
+  },
   quotesLocked: {
     code: "PURCHASE_QUOTES_LOCKED",
     status: HttpStatus.CONFLICT,

@@ -1,3 +1,5 @@
+import type { ApprovalDecision } from "@/modules/purchases/domain/purchase-approval";
+
 /** What the comparison map (mapa de cotação) shows, already worked out. */
 export type QuoteMapInput = {
   /** "SC-0007". */
@@ -42,6 +44,18 @@ export type QuoteMapInput = {
   }[];
   /** Why the chosen quote (null: none chosen or no justification). */
   justification: string | null;
+  /** Who chose it (null: not chosen). */
+  chosenByName: string | null;
+  /** The approval decision that stands (null: none yet). */
+  decision: {
+    kind: ApprovalDecision;
+    byName: string | null;
+    /** "22/11/2026 14:30". */
+    at: string;
+    note: string | null;
+    /** The limit in force (null: every purchase waited). */
+    limitCents: number | null;
+  } | null;
 };
 
 export interface QuoteMapRendererPort {

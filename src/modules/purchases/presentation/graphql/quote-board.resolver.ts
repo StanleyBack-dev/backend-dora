@@ -29,7 +29,7 @@ export class QuoteBoardResolver {
 
   @Query(() => QuoteBoardPage, {
     description:
-      "Solicitações aguardando cotação, em cotação ou aguardando aprovação, com o andamento das cotações.",
+      "Solicitações aguardando cotação, em cotação, aguardando aprovação, aprovadas ou reprovadas, com o andamento das cotações.",
   })
   quoteBoard(
     @CurrentUser() actor: AuthenticatedUser,

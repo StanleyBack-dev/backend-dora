@@ -22,11 +22,11 @@ import { PurchaseRequestType } from "@/modules/purchases/presentation/graphql/dt
 /** Base64 of a PDF or image of up to 1.2 MB (the use case checks it). */
 const FILE_ARG = { type: () => String, nullable: true } as const;
 
-// The quotes of a purchase request (management only): recorded per
-// supplier, compared, one chosen (the request then waits for the
-// approval); and the comparison map as a PDF.
+// The quotes of a purchase request: recorded per supplier, compared and
+// one chosen by the management (PURCHASES_MANAGE on each change); read, as
+// the comparison map (screen, PDF, shared by e-mail), by the management and
+// the approvers (checked by the use case).
 @RequireModule(AppModule.PURCHASES)
-@RequirePermissions(Permission.PURCHASES_MANAGE)
 @Resolver()
 export class PurchaseQuotesResolver {
   constructor(
@@ -74,6 +74,7 @@ export class PurchaseQuotesResolver {
     };
   }
 
+  @RequirePermissions(Permission.PURCHASES_MANAGE)
   @Mutation(() => PurchaseQuoteType, {
     description:
       "Registra a cotação de um fornecedor (a primeira põe a solicitação em cotação).",
@@ -90,6 +91,7 @@ export class PurchaseQuotesResolver {
       .then((quote) => this.listing.one(actor, quote.requestId, quote.id));
   }
 
+  @RequirePermissions(Permission.PURCHASES_MANAGE)
   @Mutation(() => PurchaseQuoteType, {
     description:
       "Altera uma cotação (preços, condições e o orçamento: novo arquivo, mantido ou removido).",
@@ -116,6 +118,7 @@ export class PurchaseQuotesResolver {
       .then((quote) => this.listing.one(actor, quote.requestId, quote.id));
   }
 
+  @RequirePermissions(Permission.PURCHASES_MANAGE)
   @Mutation(() => Boolean, {
     description:
       "Remove uma cotação (sem nenhuma, a solicitação volta a aguardar cotação).",
@@ -128,6 +131,7 @@ export class PurchaseQuotesResolver {
     return true;
   }
 
+  @RequirePermissions(Permission.PURCHASES_MANAGE)
   @Mutation(() => PurchaseRequestType, {
     description:
       "Escolhe a cotação vencedora (justificativa obrigatória se não for a mais barata ou houver menos de 3); a solicitação passa a aguardar aprovação.",
@@ -141,6 +145,7 @@ export class PurchaseQuotesResolver {
     return this.choosing.choose(actor, id, justification ?? null);
   }
 
+  @RequirePermissions(Permission.PURCHASES_MANAGE)
   @Mutation(() => PurchaseRequestType, {
     description:
       "Desfaz a escolha enquanto aguarda aprovação: a solicitação volta para cotação.",

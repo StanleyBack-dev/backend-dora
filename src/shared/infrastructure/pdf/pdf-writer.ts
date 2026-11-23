@@ -261,9 +261,19 @@ export class PdfWriter {
   }
 
   /** A highlighted box (a status): tinted, with a bar in its color. */
-  notice(value: string, tone: "good" | "bad") {
-    const color = tone === "good" ? C.success : C.danger;
-    const fill = tone === "good" ? C.successSoft : C.dangerSoft;
+  notice(value: string, tone: "good" | "bad" | "waiting" | "info") {
+    const color = {
+      good: C.success,
+      bad: C.danger,
+      waiting: C.warning,
+      info: C.info,
+    }[tone];
+    const fill = {
+      good: C.successSoft,
+      bad: C.dangerSoft,
+      waiting: C.warningSoft,
+      info: C.infoSoft,
+    }[tone];
     const lines = this.lines(value, this.bold, 10, WIDTH - 32);
     const height = lines.length * 13.5 + 18;
     this.ensure(height + 6);
@@ -358,6 +368,42 @@ export class PdfWriter {
     });
     this.text(note, { x, width: textWidth, size: 8, color: C.muted });
     this.y = top - height - 8;
+  }
+
+  /** Lines to sign side by side: the name in bold under each, the role below. */
+  signatures(signers: { name: string; role: string }[], title = "Assinaturas") {
+    if (signers.length === 0) return;
+    const gap = 30;
+    const width = (WIDTH - gap * (signers.length - 1)) / signers.length;
+    // The title stays on the page with the lines.
+    this.ensure(52 + 70);
+    this.heading(title);
+    this.y -= 40;
+    signers.forEach((signer, index) => {
+      const x = MARGIN + index * (width + gap);
+      this.page.drawLine({
+        start: { x, y: this.y },
+        end: { x: x + width, y: this.y },
+        thickness: 0.75,
+        color: C.soft,
+      });
+      const name = fitText(this.bold, signer.name || " ", 9, width);
+      this.page.drawText(name, {
+        x,
+        y: this.y - 12,
+        size: 9,
+        font: this.bold,
+        color: C.ink,
+      });
+      this.page.drawText(fitText(this.font, signer.role, 7.5, width), {
+        x,
+        y: this.y - 23,
+        size: 7.5,
+        font: this.font,
+        color: C.muted,
+      });
+    });
+    this.y -= 32;
   }
 
   /** The footer on every page (call once, at the end). */

@@ -27,6 +27,9 @@ export const QUOTE_BOARD_STATUSES: readonly PurchaseRequestStatus[] = [
   PurchaseRequestStatus.OPEN,
   PurchaseRequestStatus.QUOTING,
   PurchaseRequestStatus.AWAITING_APPROVAL,
+  // Decided: kept on the page so a quote doesn't vanish once approved.
+  PurchaseRequestStatus.APPROVED,
+  PurchaseRequestStatus.REJECTED,
 ];
 
 /** A supplier and what it charges in the end. */
@@ -93,12 +96,22 @@ export class ListQuoteBoardUseCase {
     page: PageRequest,
   ): Promise<Paginated<QuoteBoardRow>> {
     const condominiumId = await this.access.condominiumOf(actor);
-    // Only the quote stages (other statuses asked: nothing listed).
+    return this.rows(condominiumId, filter, page, QUOTE_BOARD_STATUSES);
+  }
+
+  /**
+   * The rows of some stages (other statuses asked: nothing listed); the
+   * approvals page uses it too.
+   */
+  async rows(
+    condominiumId: string,
+    filter: PurchaseRequestFilter,
+    page: PageRequest,
+    stages: readonly PurchaseRequestStatus[],
+  ): Promise<Paginated<QuoteBoardRow>> {
     const statuses = filter.statuses?.length
-      ? filter.statuses.filter((status) =>
-          QUOTE_BOARD_STATUSES.includes(status),
-        )
-      : [...QUOTE_BOARD_STATUSES];
+      ? filter.statuses.filter((status) => stages.includes(status))
+      : [...stages];
     if (!statuses.length) {
       return {
         items: [],

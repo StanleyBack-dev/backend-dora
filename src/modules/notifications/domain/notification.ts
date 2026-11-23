@@ -71,6 +71,14 @@ export enum NotificationType {
   PURCHASE_REQUEST_CREATED = "PURCHASE_REQUEST_CREATED",
   /** Purchases: someone else cancelled your purchase request. */
   PURCHASE_REQUEST_CANCELLED = "PURCHASE_REQUEST_CANCELLED",
+  /** Purchases: a chosen quote waits for your approval (to the approvers). */
+  PURCHASE_APPROVAL_REQUESTED = "PURCHASE_APPROVAL_REQUESTED",
+  /** Purchases: a purchase was approved (by an approver or within the limit). */
+  PURCHASE_APPROVED = "PURCHASE_APPROVED",
+  /** Purchases: the approver sent the purchase back to quotes. */
+  PURCHASE_RETURNED = "PURCHASE_RETURNED",
+  /** Purchases: the approver rejected the purchase. */
+  PURCHASE_REJECTED = "PURCHASE_REJECTED",
 }
 
 export const ALL_NOTIFICATION_TYPES: readonly NotificationType[] =

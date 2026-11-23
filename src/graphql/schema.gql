@@ -1420,6 +1420,7 @@ enum Permission {
   LOST_FOUND_MANAGE
   PURCHASES_MANAGE
   PURCHASES_REQUEST
+  PURCHASES_APPROVE
   EVENTS_MANAGE
   PAYMENTS_MANAGE
   AUDIT_READ
@@ -2035,6 +2036,10 @@ enum NotificationType {
   LOST_REPORT_EXPIRED
   PURCHASE_REQUEST_CREATED
   PURCHASE_REQUEST_CANCELLED
+  PURCHASE_APPROVAL_REQUESTED
+  PURCHASE_APPROVED
+  PURCHASE_RETURNED
+  PURCHASE_REJECTED
 }
 
 type NotificationPage {
@@ -2553,6 +2558,240 @@ type PlatformMetrics {
   health: HealthMetrics!
 }
 
+"""Como o condomínio aprova as compras (a alçada)."""
+type PurchaseSettings {
+  approvalMode: PurchaseApprovalMode!
+
+  """Com LIMIT: até este valor (centavos) a compra segue aprovada."""
+  approvalLimitCents: Float
+
+  """Vazio: nunca alterada."""
+  updatedAt: DateTime
+  updatedByName: String
+}
+
+"""
+Como o condomínio aprova as compras: toda compra passa pelo aprovador (ALWAYS) ou, até o limite (alçada), segue aprovada ao escolher a cotação (LIMIT).
+"""
+enum PurchaseApprovalMode {
+  ALWAYS
+  LIMIT
+}
+
+"""Uma decisão sobre a compra, como era na hora."""
+type PurchaseApproval {
+  id: ID!
+  decision: PurchaseApprovalDecision!
+  supplierName: String!
+
+  """Total da cotação, em centavos."""
+  totalCents: Float!
+
+  """A alçada em vigor (vazio: toda compra passava por aprovação)."""
+  limitCents: Float
+
+  """Observação (aprovada) ou motivo (devolvida, reprovada)."""
+  note: String
+  chosenByName: String
+  decidedByName: String
+  decidedAt: DateTime!
+}
+
+"""
+Decisão sobre uma compra: aprovada na alçada (ao escolher), aprovada, devolvida para cotação ou reprovada.
+"""
+enum PurchaseApprovalDecision {
+  AUTO_APPROVED
+  APPROVED
+  RETURNED
+  REJECTED
+}
+
+"""As aprovações em números (os cards da página)."""
+type PurchaseApprovalOverview {
+  """Aguardando aprovação."""
+  awaiting: Int!
+
+  """Aprovadas neste mês (inclui na alçada)."""
+  approvedThisMonth: Int!
+
+  """Devolvidas para cotação neste mês."""
+  returnedThisMonth: Int!
+
+  """Reprovadas neste mês."""
+  rejectedThisMonth: Int!
+}
+
+"""
+Resumo da compra em PDF: solicitação, cotações, escolha, aprovação e linha do tempo.
+"""
+type PurchaseSummaryFile {
+  """Nome sugerido do arquivo."""
+  fileName: String!
+
+  """application/pdf"""
+  mimeType: String!
+
+  """O PDF em base64."""
+  base64Content: String!
+}
+
+"""Um item de uma solicitação de compra."""
+type PurchaseRequestItem {
+  id: ID!
+  productId: ID!
+  productName: String!
+  quantity: Float!
+  unit: String!
+
+  """A marca pedida (vazio: qualquer marca)."""
+  brandId: ID
+  brandName: String
+  note: String
+}
+
+"""Solicitação de compra (o que a equipe precisa comprar)."""
+type PurchaseRequest {
+  id: ID!
+
+  """Número no condomínio (exibido como SC-0001)."""
+  number: Int!
+  title: String!
+  description: String
+  categories: [Category!]!
+
+  """Com OTHER entre as categorias: de que é a compra, digitado."""
+  categoryOther: String
+  priority: PurchasePriority!
+
+  """O espaço do condomínio onde vai ser usado."""
+  spaceId: ID
+
+  """Onde vai ser usado: o nome do espaço ou o local digitado."""
+  location: String
+
+  """Dia em que precisa (AAAA-MM-DD)."""
+  neededBy: String
+  status: PurchaseRequestStatus!
+  requestedById: ID!
+  requestedByName: String!
+  items: [PurchaseRequestItem!]!
+
+  """Quantas cotações tem."""
+  quoteCount: Int!
+
+  """A cotação escolhida pela gestão."""
+  chosenQuoteId: ID
+
+  """
+  Por que essa (obrigatório quando não é a mais barata ou há menos de 3 cotações).
+  """
+  choiceJustification: String
+  chosenAt: DateTime
+
+  """Quem escolheu a cotação."""
+  chosenByName: String
+  cancelReason: String
+  cancelledAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""
+Categoria de uma compra, de um fornecedor ou de outro registro (manutenção, elétrica, limpeza, alimentação…); o que não estiver na lista é OTHER, com o texto digitado.
+"""
+enum Category {
+  MAINTENANCE
+  ELECTRICAL
+  PLUMBING
+  PAINTING
+  CONSTRUCTION
+  ELEVATORS
+  CLEANING
+  PEST_CONTROL
+  GARDENING
+  POOL
+  SECURITY
+  TECHNOLOGY
+  OFFICE
+  FOOD
+  EVENTS
+  FURNITURE
+  UNIFORMS
+  GAS
+  PROFESSIONAL
+  OTHER
+}
+
+"""Prioridade de uma solicitação de compra."""
+enum PurchasePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+"""
+Solicitação de compra: aguardando cotação, em cotação, aguardando aprovação, aprovada, pedido feito, recebida, concluída, reprovada ou cancelada.
+"""
+enum PurchaseRequestStatus {
+  OPEN
+  QUOTING
+  AWAITING_APPROVAL
+  APPROVED
+  ORDERED
+  RECEIVED
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+"""Um fornecedor e o valor final da cotação dele."""
+type QuoteBoardPick {
+  supplierName: String!
+
+  """Valor final pago, em centavos."""
+  totalCents: Float!
+}
+
+"""Uma solicitação na página de cotações."""
+type QuoteBoardRow {
+  request: PurchaseRequest!
+  quoteCount: Int!
+
+  """Cotações com preço para todos os itens."""
+  completeCount: Int!
+
+  """A cotação completa mais barata."""
+  cheapest: QuoteBoardPick
+
+  """A cotação escolhida."""
+  chosen: QuoteBoardPick
+}
+
+type QuoteBoardPage {
+  items: [QuoteBoardRow!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+"""As cotações em números (os cards da página)."""
+type QuoteBoardOverview {
+  """Aguardando a primeira cotação."""
+  awaitingQuotes: Int!
+
+  """Em cotação."""
+  quoting: Int!
+
+  """Em cotação com menos cotações que o recomendado."""
+  belowMinimum: Int!
+
+  """Com cotação escolhida, aguardando aprovação."""
+  awaitingApproval: Int!
+}
+
 """Mapa de cotação de uma solicitação, em PDF."""
 type PurchaseQuoteMapFile {
   """Nome sugerido do arquivo."""
@@ -2661,113 +2900,6 @@ enum PaymentMethod {
   OTHER
 }
 
-"""Um item de uma solicitação de compra."""
-type PurchaseRequestItem {
-  id: ID!
-  productId: ID!
-  productName: String!
-  quantity: Float!
-  unit: String!
-
-  """A marca pedida (vazio: qualquer marca)."""
-  brandId: ID
-  brandName: String
-  note: String
-}
-
-"""Solicitação de compra (o que a equipe precisa comprar)."""
-type PurchaseRequest {
-  id: ID!
-
-  """Número no condomínio (exibido como SC-0001)."""
-  number: Int!
-  title: String!
-  description: String
-  categories: [Category!]!
-
-  """Com OTHER entre as categorias: de que é a compra, digitado."""
-  categoryOther: String
-  priority: PurchasePriority!
-
-  """O espaço do condomínio onde vai ser usado."""
-  spaceId: ID
-
-  """Onde vai ser usado: o nome do espaço ou o local digitado."""
-  location: String
-
-  """Dia em que precisa (AAAA-MM-DD)."""
-  neededBy: String
-  status: PurchaseRequestStatus!
-  requestedById: ID!
-  requestedByName: String!
-  items: [PurchaseRequestItem!]!
-
-  """Quantas cotações tem."""
-  quoteCount: Int!
-
-  """A cotação escolhida pela gestão."""
-  chosenQuoteId: ID
-
-  """
-  Por que essa (obrigatório quando não é a mais barata ou há menos de 3 cotações).
-  """
-  choiceJustification: String
-  chosenAt: DateTime
-  cancelReason: String
-  cancelledAt: DateTime
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
-"""
-Categoria de uma compra, de um fornecedor ou de outro registro (manutenção, elétrica, limpeza, alimentação…); o que não estiver na lista é OTHER, com o texto digitado.
-"""
-enum Category {
-  MAINTENANCE
-  ELECTRICAL
-  PLUMBING
-  PAINTING
-  CONSTRUCTION
-  ELEVATORS
-  CLEANING
-  PEST_CONTROL
-  GARDENING
-  POOL
-  SECURITY
-  TECHNOLOGY
-  OFFICE
-  FOOD
-  EVENTS
-  FURNITURE
-  UNIFORMS
-  GAS
-  PROFESSIONAL
-  OTHER
-}
-
-"""Prioridade de uma solicitação de compra."""
-enum PurchasePriority {
-  LOW
-  NORMAL
-  HIGH
-  URGENT
-}
-
-"""
-Solicitação de compra: aguardando cotação, em cotação, aguardando aprovação, aprovada, pedido feito, recebida, concluída, reprovada ou cancelada.
-"""
-enum PurchaseRequestStatus {
-  OPEN
-  QUOTING
-  AWAITING_APPROVAL
-  APPROVED
-  ORDERED
-  RECEIVED
-  COMPLETED
-  REJECTED
-  CANCELLED
-}
-
 """Uma solicitação no filtro (número e título)."""
 type PurchaseRequestOption {
   id: ID!
@@ -2794,13 +2926,13 @@ type PurchaseRequestOverview {
   """Aguardando cotação."""
   open: Int!
 
-  """Em andamento e urgentes."""
+  """Pendentes (em cotação ou aguardando aprovação) e urgentes."""
   urgent: Int!
 
-  """Em andamento e precisam em até 7 dias."""
+  """Pendentes e precisam em até 7 dias."""
   dueSoon: Int!
 
-  """Em andamento e com a data em que precisavam já passada."""
+  """Pendentes e com a data em que precisavam já passada."""
   overdue: Int!
 }
 
@@ -2829,52 +2961,6 @@ type PurchaseCatalogUsage {
   """Marcas em ao menos uma solicitação."""
   brandsInUse: Int!
   topBrand: PurchaseCatalogTop
-}
-
-"""Um fornecedor e o valor final da cotação dele."""
-type QuoteBoardPick {
-  supplierName: String!
-
-  """Valor final pago, em centavos."""
-  totalCents: Float!
-}
-
-"""Uma solicitação na página de cotações."""
-type QuoteBoardRow {
-  request: PurchaseRequest!
-  quoteCount: Int!
-
-  """Cotações com preço para todos os itens."""
-  completeCount: Int!
-
-  """A cotação completa mais barata."""
-  cheapest: QuoteBoardPick
-
-  """A cotação escolhida."""
-  chosen: QuoteBoardPick
-}
-
-type QuoteBoardPage {
-  items: [QuoteBoardRow!]!
-  total: Int!
-  page: Int!
-  limit: Int!
-  totalPages: Int!
-}
-
-"""As cotações em números (os cards da página)."""
-type QuoteBoardOverview {
-  """Aguardando a primeira cotação."""
-  awaitingQuotes: Int!
-
-  """Em cotação."""
-  quoting: Int!
-
-  """Em cotação com menos cotações que o recomendado."""
-  belowMinimum: Int!
-
-  """Com cotação escolhida, aguardando aprovação."""
-  awaitingApproval: Int!
 }
 
 """Dependente aprovado de um morador."""
@@ -3578,6 +3664,25 @@ type Query {
   platformMetrics(filter: PlatformMetricsFilterInput): PlatformMetrics!
 
   """
+  Resumo da compra em PDF (solicitação, cotações, escolha, aprovação e linha do tempo).
+  """
+  purchaseSummaryPdf(requestId: ID!): PurchaseSummaryFile!
+
+  """Como o condomínio aprova as compras (a alçada)."""
+  purchaseSettings: PurchaseSettings!
+
+  """As decisões sobre uma compra, a mais recente primeiro."""
+  purchaseApprovals(requestId: ID!): [PurchaseApproval!]!
+
+  """
+  Compras aguardando aprovação, aprovadas ou reprovadas, com a cotação escolhida.
+  """
+  approvalBoard(filter: PurchaseRequestFilterInput, page: PageInput): QuoteBoardPage!
+
+  """As aprovações em números (os cards da página)."""
+  approvalBoardOverview: PurchaseApprovalOverview!
+
+  """
   As cotações de uma solicitação, com os totais, a mais barata e a escolhida.
   """
   purchaseQuotes(requestId: ID!): [PurchaseQuote!]!
@@ -3607,7 +3712,7 @@ type Query {
   purchaseCatalogUsage: PurchaseCatalogUsage!
 
   """
-  Solicitações aguardando cotação, em cotação ou aguardando aprovação, com o andamento das cotações.
+  Solicitações aguardando cotação, em cotação, aguardando aprovação, aprovadas ou reprovadas, com o andamento das cotações.
   """
   quoteBoard(filter: PurchaseRequestFilterInput, page: PageInput): QuoteBoardPage!
 
@@ -4289,6 +4394,18 @@ type Mutation {
 
   """Remove a própria foto de perfil."""
   removeMyPhoto: Boolean!
+
+  """Muda como as compras são aprovadas (vale para as próximas escolhas)."""
+  updatePurchaseSettings(input: PurchaseSettingsInput!): PurchaseSettings!
+
+  """Aprova a cotação escolhida (observação opcional)."""
+  approvePurchase(requestId: ID!, note: String): PurchaseRequest!
+
+  """Devolve a compra para cotação, com o motivo (a escolha é desfeita)."""
+  returnPurchaseToQuotes(requestId: ID!, reason: String!): PurchaseRequest!
+
+  """Reprova a compra, com o motivo (a solicitação é encerrada)."""
+  rejectPurchase(requestId: ID!, reason: String!): PurchaseRequest!
 
   """
   Envia o mapa de cotação em PDF por e-mail (um e-mail por endereço); devolve quantos foram.
@@ -5115,6 +5232,14 @@ input AuthorizeParcelPickupInput {
 
   """CPF ou RG (opcional)."""
   document: String
+}
+
+"""Como o condomínio aprova as compras."""
+input PurchaseSettingsInput {
+  approvalMode: PurchaseApprovalMode!
+
+  """Com LIMIT: a alçada, em centavos."""
+  approvalLimitCents: Float
 }
 
 """Envio do mapa de cotação por e-mail."""

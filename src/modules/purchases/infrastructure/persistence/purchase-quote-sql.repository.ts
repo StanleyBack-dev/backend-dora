@@ -2,15 +2,19 @@ import { Injectable } from "@nestjs/common";
 import { InjectDataSource } from "@nestjs/typeorm";
 import type { DataSource, EntityManager } from "typeorm";
 import type {
+  ChoiceOutcome,
   PurchaseQuoteData,
   PurchaseQuoteRepositoryPort,
 } from "@/modules/purchases/application/ports/purchase-quote-repository.port";
 import type { PurchaseQuote } from "@/modules/purchases/domain/purchase-quote";
 import { PurchaseRequestStatus } from "@/modules/purchases/domain/purchase-request";
+import { insertApproval } from "@/modules/purchases/infrastructure/persistence/purchase-approval-sql.repository";
+import { OutboxTypeormWriter } from "@/modules/outbox/infrastructure/persistence/typeorm/outbox-typeorm.repository";
 
 const OPEN = PurchaseRequestStatus.OPEN;
 const QUOTING = PurchaseRequestStatus.QUOTING;
 const AWAITING = PurchaseRequestStatus.AWAITING_APPROVAL;
+const APPROVED = PurchaseRequestStatus.APPROVED;
 
 // The supplier's name comes from the suppliers registry, read-only; the
 // prices as one JSON array.
@@ -63,7 +67,10 @@ const toQuote = (row: Row): PurchaseQuote => ({
 
 @Injectable()
 export class PurchaseQuoteSqlRepository implements PurchaseQuoteRepositoryPort {
-  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly outbox: OutboxTypeormWriter,
+  ) {}
 
   private async byId(
     id: string,
@@ -240,23 +247,32 @@ export class PurchaseQuoteSqlRepository implements PurchaseQuoteRepositoryPort {
     });
   }
 
-  async choose(
+  choose(
     requestId: string,
     quoteId: string,
     justification: string | null,
     chosenBy: string,
     at: Date,
+    outcome: ChoiceOutcome,
   ): Promise<boolean> {
-    const changed = await this.dataSource.query<{ id: string }[]>(
-      `UPDATE tb_purchase_requests
-          SET status = '${AWAITING}', chosen_quote_id = $2,
-              choice_justification = $3, chosen_by = $4, chosen_at = $5,
-              updated_at = now()
-        WHERE idtb_purchase_requests = $1 AND status = '${QUOTING}'
-        RETURNING idtb_purchase_requests AS id`,
-      [requestId, quoteId, justification, chosenBy, at],
-    );
-    return changed.length > 0;
+    const status = outcome.autoApproval ? APPROVED : AWAITING;
+    return this.dataSource.transaction(async (manager) => {
+      const changed = await manager.query<{ id: string }[]>(
+        `UPDATE tb_purchase_requests
+            SET status = $6, chosen_quote_id = $2,
+                choice_justification = $3, chosen_by = $4, chosen_at = $5,
+                updated_at = now()
+          WHERE idtb_purchase_requests = $1 AND status = '${QUOTING}'
+          RETURNING idtb_purchase_requests AS id`,
+        [requestId, quoteId, justification, chosenBy, at, status],
+      );
+      if (changed.length === 0) return false;
+      if (outcome.autoApproval) {
+        await insertApproval(manager, outcome.autoApproval);
+      }
+      await this.outbox.write(manager, outcome.notices);
+      return true;
+    });
   }
 
   async reopen(requestId: string): Promise<boolean> {
