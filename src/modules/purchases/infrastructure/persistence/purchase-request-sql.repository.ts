@@ -25,9 +25,11 @@ import {
   type Paginated,
 } from "@/shared/application/pagination";
 
-// The requester's name comes from identity and the items' products and
-// brands from the catalog, read-only; the items as one JSON array, in
-// their order.
+/**
+ * The requester's name comes from identity and the items' products and
+ * brands from the catalog, read-only; the items as one JSON array, in
+ * their order.
+ */
 const SELECT = `
   SELECT r.idtb_purchase_requests AS id, r.idtb_condominiums AS "condominiumId",
          r.number, r.title, r.description, r.categories,
@@ -149,6 +151,7 @@ export class PurchaseRequestSqlRepository implements PurchaseRequestRepositoryPo
     );
   }
 
+  /** One numbering at a time per condominium: no gaps, no repeats. */
   create(
     condominiumId: string,
     requestedById: string,
@@ -156,7 +159,6 @@ export class PurchaseRequestSqlRepository implements PurchaseRequestRepositoryPo
     notices: (request: PurchaseRequest) => OutboxDraft[],
   ): Promise<PurchaseRequest> {
     return this.dataSource.transaction(async (manager) => {
-      // One numbering at a time in the condominium (no gaps, no repeats).
       await manager.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [
         `purchase-requests:${condominiumId}`,
       ]);
@@ -220,7 +222,7 @@ export class PurchaseRequestSqlRepository implements PurchaseRequestRepositoryPo
     data: PurchaseRequestData,
   ): Promise<PurchaseRequest | null> {
     return this.dataSource.transaction(async (manager) => {
-      const changed = await manager.query<{ id: string }[]>(
+      const [changed] = await manager.query<[{ id: string }[], number]>(
         `UPDATE tb_purchase_requests
             SET priority = $2, idtb_spaces = $3, location = $4,
                 needed_by = $5, updated_at = now()
@@ -241,7 +243,7 @@ export class PurchaseRequestSqlRepository implements PurchaseRequestRepositoryPo
     notices: OutboxDraft[],
   ): Promise<PurchaseRequest | null> {
     return this.dataSource.transaction(async (manager) => {
-      const changed = await manager.query<{ id: string }[]>(
+      const [changed] = await manager.query<[{ id: string }[], number]>(
         `UPDATE tb_purchase_requests
             SET status = '${PurchaseRequestStatus.CANCELLED}',
                 cancel_reason = $2, cancelled_by = $3, cancelled_at = $4,
@@ -335,7 +337,6 @@ export class PurchaseRequestSqlRepository implements PurchaseRequestRepositoryPo
   }
 
   async catalogUsage(condominiumId: string): Promise<PurchaseCatalogUsage> {
-    // How many requests use each product (or brand) of the condominium.
     const usage = (column: string, table: string, key: string) =>
       this.dataSource.query<{ name: string; requestCount: number }[]>(
         `SELECT c.name,

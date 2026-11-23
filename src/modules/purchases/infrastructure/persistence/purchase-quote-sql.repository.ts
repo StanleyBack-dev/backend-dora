@@ -16,8 +16,10 @@ const QUOTING = PurchaseRequestStatus.QUOTING;
 const AWAITING = PurchaseRequestStatus.AWAITING_APPROVAL;
 const APPROVED = PurchaseRequestStatus.APPROVED;
 
-// The supplier's name comes from the suppliers registry, read-only; the
-// prices as one JSON array.
+/**
+ * The supplier's name comes from the suppliers registry, read-only; the
+ * prices as one JSON array.
+ */
 const SELECT = `
   SELECT q.idtb_purchase_quotes AS id,
          q.idtb_purchase_requests AS "requestId",
@@ -52,7 +54,7 @@ type Row = Omit<
   items: { requestItemId: string; unitPriceCents: string | number | null }[];
 };
 
-// bigint comes back as text.
+/** bigint comes back as text. */
 const toQuote = (row: Row): PurchaseQuote => ({
   ...row,
   shippingCents: Number(row.shippingCents),
@@ -90,7 +92,9 @@ export class PurchaseQuoteSqlRepository implements PurchaseQuoteRepositoryPort {
     requestId: string,
     statuses: PurchaseRequestStatus[],
   ): Promise<boolean> {
-    const [row] = await manager.query<{ status: PurchaseRequestStatus }[]>(
+    const [[row]] = await manager.query<
+      [{ status: PurchaseRequestStatus }[], number]
+    >(
       `SELECT status FROM tb_purchase_requests
         WHERE idtb_purchase_requests = $1 FOR UPDATE`,
       [requestId],
@@ -257,7 +261,7 @@ export class PurchaseQuoteSqlRepository implements PurchaseQuoteRepositoryPort {
   ): Promise<boolean> {
     const status = outcome.autoApproval ? APPROVED : AWAITING;
     return this.dataSource.transaction(async (manager) => {
-      const changed = await manager.query<{ id: string }[]>(
+      const [changed] = await manager.query<[{ id: string }[], number]>(
         `UPDATE tb_purchase_requests
             SET status = $6, chosen_quote_id = $2,
                 choice_justification = $3, chosen_by = $4, chosen_at = $5,
@@ -276,7 +280,7 @@ export class PurchaseQuoteSqlRepository implements PurchaseQuoteRepositoryPort {
   }
 
   async reopen(requestId: string): Promise<boolean> {
-    const changed = await this.dataSource.query<{ id: string }[]>(
+    const [changed] = await this.dataSource.query<[{ id: string }[], number]>(
       `UPDATE tb_purchase_requests
           SET status = '${QUOTING}', chosen_quote_id = NULL,
               choice_justification = NULL, chosen_by = NULL, chosen_at = NULL,
