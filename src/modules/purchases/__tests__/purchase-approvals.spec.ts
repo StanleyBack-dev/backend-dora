@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { PurchaseSummaryPdfUseCase } from "@/modules/purchases/application/use-cases/purchase-summary-pdf.use-case";
 import { PdfLibPurchaseSummaryRenderer } from "@/modules/purchases/infrastructure/pdf/pdf-lib-purchase-summary.renderer";
+import type { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import type { AuditTrailService } from "@/modules/audit/application/audit-trail.service";
 import { NotificationType } from "@/modules/notifications/domain/notification";
@@ -128,6 +129,7 @@ describe("DecidePurchaseApprovalUseCase", () => {
         managers: jest.fn().mockResolvedValue(["ana", "sindico"]),
       } as unknown as PurchasesAccessService,
       { stamp: jest.fn() } as unknown as AuditTrailService,
+      { kick: jest.fn() } as unknown as OutboxDispatcher,
       { now: () => new Date("2026-11-23T12:00:00Z") } as ClockPort,
     );
     return { approvals, useCase };

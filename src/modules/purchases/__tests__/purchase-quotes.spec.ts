@@ -9,6 +9,7 @@ import type { SendDocumentEmailUseCase } from "@/modules/mails/application/use-c
 import { PurchaseDocumentMailer } from "@/modules/purchases/application/purchase-document-mailer";
 import { ShareQuoteMapUseCase } from "@/modules/purchases/application/use-cases/share-quote-map.use-case";
 import type { RateLimitPort } from "@/shared/application/ports/rate-limit.port";
+import type { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import type { AuditTrailService } from "@/modules/audit/application/audit-trail.service";
 import type { PurchaseQuoteRepositoryPort } from "@/modules/purchases/application/ports/purchase-quote-repository.port";
@@ -203,6 +204,7 @@ describe("ChoosePurchaseQuoteUseCase", () => {
         approvers: jest.fn().mockResolvedValue(["m1", "m2"]),
       } as unknown as PurchasesAccessService,
       { stamp: jest.fn() } as unknown as AuditTrailService,
+      { kick: jest.fn() } as unknown as OutboxDispatcher,
       { now: () => new Date() } as ClockPort,
       {
         settings: jest.fn().mockResolvedValue(settings),

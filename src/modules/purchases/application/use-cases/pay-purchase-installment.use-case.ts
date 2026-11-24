@@ -11,6 +11,7 @@ import {
   boundedText,
   orderInvalid,
 } from "@/modules/purchases/application/purchase-errors";
+import { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
 import { PurchaseOrderFiles } from "@/modules/purchases/application/purchase-order-files";
 import { completedNotices } from "@/modules/purchases/application/purchase-order-notices";
 import { PurchasesAccessService } from "@/modules/purchases/application/purchases-access.service";
@@ -45,6 +46,7 @@ export class PayPurchaseInstallmentUseCase {
     private readonly files: PurchaseOrderFiles,
     private readonly access: PurchasesAccessService,
     private readonly audit: AuditTrailService,
+    private readonly outbox: OutboxDispatcher,
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
@@ -142,6 +144,7 @@ export class PayPurchaseInstallmentUseCase {
   }
 
   private stamp(actor: AuthenticatedUser, requestId: string) {
+    this.outbox.kick();
     return this.audit.stamp({
       actorId: actor.id,
       entity: "purchase_request",
