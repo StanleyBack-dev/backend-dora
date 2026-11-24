@@ -284,10 +284,3 @@ export function needsProof(
   const byAge = type.minAge !== null || type.maxAge !== null;
   return byAge && !ageKnown;
 }
-
-/** "R$ 1.234,56". */
-export const formatCents = (cents: number) =>
-  (cents / 100).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });

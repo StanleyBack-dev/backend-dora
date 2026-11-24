@@ -21,6 +21,17 @@ export const STAMPED_TABLES = {
     key: "idtb_enrollment_requests",
   },
   event: { table: "tb_events", key: "idtb_events" },
+  supplier: { table: "tb_suppliers", key: "idtb_suppliers" },
+  product: { table: "tb_products", key: "idtb_products" },
+  brand: { table: "tb_brands", key: "idtb_brands" },
+  purchase_quote: {
+    table: "tb_purchase_quotes",
+    key: "idtb_purchase_quotes",
+  },
+  purchase_request: {
+    table: "tb_purchase_requests",
+    key: "idtb_purchase_requests",
+  },
   support_request: {
     table: "tb_support_requests",
     key: "idtb_support_requests",

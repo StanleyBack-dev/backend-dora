@@ -9,8 +9,6 @@ import { CATEGORY_LABELS } from "@/modules/lost-and-found/domain/found-item";
 import { formatDateTime } from "@/shared/domain/local-date";
 import { deviceFacts } from "@/shared/domain/signature/signature-capture";
 import {
-  BAD,
-  GOOD,
   locationText,
   MUTED,
   PdfWriter,
@@ -34,19 +32,16 @@ export class PdfLibReturnReceiptRenderer implements ReturnReceiptRendererPort {
     doc.setCreator("Dora");
     const font = await doc.embedFont(StandardFonts.Helvetica);
     const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-    const out = new PdfWriter(doc, font, bold);
+    const out = new PdfWriter(doc, font, bold, {
+      label: "Comprovante de devolução",
+      subtitle: input.condominiumName,
+      footer: `${item.title} · emitido em ${when(input.issuedAt)}`,
+    });
 
-    out.text(input.condominiumName, { size: 10, color: MUTED });
-    out.text("Comprovante de devolução de item achado", {
-      size: 17,
-      bold: true,
-      gap: 2,
-    });
-    out.text(`${item.title} · emitido em ${when(input.issuedAt)}`, {
-      size: 9,
-      color: MUTED,
-    });
-    out.rule();
+    out.intro(
+      "Comprovante de devolução de item achado",
+      `${item.title} · emitido em ${when(input.issuedAt)}`,
+    );
 
     out.heading("Item");
     out.facts([
@@ -108,11 +103,11 @@ export class PdfLibReturnReceiptRenderer implements ReturnReceiptRendererPort {
     }
 
     out.heading("Integridade");
-    out.text(
+    out.notice(
       signature.intact
         ? "Registro íntegro: as provas guardadas conferem com o código gravado na assinatura."
         : "Registro alterado: as provas guardadas não conferem com o código gravado na assinatura.",
-      { bold: true, color: signature.intact ? GOOD : BAD, gap: 4 },
+      signature.intact ? "good" : "bad",
     );
     out.facts(
       [
@@ -137,6 +132,7 @@ export class PdfLibReturnReceiptRenderer implements ReturnReceiptRendererPort {
       "Assinatura eletrônica feita na tela de quem devolveu o item, registrada pelo Dora com a data e a hora, o endereço IP, o aparelho, a localização (quando permitida) e quem entregou. Os códigos SHA-256 permitem conferir que o registro não foi alterado.",
     );
 
+    out.finish();
     return Buffer.from(await doc.save());
   }
 }

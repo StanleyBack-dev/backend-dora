@@ -1,6 +1,7 @@
 import { Logger, Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { MAIL_PROVIDER } from "@/modules/mails/application/ports/mail-provider.port";
+import { SendDocumentEmailUseCase } from "@/modules/mails/application/use-cases/send-document-email.use-case";
 import { SendIdentityEmailsUseCase } from "@/modules/mails/application/use-cases/send-identity-emails.use-case";
 import { SendLandingEmailsUseCase } from "@/modules/mails/application/use-cases/send-landing-emails.use-case";
 import { SendNotificationEmailUseCase } from "@/modules/mails/application/use-cases/send-notification-email.use-case";
@@ -52,11 +53,13 @@ import { mailDeliveryFor } from "@/modules/mails/infrastructure/providers/mail-d
     SendIdentityEmailsUseCase,
     SendNotificationEmailUseCase,
     SendLandingEmailsUseCase,
+    SendDocumentEmailUseCase,
   ],
   exports: [
     SendIdentityEmailsUseCase,
     SendNotificationEmailUseCase,
     SendLandingEmailsUseCase,
+    SendDocumentEmailUseCase,
   ],
 })
 export class MailModule {}

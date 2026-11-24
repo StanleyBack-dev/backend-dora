@@ -67,6 +67,28 @@ export enum NotificationType {
   LOST_REPORT_SPOTTED = "LOST_REPORT_SPOTTED",
   /** "Perdi algo" ended after the keeping period without news. */
   LOST_REPORT_EXPIRED = "LOST_REPORT_EXPIRED",
+  /** Purchases: a purchase request was made (to the managers). */
+  PURCHASE_REQUEST_CREATED = "PURCHASE_REQUEST_CREATED",
+  /** Purchases: someone else cancelled your purchase request. */
+  PURCHASE_REQUEST_CANCELLED = "PURCHASE_REQUEST_CANCELLED",
+  /** Purchases: a chosen quote waits for your approval (to the approvers). */
+  PURCHASE_APPROVAL_REQUESTED = "PURCHASE_APPROVAL_REQUESTED",
+  /** Purchases: a purchase was approved (by an approver or within the limit). */
+  PURCHASE_APPROVED = "PURCHASE_APPROVED",
+  /** Purchases: the approver sent the purchase back to quotes. */
+  PURCHASE_RETURNED = "PURCHASE_RETURNED",
+  /** Purchases: the approver rejected the purchase. */
+  PURCHASE_REJECTED = "PURCHASE_REJECTED",
+  /** Purchases: the order was placed with the supplier (to the requester). */
+  PURCHASE_ORDERED = "PURCHASE_ORDERED",
+  /** Purchases: a delivery arrived (to the managers and the requester). */
+  PURCHASE_RECEIVED = "PURCHASE_RECEIVED",
+  /** Purchases: received and paid in full (to the requester). */
+  PURCHASE_COMPLETED = "PURCHASE_COMPLETED",
+  /** Purchases: the order was cancelled (to the requester and the managers). */
+  PURCHASE_ORDER_CANCELLED = "PURCHASE_ORDER_CANCELLED",
+  /** Purchases: the accounts were published (to the residents). */
+  PURCHASE_TRANSPARENCY_PUBLISHED = "PURCHASE_TRANSPARENCY_PUBLISHED",
 }
 
 export const ALL_NOTIFICATION_TYPES: readonly NotificationType[] =

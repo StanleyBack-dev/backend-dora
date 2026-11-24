@@ -388,6 +388,62 @@ enum UserGroup {
   ADMIN_MASTER
 }
 
+"""Marca do catálogo do condomínio."""
+type Brand {
+  id: ID!
+  name: String!
+  active: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""Quantos produtos (ou marcas) estão ativos e inativos."""
+type CatalogCounts {
+  active: Int!
+  inactive: Int!
+}
+
+"""Um produto ou marca nos selects (os novos usos oferecem só os ativos)."""
+type CatalogOption {
+  id: ID!
+  name: String!
+  active: Boolean!
+
+  """Produtos: a unidade de costume."""
+  unit: String
+}
+
+"""
+Produto do catálogo do condomínio (usado pelas compras e, no futuro, por outros módulos).
+"""
+type Product {
+  id: ID!
+  name: String!
+
+  """Unidade de costume (un, cx, kg…)."""
+  unit: String!
+  description: String
+  active: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type ProductPage {
+  items: [Product!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+type BrandPage {
+  items: [Brand!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
 """Condomínio cliente, como o console da plataforma o mostra."""
 type Condominium {
   id: ID!
@@ -440,6 +496,7 @@ enum AppModule {
   EVENTS
   PARCELS
   LOST_AND_FOUND
+  PURCHASES
 }
 
 """Quem recebe um PIX: chave, nome e cidade (como no banco)."""
@@ -1361,6 +1418,9 @@ enum Permission {
   RESIDENTS_READ
   PARCELS_MANAGE
   LOST_FOUND_MANAGE
+  PURCHASES_MANAGE
+  PURCHASES_REQUEST
+  PURCHASES_APPROVE
   EVENTS_MANAGE
   PAYMENTS_MANAGE
   AUDIT_READ
@@ -1974,6 +2034,17 @@ enum NotificationType {
   LOST_REPORT_MATCH
   LOST_REPORT_SPOTTED
   LOST_REPORT_EXPIRED
+  PURCHASE_REQUEST_CREATED
+  PURCHASE_REQUEST_CANCELLED
+  PURCHASE_APPROVAL_REQUESTED
+  PURCHASE_APPROVED
+  PURCHASE_RETURNED
+  PURCHASE_REJECTED
+  PURCHASE_ORDERED
+  PURCHASE_RECEIVED
+  PURCHASE_COMPLETED
+  PURCHASE_ORDER_CANCELLED
+  PURCHASE_TRANSPARENCY_PUBLISHED
 }
 
 type NotificationPage {
@@ -2492,6 +2563,808 @@ type PlatformMetrics {
   health: HealthMetrics!
 }
 
+"""Como o condomínio aprova as compras (a alçada)."""
+type PurchaseSettings {
+  approvalMode: PurchaseApprovalMode!
+
+  """Com LIMIT: até este valor (centavos) a compra segue aprovada."""
+  approvalLimitCents: Float
+
+  """Vazio: nunca alterada."""
+  updatedAt: DateTime
+  updatedByName: String
+}
+
+"""
+Como o condomínio aprova as compras: toda compra passa pelo aprovador (ALWAYS) ou, até o limite (alçada), segue aprovada ao escolher a cotação (LIMIT).
+"""
+enum PurchaseApprovalMode {
+  ALWAYS
+  LIMIT
+}
+
+"""Uma decisão sobre a compra, como era na hora."""
+type PurchaseApproval {
+  id: ID!
+  decision: PurchaseApprovalDecision!
+  supplierName: String!
+
+  """Total da cotação, em centavos."""
+  totalCents: Float!
+
+  """A alçada em vigor (vazio: toda compra passava por aprovação)."""
+  limitCents: Float
+
+  """Observação (aprovada) ou motivo (devolvida, reprovada)."""
+  note: String
+  chosenByName: String
+  decidedByName: String
+  decidedAt: DateTime!
+}
+
+"""
+Decisão sobre uma compra: aprovada na alçada (ao escolher), aprovada, devolvida para cotação ou reprovada.
+"""
+enum PurchaseApprovalDecision {
+  AUTO_APPROVED
+  APPROVED
+  RETURNED
+  REJECTED
+}
+
+"""As aprovações em números (os cards da página)."""
+type PurchaseApprovalOverview {
+  """Aguardando aprovação."""
+  awaiting: Int!
+
+  """Aprovadas neste mês (inclui na alçada)."""
+  approvedThisMonth: Int!
+
+  """Devolvidas para cotação neste mês."""
+  returnedThisMonth: Int!
+
+  """Reprovadas neste mês."""
+  rejectedThisMonth: Int!
+}
+
+"""
+Resumo da compra em PDF: solicitação, cotações, escolha, aprovação e linha do tempo.
+"""
+type PurchaseSummaryFile {
+  """Nome sugerido do arquivo."""
+  fileName: String!
+
+  """application/pdf"""
+  mimeType: String!
+
+  """O PDF em base64."""
+  base64Content: String!
+}
+
+"""Um item de uma solicitação de compra."""
+type PurchaseRequestItem {
+  id: ID!
+  productId: ID!
+  productName: String!
+  quantity: Float!
+  unit: String!
+
+  """A marca pedida (vazio: qualquer marca)."""
+  brandId: ID
+  brandName: String
+  note: String
+}
+
+"""Solicitação de compra (o que a equipe precisa comprar)."""
+type PurchaseRequest {
+  id: ID!
+
+  """Número no condomínio (exibido como SC-0001)."""
+  number: Int!
+  title: String!
+  description: String
+  categories: [Category!]!
+
+  """Com OTHER entre as categorias: de que é a compra, digitado."""
+  categoryOther: String
+  priority: PurchasePriority!
+
+  """O espaço do condomínio onde vai ser usado."""
+  spaceId: ID
+
+  """Onde vai ser usado: o nome do espaço ou o local digitado."""
+  location: String
+
+  """Dia em que precisa (AAAA-MM-DD)."""
+  neededBy: String
+  status: PurchaseRequestStatus!
+  requestedById: ID!
+  requestedByName: String!
+  items: [PurchaseRequestItem!]!
+
+  """Quantas cotações tem."""
+  quoteCount: Int!
+
+  """A cotação escolhida pela gestão."""
+  chosenQuoteId: ID
+
+  """
+  Por que essa (obrigatório quando não é a mais barata ou há menos de 3 cotações).
+  """
+  choiceJustification: String
+  chosenAt: DateTime
+
+  """Quem escolheu a cotação."""
+  chosenByName: String
+  cancelReason: String
+  cancelledAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""
+Categoria de uma compra, de um fornecedor ou de outro registro (manutenção, elétrica, limpeza, alimentação…); o que não estiver na lista é OTHER, com o texto digitado.
+"""
+enum Category {
+  MAINTENANCE
+  ELECTRICAL
+  PLUMBING
+  PAINTING
+  CONSTRUCTION
+  ELEVATORS
+  CLEANING
+  PEST_CONTROL
+  GARDENING
+  POOL
+  SECURITY
+  TECHNOLOGY
+  OFFICE
+  FOOD
+  EVENTS
+  FURNITURE
+  UNIFORMS
+  GAS
+  PROFESSIONAL
+  OTHER
+}
+
+"""Prioridade de uma solicitação de compra."""
+enum PurchasePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+"""
+Solicitação de compra: aguardando cotação, em cotação, aguardando aprovação, aprovada, pedido feito, recebida, concluída, reprovada ou cancelada.
+"""
+enum PurchaseRequestStatus {
+  OPEN
+  QUOTING
+  AWAITING_APPROVAL
+  APPROVED
+  ORDERED
+  RECEIVED
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+"""Um fornecedor e o valor final da cotação dele."""
+type QuoteBoardPick {
+  supplierName: String!
+
+  """Valor final pago, em centavos."""
+  totalCents: Float!
+}
+
+"""Uma solicitação na página de cotações."""
+type QuoteBoardRow {
+  request: PurchaseRequest!
+  quoteCount: Int!
+
+  """Cotações com preço para todos os itens."""
+  completeCount: Int!
+
+  """A cotação completa mais barata."""
+  cheapest: QuoteBoardPick
+
+  """A cotação escolhida."""
+  chosen: QuoteBoardPick
+}
+
+type QuoteBoardPage {
+  items: [QuoteBoardRow!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+"""As cotações em números (os cards da página)."""
+type QuoteBoardOverview {
+  """Aguardando a primeira cotação."""
+  awaitingQuotes: Int!
+
+  """Em cotação."""
+  quoting: Int!
+
+  """Em cotação com menos cotações que o recomendado."""
+  belowMinimum: Int!
+
+  """Com cotação escolhida, aguardando aprovação."""
+  awaitingApproval: Int!
+}
+
+type IndicatorPeriod {
+  year: Int!
+  month: Int
+}
+
+"""Pago numa categoria."""
+type CategorySpend {
+  category: Category!
+  cents: Float!
+  purchases: Int!
+}
+
+"""Pago num mês do ano."""
+type MonthSpend {
+  month: Int!
+  cents: Float!
+}
+
+"""Pago a um fornecedor."""
+type SupplierSpend {
+  supplierId: ID
+  supplierName: String!
+  cents: Float!
+  purchases: Int!
+  ratingAverage: Float
+  ratingCount: Int!
+}
+
+"""O que os pedidos feitos ainda devem (hoje)."""
+type CommittedSpend {
+  cents: Float!
+  installments: Int!
+  orders: Int!
+}
+
+"""Como foram os pedidos feitos no período."""
+type ProcessIndicators {
+  orders: Int!
+
+  """Maior cotação completa menos a escolhida, somadas."""
+  savingsCents: Float!
+  withThreeQuotes: Int!
+  avgDaysToOrder: Float
+  avgDaysToDeliver: Float
+  lateDeliveries: Int!
+}
+
+"""As compras em números para a gestão."""
+type PurchaseIndicators {
+  period: IndicatorPeriod!
+  paidCents: Float!
+  paidInstallments: Int!
+  purchases: Int!
+  committed: CommittedSpend!
+  byCategory: [CategorySpend!]!
+  byMonth: [MonthSpend!]!
+  bySupplier: [SupplierSpend!]!
+  process: ProcessIndicators!
+}
+
+"""Se a prestação de contas está publicada aos moradores."""
+type TransparencyStatus {
+  enabled: Boolean!
+  updatedAt: DateTime
+  updatedByName: String
+
+  """Publica ou retira (aprovadores)."""
+  canManage: Boolean!
+
+  """Vê mesmo sem publicar (gestão e aprovadores)."""
+  canPreview: Boolean!
+}
+
+"""A prestação de contas de um período."""
+type TransparencySummary {
+  period: IndicatorPeriod!
+  paidCents: Float!
+  purchases: Int!
+  byCategory: [CategorySpend!]!
+  byMonth: [MonthSpend!]!
+}
+
+"""Uma compra concluída, como o morador vê."""
+type TransparencyPurchase {
+  number: Int!
+  title: String!
+  categories: [Category!]!
+  categoryOther: String
+  supplierName: String!
+  totalCents: Float!
+
+  """YYYY-MM-DD"""
+  completedOn: String!
+  quoteCount: Int!
+}
+
+type TransparencyPurchasePage {
+  items: [TransparencyPurchase!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+"""Relatório de compras em PDF (indicadores ou prestação de contas)."""
+type PurchaseReportFile {
+  """Nome sugerido do arquivo."""
+  fileName: String!
+
+  """application/pdf"""
+  mimeType: String!
+
+  """O PDF em base64."""
+  base64Content: String!
+}
+
+"""O que chegou de um item numa entrega."""
+type PurchaseReceiptItem {
+  requestItemId: ID!
+  quantity: Float!
+}
+
+"""Uma entrega do pedido (toda ou em parte), com a nota fiscal."""
+type PurchaseReceipt {
+  id: ID!
+
+  """O dia em que chegou (AAAA-MM-DD)."""
+  receivedOn: String!
+  items: [PurchaseReceiptItem!]!
+  invoiceNumber: String
+
+  """Valor da nota em centavos (null: não informado ou oculto)."""
+  invoiceCents: Float
+  invoiceDate: String
+
+  """Link temporário da nota fiscal (null: sem arquivo)."""
+  fileUrl: String
+  fileIsPdf: Boolean
+  note: String
+  receivedById: ID
+  receivedByName: String
+  createdAt: DateTime!
+}
+
+"""Uma parcela a pagar ao fornecedor (ou o pagamento à vista)."""
+type PurchaseInstallment {
+  id: ID!
+  number: Int!
+
+  """Em centavos."""
+  amountCents: Float!
+  dueOn: String!
+
+  """null: não paga."""
+  paidOn: String
+  paidByName: String
+
+  """Link temporário do comprovante (null: sem arquivo)."""
+  proofUrl: String
+  proofIsPdf: Boolean
+  note: String
+}
+
+"""A avaliação do fornecedor nesta compra."""
+type PurchaseOrderRating {
+  """De 1 a 5."""
+  rating: Int!
+  comment: String
+  ratedByName: String
+  ratedAt: DateTime!
+}
+
+"""
+A ordem de compra (OC) de uma compra aprovada, com as entregas e as parcelas.
+"""
+type PurchaseOrder {
+  id: ID!
+
+  """Sequencial no condomínio (OC-0001)."""
+  number: Int!
+  supplierName: String!
+
+  """Para enviar o pedido (null: sem e-mail ou oculto)."""
+  supplierEmail: String
+
+  """Para o WhatsApp (null: sem telefone ou oculto)."""
+  supplierPhone: String
+
+  """null: oculto."""
+  itemsCents: Float
+
+  """null: oculto."""
+  totalCents: Float
+  paymentMethod: PaymentMethod
+  paymentTerms: String
+  expectedOn: String
+  notes: String
+  orderedByName: String
+  orderedAt: DateTime!
+  completedAt: DateTime
+  receipts: [PurchaseReceipt!]!
+
+  """Vazio para quem não vê os valores."""
+  installments: [PurchaseInstallment!]!
+  rating: PurchaseOrderRating
+}
+
+"""
+Forma de pagamento de uma cotação: PIX, dinheiro, cartão de débito ou de crédito, boleto, transferência, faturado ou outra (digitada).
+"""
+enum PaymentMethod {
+  PIX
+  CASH
+  DEBIT_CARD
+  CREDIT_CARD
+  BOLETO
+  BANK_TRANSFER
+  INVOICE
+  OTHER
+}
+
+"""Um item da compra e como está a entrega dele."""
+type PurchaseOrderLine {
+  requestItemId: ID!
+  productName: String!
+  brandName: String
+  note: String
+  unit: String!
+  quantity: Float!
+
+  """Quanto já chegou."""
+  received: Float!
+
+  """Quanto falta chegar."""
+  pending: Float!
+  unitPriceCents: Float
+  lineCents: Float
+}
+
+"""Como fica o pedido de uma compra aprovada (da cotação escolhida)."""
+type PurchaseOrderPlan {
+  supplierName: String!
+  itemsCents: Float!
+  totalCents: Float!
+  paymentMethod: PaymentMethod
+  paymentTerms: String
+  deliveryDays: Int
+
+  """Cada parcela (uma: à vista)."""
+  installmentValues: [Float!]!
+}
+
+"""Um pedido cancelado antes de chegar ou ser pago algo."""
+type CancelledPurchaseOrder {
+  number: Int!
+  supplierName: String!
+
+  """null: oculto."""
+  totalCents: Float
+  orderedAt: DateTime!
+  cancelledAt: DateTime!
+  cancelledByName: String
+  reason: String!
+}
+
+"""A página do pedido de uma compra."""
+type PurchaseOrderView {
+  request: PurchaseRequest!
+
+  """null: aprovada, o pedido ainda por fazer."""
+  order: PurchaseOrder
+  lines: [PurchaseOrderLine!]!
+  plan: PurchaseOrderPlan
+
+  """Pedidos cancelados antes, do mais recente."""
+  cancelledOrders: [CancelledPurchaseOrder!]!
+
+  """Faz o pedido, paga, avalia e desfaz."""
+  canManage: Boolean!
+
+  """Vê os valores."""
+  canSeeMoney: Boolean!
+}
+
+"""Uma compra na página de pedidos."""
+type OrderBoardRow {
+  request: PurchaseRequest!
+
+  """null: pedido por fazer."""
+  orderNumber: Int
+  supplierName: String
+
+  """null: oculto."""
+  totalCents: Float
+  expectedOn: String
+
+  """Itens que já chegaram por completo."""
+  itemsReceived: Int!
+  itemCount: Int!
+
+  """Entregas registradas (parciais ou não)."""
+  receiptCount: Int!
+  installmentsPaid: Int!
+  installmentCount: Int!
+
+  """O vencimento da próxima parcela em aberto."""
+  nextDueOn: String
+}
+
+type OrderBoardPage {
+  items: [OrderBoardRow!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+"""Os pedidos em números (os cards da página)."""
+type OrderBoardOverview {
+  """Aprovadas, o pedido por fazer."""
+  toOrder: Int!
+
+  """Pedido feito, aguardando a entrega."""
+  awaitingDelivery: Int!
+
+  """Parcelas em aberto."""
+  unpaidInstallments: Int!
+
+  """Soma das parcelas em aberto."""
+  unpaidCents: Float!
+
+  """Parcelas vencidas."""
+  overdueInstallments: Int!
+
+  """Concluídas neste mês."""
+  completedThisMonth: Int!
+}
+
+"""A ordem de compra em PDF."""
+type PurchaseOrderFile {
+  """Nome sugerido do arquivo."""
+  fileName: String!
+
+  """application/pdf"""
+  mimeType: String!
+
+  """O PDF em base64."""
+  base64Content: String!
+}
+
+"""As entregas em números (os cards da página de recebimentos)."""
+type DeliveryBoardOverview {
+  """Pedidos aguardando a entrega."""
+  awaitingDelivery: Int!
+
+  """Destes, com a entrega prevista vencida."""
+  lateDeliveries: Int!
+
+  """Destes, com parte já entregue."""
+  partialDeliveries: Int!
+
+  """Entregas registradas neste mês."""
+  receiptsThisMonth: Int!
+}
+
+"""Uma parcela a pagar (ou paga), com a compra dela."""
+type PaymentBoardRow {
+  id: ID!
+  number: Int!
+
+  """Quantas parcelas o pedido tem."""
+  installmentCount: Int!
+
+  """Em centavos."""
+  amountCents: Float!
+  dueOn: String!
+  paidOn: String
+  paidByName: String
+  proofUrl: String
+  proofIsPdf: Boolean
+  note: String
+  requestId: ID!
+  requestNumber: Int!
+  requestTitle: String!
+  orderNumber: Int!
+  orderedAt: DateTime!
+  supplierName: String!
+}
+
+type PaymentBoardPage {
+  items: [PaymentBoardRow!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+"""As contas a pagar em números (os cards da página)."""
+type PaymentBoardOverview {
+  openCents: Float!
+  openCount: Int!
+  overdueCents: Float!
+  overdueCount: Int!
+
+  """Vencem em até 7 dias."""
+  dueSoonCents: Float!
+  dueSoonCount: Int!
+  paidThisMonthCents: Float!
+  paidThisMonthCount: Int!
+}
+
+"""Mapa de cotação de uma solicitação, em PDF."""
+type PurchaseQuoteMapFile {
+  """Nome sugerido do arquivo."""
+  fileName: String!
+
+  """application/pdf"""
+  mimeType: String!
+
+  """O PDF em base64."""
+  base64Content: String!
+}
+
+"""O preço de um item numa cotação (na ordem dos itens)."""
+type PurchaseQuoteLine {
+  requestItemId: ID!
+
+  """Preço unitário em centavos (vazio: não cotou)."""
+  unitPriceCents: Float
+
+  """Quantidade × preço, em centavos."""
+  lineCents: Float
+}
+
+"""Um dos outros encargos de uma cotação."""
+type QuoteCharge {
+  label: String!
+
+  """Valor em centavos."""
+  amountCents: Float!
+}
+
+"""Cotação de um fornecedor para uma solicitação de compra."""
+type PurchaseQuote {
+  id: ID!
+  supplierId: ID!
+  supplierName: String!
+  lines: [PurchaseQuoteLine!]!
+
+  """Frete em centavos."""
+  shippingCents: Float!
+  charges: [QuoteCharge!]!
+
+  """A soma dos encargos, em centavos."""
+  chargesCents: Float!
+
+  """Desconto, em centavos."""
+  discountCents: Float!
+
+  """Desconto em centésimos de % (vazio: valor fixo)."""
+  discountPercentBp: Int
+
+  """Juros ao mês, em centésimos de % (vazio: sem juros)."""
+  interestRateBp: Int
+
+  """Itens cotados, em centavos."""
+  itemsCents: Float!
+
+  """Itens + frete + encargos − desconto (à vista), em centavos."""
+  cashCents: Float!
+
+  """O valor final pago (com juros, a soma das parcelas), em centavos."""
+  totalCents: Float!
+
+  """Juros do parcelamento, em centavos."""
+  interestCents: Float!
+
+  """O valor de cada parcela (vazio: à vista)."""
+  installmentValues: [Float!]!
+
+  """Todos os itens têm preço."""
+  complete: Boolean!
+
+  """A cotação completa mais barata (empates também)."""
+  cheapest: Boolean!
+
+  """A escolhida pela gestão."""
+  chosen: Boolean!
+  deliveryDays: Int
+  paymentMethod: PaymentMethod
+
+  """Parcelas (vazio: à vista)."""
+  installments: Int
+
+  """Com OTHER: a forma de pagamento digitada."""
+  paymentTerms: String
+  validUntil: String
+  notes: String
+
+  """Link temporário do orçamento do fornecedor."""
+  fileUrl: String
+  fileIsPdf: Boolean
+  createdAt: DateTime!
+}
+
+"""Uma solicitação no filtro (número e título)."""
+type PurchaseRequestOption {
+  id: ID!
+  number: Int!
+  title: String!
+}
+
+"""Quem fez solicitações (filtro “Solicitante”)."""
+type PurchaseRequesterOption {
+  id: ID!
+  name: String!
+}
+
+"""O que os filtros das solicitações oferecem (as que a pessoa vê)."""
+type PurchaseRequestFilterOptions {
+  requests: [PurchaseRequestOption!]!
+  requesters: [PurchaseRequesterOption!]!
+}
+
+"""
+As solicitações em números (os cards da página), independente dos filtros.
+"""
+type PurchaseRequestOverview {
+  """Aguardando cotação."""
+  open: Int!
+
+  """Pendentes (em cotação ou aguardando aprovação) e urgentes."""
+  urgent: Int!
+
+  """Pendentes e precisam em até 7 dias."""
+  dueSoon: Int!
+
+  """Pendentes e com a data em que precisavam já passada."""
+  overdue: Int!
+}
+
+type PurchaseRequestPage {
+  items: [PurchaseRequest!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+"""O produto (ou marca) em mais solicitações."""
+type PurchaseCatalogTop {
+  name: String!
+  requestCount: Int!
+}
+
+"""
+Como os produtos e marcas do catálogo aparecem nas solicitações de compra.
+"""
+type PurchaseCatalogUsage {
+  """Produtos em ao menos uma solicitação."""
+  productsInUse: Int!
+  topProduct: PurchaseCatalogTop
+
+  """Marcas em ao menos uma solicitação."""
+  brandsInUse: Int!
+  topBrand: PurchaseCatalogTop
+}
+
 """Dependente aprovado de um morador."""
 type ResidentDependent {
   id: ID!
@@ -2631,6 +3504,112 @@ type Space {
 
   """Até 3 fotos."""
   photos: [SpacePhoto!]!
+}
+
+"""Um fornecedor no filtro “Nome” (nome fantasia ou razão social)."""
+type SupplierNameOption {
+  id: ID!
+  name: String!
+}
+
+"""Um CNPJ/CPF no filtro de documento."""
+type SupplierDocumentOption {
+  documentType: SupplierDocumentType!
+
+  """Só os números."""
+  document: String!
+}
+
+"""Fornecedor com CNPJ (empresa) ou CPF (autônomo)."""
+enum SupplierDocumentType {
+  CNPJ
+  CPF
+}
+
+"""
+O que os filtros dos fornecedores oferecem: os nomes, contatos e documentos em uso.
+"""
+type SupplierFilterOptions {
+  suppliers: [SupplierNameOption!]!
+  contacts: [String!]!
+  documents: [SupplierDocumentOption!]!
+}
+
+"""
+Os fornecedores em números (os cards da página), independente dos filtros.
+"""
+type SupplierOverview {
+  active: Int!
+  inactive: Int!
+
+  """Ativos sem chave PIX para pagamento."""
+  activeWithoutPix: Int!
+
+  """Ativos sem telefone nem e-mail."""
+  activeWithoutContact: Int!
+
+  """Categorias atendidas por ao menos um fornecedor ativo."""
+  categoriesServed: Int!
+}
+
+"""Um fornecedor ativo num select, com o que atende."""
+type SupplierOption {
+  id: ID!
+
+  """Nome fantasia, ou a razão social."""
+  name: String!
+  categories: [Category!]!
+  categoryOther: String
+
+  """A média das avaliações, de 1 a 5 (null: nunca avaliado)."""
+  ratingAverage: Float
+
+  """Quantas avaliações recebeu."""
+  ratingCount: Int!
+}
+
+"""Fornecedor do condomínio (empresa ou autônomo)."""
+type Supplier {
+  id: ID!
+  documentType: SupplierDocumentType!
+
+  """CNPJ ou CPF, só os números."""
+  document: String!
+
+  """Razão social, ou o nome do autônomo."""
+  name: String!
+  tradeName: String
+  categories: [Category!]!
+
+  """Com OTHER entre as categorias: o que ele atende, digitado."""
+  categoryOther: String
+  contactName: String
+  email: String
+
+  """Só os números, com DDD."""
+  phone: String
+  city: String
+  state: String
+  pixKeyType: PixKeyType
+  pixKey: String
+  notes: String
+  active: Boolean!
+
+  """A média das avaliações, de 1 a 5 (null: nunca avaliado)."""
+  ratingAverage: Float
+
+  """Quantas avaliações recebeu."""
+  ratingCount: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type SupplierPage {
+  items: [Supplier!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
 }
 
 """Solicitação de suporte."""
@@ -2871,6 +3850,24 @@ type Query {
   """Os comunicados do condomínio em números."""
   broadcastStats: BroadcastStats!
 
+  """Marcas do catálogo (ativas primeiro, por nome)."""
+  brands(filter: CatalogFilterInput, page: PageInput): BrandPage!
+
+  """Todas as marcas, por nome (selects e filtros)."""
+  brandOptions: [CatalogOption!]!
+
+  """Quantas marcas estão ativas e inativas."""
+  brandCounts: CatalogCounts!
+
+  """Produtos do catálogo (ativos primeiro, por nome)."""
+  products(filter: CatalogFilterInput, page: PageInput): ProductPage!
+
+  """Todos os produtos, por nome (selects e filtros)."""
+  productOptions: [CatalogOption!]!
+
+  """Quantos produtos estão ativos e inativos."""
+  productCounts: CatalogCounts!
+
   """O PIX do condomínio (nulo: ainda não cadastrado)."""
   condominiumPix: PixReceiver
   condominiums(filter: CondominiumFilterInput): [Condominium!]!
@@ -3081,6 +4078,105 @@ type Query {
   platformMetrics(filter: PlatformMetricsFilterInput): PlatformMetrics!
 
   """
+  Resumo da compra em PDF (solicitação, cotações, escolha, aprovação e linha do tempo).
+  """
+  purchaseSummaryPdf(requestId: ID!): PurchaseSummaryFile!
+
+  """Como o condomínio aprova as compras (a alçada)."""
+  purchaseSettings: PurchaseSettings!
+
+  """As decisões sobre uma compra, a mais recente primeiro."""
+  purchaseApprovals(requestId: ID!): [PurchaseApproval!]!
+
+  """
+  Compras aguardando aprovação, aprovadas ou reprovadas, com a cotação escolhida.
+  """
+  approvalBoard(filter: PurchaseRequestFilterInput, page: PageInput): QuoteBoardPage!
+
+  """As aprovações em números (os cards da página)."""
+  approvalBoardOverview: PurchaseApprovalOverview!
+
+  """
+  Gasto por categoria, mês e fornecedor, o comprometido e o processo (gestão e aprovadores).
+  """
+  purchaseIndicators(period: IndicatorPeriodInput!): PurchaseIndicators!
+
+  """Os indicadores do período em PDF (A4 deitado)."""
+  purchaseIndicatorsPdf(period: IndicatorPeriodInput!): PurchaseReportFile!
+
+  """Se a prestação de contas está publicada (qualquer membro)."""
+  purchaseTransparencyStatus: TransparencyStatus!
+
+  """Gasto por categoria e mês na prestação de contas."""
+  purchaseTransparency(period: IndicatorPeriodInput!): TransparencySummary!
+
+  """As compras concluídas no período, da mais recente."""
+  transparencyPurchases(period: IndicatorPeriodInput!, page: PageInput): TransparencyPurchasePage!
+
+  """A prestação de contas do período em PDF (A4 deitado)."""
+  purchaseTransparencyPdf(period: IndicatorPeriodInput!): PurchaseReportFile!
+
+  """
+  Compras aprovadas, com pedido feito, recebidas ou concluídas (para a portaria, só as com pedido, sem valores).
+  """
+  orderBoard(filter: PurchaseRequestFilterInput, page: PageInput): OrderBoardPage!
+
+  """Os pedidos em números (os cards da página)."""
+  orderBoardOverview: OrderBoardOverview!
+
+  """As entregas em números (os cards da página de recebimentos)."""
+  deliveryBoardOverview: DeliveryBoardOverview!
+
+  """O pedido de uma compra: itens, entregas e parcelas."""
+  purchaseOrder(requestId: ID!): PurchaseOrderView!
+
+  """A ordem de compra em PDF, para enviar ao fornecedor."""
+  purchaseOrderPdf(requestId: ID!): PurchaseOrderFile!
+
+  """As parcelas dos pedidos, pelo vencimento."""
+  paymentBoard(filter: PaymentFilterInput, page: PageInput): PaymentBoardPage!
+
+  """As contas a pagar em números (os cards da página)."""
+  paymentBoardOverview: PaymentBoardOverview!
+
+  """
+  As cotações de uma solicitação, com os totais, a mais barata e a escolhida.
+  """
+  purchaseQuotes(requestId: ID!): [PurchaseQuote!]!
+
+  """O mapa de cotação da solicitação, em PDF."""
+  purchaseQuoteMapPdf(requestId: ID!): PurchaseQuoteMapFile!
+
+  """
+  Solicitações de compra (todas para a gestão; as próprias para quem só solicita), as mais novas primeiro.
+  """
+  purchaseRequests(filter: PurchaseRequestFilterInput, page: PageInput): PurchaseRequestPage!
+
+  """Uma solicitação de compra."""
+  purchaseRequest(id: ID!): PurchaseRequest!
+
+  """
+  O que os filtros das solicitações oferecem (números, títulos e solicitantes).
+  """
+  purchaseRequestFilterOptions: PurchaseRequestFilterOptions!
+
+  """As solicitações em números (os cards da página)."""
+  purchaseRequestOverview: PurchaseRequestOverview!
+
+  """
+  Como os produtos e marcas do catálogo aparecem nas solicitações (cards das páginas do catálogo).
+  """
+  purchaseCatalogUsage: PurchaseCatalogUsage!
+
+  """
+  Solicitações aguardando cotação, em cotação, aguardando aprovação, aprovadas ou reprovadas, com o andamento das cotações.
+  """
+  quoteBoard(filter: PurchaseRequestFilterInput, page: PageInput): QuoteBoardPage!
+
+  """As cotações em números (os cards da página)."""
+  quoteBoardOverview: QuoteBoardOverview!
+
+  """
   Moradores ativos do condomínio, por nome, com filtros e por página (somente leitura).
   """
   residentsDirectory(filter: ResidentsFilterInput, page: PageInput): ResidentListingPage!
@@ -3093,6 +4189,25 @@ type Query {
   """
   spaces(includeInactive: Boolean! = false): [Space!]!
   space(id: ID!): Space!
+
+  """Fornecedores do condomínio (ativos primeiro, por nome)."""
+  suppliers(filter: SupplierFilterInput, page: PageInput): SupplierPage!
+
+  """
+  Os fornecedores ativos, por nome, com o que atendem (ex.: para cotar uma compra).
+  """
+  supplierOptions: [SupplierOption!]!
+
+  """
+  O que os filtros dos fornecedores oferecem (nomes, contatos e CNPJ/CPF em uso).
+  """
+  supplierFilterOptions: SupplierFilterOptions!
+
+  """Os fornecedores em números (os cards da página)."""
+  supplierOverview: SupplierOverview!
+
+  """Um fornecedor do condomínio."""
+  supplier(id: ID!): Supplier!
 
   """Quantas solicitações de suporte ainda posso enviar hoje."""
   supportQuota: SupportQuota!
@@ -3170,6 +4285,15 @@ input DayGuestFilterInput {
 
   """true: só quem já entrou; false: só quem ainda não entrou."""
   checkedIn: Boolean
+}
+
+"""Filtros dos produtos ou das marcas."""
+input CatalogFilterInput {
+  """Exatamente este."""
+  id: ID
+
+  """Só os ativos (true) ou só os inativos (false); vazio: todos."""
+  active: Boolean
 }
 
 input CondominiumFilterInput {
@@ -3362,6 +4486,43 @@ input PlatformMetricsFilterInput {
   condominiumId: ID
 }
 
+"""Filtros das solicitações de compra."""
+input PurchaseRequestFilterInput {
+  """Exatamente esta solicitação."""
+  requestId: ID
+
+  """Feitas por esta pessoa."""
+  requestedById: ID
+
+  """Com esta categoria entre as suas."""
+  category: Category
+  priority: PurchasePriority
+  statuses: [PurchaseRequestStatus!]
+}
+
+"""Um ano ou um mês dele."""
+input IndicatorPeriodInput {
+  year: Int!
+
+  """1–12 (vazio: o ano)."""
+  month: Int
+}
+
+"""Filtros da página de pagamentos."""
+input PaymentFilterInput {
+  states: [PurchaseInstallmentState!]
+  requestId: ID
+  supplierId: ID
+}
+
+"""Parcela a pagar: em aberto, vencida, vencendo em até 7 dias ou paga."""
+enum PurchaseInstallmentState {
+  OPEN
+  OVERDUE
+  DUE_SOON
+  PAID
+}
+
 """Filtros da consulta de moradores."""
 input ResidentsFilterInput {
   """Um morador (pelo nome)."""
@@ -3369,6 +4530,22 @@ input ResidentsFilterInput {
 
   """A unidade."""
   unitId: ID
+}
+
+"""Filtros dos fornecedores."""
+input SupplierFilterInput {
+  """Exatamente este fornecedor."""
+  supplierId: ID
+
+  """Exatamente este contato."""
+  contactName: String
+
+  """Exatamente este CNPJ/CPF (com ou sem pontuação)."""
+  document: String
+  category: Category
+
+  """Só os ativos (true) ou só os inativos (false); vazio: todos."""
+  active: Boolean
 }
 
 input SystemLogFilterInput {
@@ -3428,6 +4605,32 @@ type Mutation {
   createSpaceBlock(input: CreateSpaceBlockInput!): SpaceBlock!
   deleteSpaceBlock(id: ID!): Boolean!
   sendBroadcast(input: BroadcastInput!): Broadcast!
+
+  """
+  Cadastra uma marca (um nome por condomínio); também ao preencher um item.
+  """
+  createBrand(name: String!): Brand!
+
+  """Renomeia uma marca."""
+  renameBrand(id: ID!, name: String!): Brand!
+
+  """
+  Ativa ou desativa uma marca (inativa não aparece em novos usos; o histórico fica).
+  """
+  setBrandActive(id: ID!, active: Boolean!): Brand!
+
+  """
+  Cadastra um produto (um nome por condomínio); também ao preencher um item.
+  """
+  createProduct(input: ProductInput!): Product!
+
+  """Altera um produto."""
+  updateProduct(id: ID!, input: ProductInput!): Product!
+
+  """
+  Ativa ou desativa um produto (inativo não aparece em novos usos; o histórico fica).
+  """
+  setProductActive(id: ID!, active: Boolean!): Product!
 
   """
   Liga ou desliga um módulo contratado à parte (ex.: Eventos) no condomínio.
@@ -3671,6 +4874,101 @@ type Mutation {
 
   """Remove a própria foto de perfil."""
   removeMyPhoto: Boolean!
+
+  """Muda como as compras são aprovadas (vale para as próximas escolhas)."""
+  updatePurchaseSettings(input: PurchaseSettingsInput!): PurchaseSettings!
+
+  """Aprova a cotação escolhida (observação opcional)."""
+  approvePurchase(requestId: ID!, note: String): PurchaseRequest!
+
+  """Devolve a compra para cotação, com o motivo (a escolha é desfeita)."""
+  returnPurchaseToQuotes(requestId: ID!, reason: String!): PurchaseRequest!
+
+  """Reprova a compra, com o motivo (a solicitação é encerrada)."""
+  rejectPurchase(requestId: ID!, reason: String!): PurchaseRequest!
+
+  """Publica ou retira a prestação de contas (aprovadores)."""
+  publishPurchaseTransparency(enabled: Boolean!): TransparencyStatus!
+
+  """
+  Faz o pedido de uma compra aprovada (gera a OC e as parcelas da cotação escolhida).
+  """
+  placePurchaseOrder(requestId: ID!, input: PlacePurchaseOrderInput!): PurchaseOrderView!
+
+  """
+  Registra uma entrega (toda ou em parte), com a nota fiscal (PDF ou imagem em base64).
+  """
+  recordPurchaseReceipt(requestId: ID!, input: PurchaseReceiptInput!, file: String): PurchaseOrderView!
+
+  """Remove uma entrega registrada por engano."""
+  removePurchaseReceipt(requestId: ID!, receiptId: ID!): PurchaseOrderView!
+
+  """
+  Cancela um pedido sem entrega nem pagamento, com o motivo: a compra volta a aprovada ou, com backToQuotes, às cotações (então devolve null).
+  """
+  cancelPurchaseOrder(requestId: ID!, reason: String!, backToQuotes: Boolean! = false): PurchaseOrderView
+
+  """
+  Envia a ordem de compra por e-mail (PDF anexado); devolve quantos e-mails saíram.
+  """
+  sendPurchaseOrderByEmail(requestId: ID!, input: PurchaseEmailInput!): Int!
+
+  """Avalia o fornecedor de uma compra concluída (1 a 5 e um comentário)."""
+  ratePurchaseSupplier(requestId: ID!, rating: Int!, comment: String): PurchaseOrderView!
+
+  """
+  Marca uma parcela como paga, com o comprovante (PDF ou imagem em base64).
+  """
+  payPurchaseInstallment(requestId: ID!, installmentId: ID!, input: PurchasePaymentInput!, file: String): PurchaseOrderView!
+
+  """Desfaz o pagamento de uma parcela marcada por engano."""
+  unpayPurchaseInstallment(requestId: ID!, installmentId: ID!): PurchaseOrderView!
+
+  """Muda o vencimento de uma parcela ainda não paga."""
+  reschedulePurchaseInstallment(requestId: ID!, installmentId: ID!, dueOn: String!): PurchaseOrderView!
+
+  """
+  Envia o mapa de cotação em PDF por e-mail (um e-mail por endereço); devolve quantos foram.
+  """
+  sharePurchaseQuoteMapByEmail(requestId: ID!, input: PurchaseEmailInput!): Int!
+
+  """
+  Registra a cotação de um fornecedor (a primeira põe a solicitação em cotação).
+  """
+  addPurchaseQuote(requestId: ID!, supplierId: ID!, input: PurchaseQuoteInput!, file: String): PurchaseQuote!
+
+  """
+  Altera uma cotação (preços, condições e o orçamento: novo arquivo, mantido ou removido).
+  """
+  updatePurchaseQuote(id: ID!, input: PurchaseQuoteInput!, file: String, removeFile: Boolean! = false): PurchaseQuote!
+
+  """
+  Remove uma cotação (sem nenhuma, a solicitação volta a aguardar cotação).
+  """
+  removePurchaseQuote(id: ID!): Boolean!
+
+  """
+  Escolhe a cotação vencedora (justificativa obrigatória se não for a mais barata ou houver menos de 3); a solicitação passa a aguardar aprovação.
+  """
+  choosePurchaseQuote(id: ID!, justification: String): PurchaseRequest!
+
+  """
+  Desfaz a escolha enquanto aguarda aprovação: a solicitação volta para cotação.
+  """
+  reopenPurchaseQuotes(requestId: ID!): PurchaseRequest!
+
+  """
+  Faz uma solicitação de compra (numerada no condomínio); a gestão é avisada.
+  """
+  createPurchaseRequest(input: PurchaseRequestInput!): PurchaseRequest!
+
+  """Altera uma solicitação (dados e itens) enquanto aguarda cotação."""
+  updatePurchaseRequest(id: ID!, input: PurchaseRequestInput!): PurchaseRequest!
+
+  """
+  Cancela uma solicitação que aguarda cotação, com o motivo (quem pediu é avisado quando foi outra pessoa).
+  """
+  cancelPurchaseRequest(id: ID!, reason: String!): PurchaseRequest!
   createSpace(input: SpaceInput!): Space!
   updateSpace(id: ID!, input: SpaceInput!): Space!
 
@@ -3685,6 +4983,17 @@ type Mutation {
 
   """Exclui o espaço."""
   deleteSpace(id: ID!): Boolean!
+
+  """Cadastra um fornecedor."""
+  createSupplier(input: SupplierInput!): Supplier!
+
+  """Altera um fornecedor."""
+  updateSupplier(id: ID!, input: SupplierInput!): Supplier!
+
+  """
+  Ativa ou desativa um fornecedor (inativo não entra em novas cotações; o histórico fica).
+  """
+  setSupplierActive(id: ID!, active: Boolean!): Supplier!
 
   """
   Envia uma solicitação de suporte (até 3 por dia); avisa os administradores.
@@ -3795,6 +5104,17 @@ input BroadcastInput {
 
   """Também envia por e-mail."""
   sendEmail: Boolean!
+}
+
+"""Dados de um produto do catálogo."""
+input ProductInput {
+  name: String!
+
+  """Unidade de costume (un, cx, kg…)."""
+  unit: String!
+
+  """O que identifica o produto (medida, modelo…)."""
+  description: String
 }
 
 input PixReceiverInput {
@@ -4434,6 +5754,162 @@ input AuthorizeParcelPickupInput {
   document: String
 }
 
+"""Como o condomínio aprova as compras."""
+input PurchaseSettingsInput {
+  approvalMode: PurchaseApprovalMode!
+
+  """Com LIMIT: a alçada, em centavos."""
+  approvalLimitCents: Float
+}
+
+"""O pedido de uma compra aprovada."""
+input PlacePurchaseOrderInput {
+  """Entrega prevista (AAAA-MM-DD)."""
+  expectedOn: String
+
+  """
+  Vencimento da primeira parcela (ou do pagamento à vista); as demais, mês a mês.
+  """
+  firstDueOn: String!
+  notes: String
+}
+
+"""Uma entrega do pedido (toda ou em parte)."""
+input PurchaseReceiptInput {
+  """O dia em que chegou (AAAA-MM-DD)."""
+  receivedOn: String!
+  items: [PurchaseReceiptItemInput!]!
+  invoiceNumber: String
+
+  """Em centavos."""
+  invoiceCents: Float
+  invoiceDate: String
+  note: String
+}
+
+"""O que chegou de um item."""
+input PurchaseReceiptItemInput {
+  requestItemId: ID!
+  quantity: Float!
+}
+
+"""Envio de um documento da compra (mapa, ordem de compra) por e-mail."""
+input PurchaseEmailInput {
+  """De 1 a 5 e-mails."""
+  emails: [String!]!
+
+  """A mensagem que vai no e-mail."""
+  message: String!
+}
+
+"""O pagamento de uma parcela."""
+input PurchasePaymentInput {
+  """O dia em que foi paga (AAAA-MM-DD)."""
+  paidOn: String!
+  note: String
+}
+
+"""Preços e condições de uma cotação."""
+input PurchaseQuoteInput {
+  items: [PurchaseQuoteItemInput!]!
+
+  """Frete em centavos."""
+  shippingCents: Float
+
+  """Outros encargos (instalação, taxas…), cada um com o valor."""
+  charges: [QuoteChargeInput!]
+
+  """Desconto fixo, em centavos (ignorado com porcentagem)."""
+  discountCents: Float
+
+  """
+  Desconto em porcentagem de itens + frete + encargos, em centésimos de % (5% = 500; até 10000).
+  """
+  discountPercentBp: Int
+
+  """
+  Juros do parcelamento ao mês, em centésimos de % (1,99% = 199; até 2000). Só parcelado.
+  """
+  interestRateBp: Int
+
+  """Prazo de entrega em dias."""
+  deliveryDays: Int
+  paymentMethod: PaymentMethod
+
+  """
+  Parcelas (2 a 60; vazio ou 1: à vista). Cartão de crédito, boleto, faturado ou outro.
+  """
+  installments: Int
+
+  """Com OTHER: a forma de pagamento digitada."""
+  paymentTerms: String
+
+  """Último dia em que os preços valem (AAAA-MM-DD)."""
+  validUntil: String
+  notes: String
+}
+
+"""O preço de um item da solicitação numa cotação."""
+input PurchaseQuoteItemInput {
+  requestItemId: ID!
+
+  """Preço unitário em centavos (vazio: o fornecedor não tem)."""
+  unitPriceCents: Float
+}
+
+"""Um dos outros encargos de uma cotação."""
+input QuoteChargeInput {
+  """O que é (instalação, taxa…)."""
+  label: String!
+
+  """Valor em centavos."""
+  amountCents: Float!
+}
+
+"""Dados de uma solicitação de compra."""
+input PurchaseRequestInput {
+  """O que precisa ser comprado ou contratado."""
+  title: String!
+  description: String
+
+  """De que é a compra (ao menos uma)."""
+  categories: [Category!]!
+
+  """Com OTHER entre as categorias: de que é a compra, digitado."""
+  categoryOther: String
+
+  """Vazio: normal."""
+  priority: PurchasePriority
+
+  """Um espaço do condomínio onde vai ser usado."""
+  spaceId: ID
+
+  """Outro local (sem espaço), digitado."""
+  location: String
+
+  """Dia em que precisa (AAAA-MM-DD), hoje ou depois."""
+  neededBy: String
+  items: [PurchaseRequestItemInput!]!
+}
+
+"""Um item de uma solicitação de compra."""
+input PurchaseRequestItemInput {
+  """Um produto do catálogo do condomínio."""
+  productId: ID!
+
+  """Maior que zero, até 2 casas decimais."""
+  quantity: Float!
+
+  """un, cx, kg, m², serviço…"""
+  unit: String!
+
+  """Uma marca do catálogo (vazio: qualquer marca)."""
+  brandId: ID
+
+  """Observação do item (cor, medida, modelo…)."""
+  note: String
+}
+
 """O formulário completo do espaço."""
 input SpaceInput {
   name: String!
@@ -4486,6 +5962,38 @@ input GuestRulesInput {
 
   """A portaria exige o documento de cada convidado."""
   documentRequired: Boolean!
+}
+
+"""Dados de um fornecedor."""
+input SupplierInput {
+  documentType: SupplierDocumentType!
+
+  """CNPJ ou CPF (com ou sem pontuação)."""
+  document: String!
+
+  """Razão social, ou o nome do autônomo."""
+  name: String!
+
+  """Nome fantasia."""
+  tradeName: String
+
+  """O que o fornecedor atende (ao menos uma)."""
+  categories: [Category!]!
+
+  """
+  Com OTHER entre as categorias: o que ele atende, digitado (ex.: dedetização).
+  """
+  categoryOther: String
+  contactName: String
+  email: String
+  phone: String
+  city: String
+
+  """UF (ex.: GO)."""
+  state: String
+  pixKeyType: PixKeyType
+  pixKey: String
+  notes: String
 }
 
 input SupportRequestInput {

@@ -1,5 +1,5 @@
 import type { EventOrder } from "@/modules/events/application/ports/event-order-repository.port";
-import { formatCents } from "@/modules/events/domain/event-tickets";
+import { formatCents } from "@/shared/domain/money";
 import { deliveryDraft } from "@/modules/notifications/application/notification-delivery";
 import { NotificationType } from "@/modules/notifications/domain/notification";
 import type { OutboxDraft } from "@/modules/outbox/domain/outbox";

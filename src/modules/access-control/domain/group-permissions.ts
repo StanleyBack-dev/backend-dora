@@ -23,15 +23,20 @@ const MANAGER_DEFAULTS: Permission[] = [
   Permission.PAYMENTS_MANAGE,
   Permission.PARCELS_MANAGE,
   Permission.LOST_FOUND_MANAGE,
+  Permission.PURCHASES_MANAGE,
+  Permission.PURCHASES_REQUEST,
+  Permission.PURCHASES_APPROVE,
 ];
 
-// Portaria (gate staff): the day's guests, the parcels, lost and found and
-// the residents' directory (read only); they don't book.
+// Portaria (gate staff): the day's guests, the parcels, lost and found,
+// the residents' directory (read only) and asking for purchases; they don't
+// book.
 const CONCIERGE_DEFAULTS: Permission[] = [
   Permission.GUESTS_CHECKIN,
   Permission.RESIDENTS_READ,
   Permission.PARCELS_MANAGE,
   Permission.LOST_FOUND_MANAGE,
+  Permission.PURCHASES_REQUEST,
 ];
 
 export const GROUP_DEFAULT_PERMISSIONS: Record<
