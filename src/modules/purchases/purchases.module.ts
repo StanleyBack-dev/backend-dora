@@ -54,11 +54,20 @@ import { CancelPurchaseOrderUseCase } from "@/modules/purchases/application/use-
 import { ListPurchasePaymentsUseCase } from "@/modules/purchases/application/use-cases/list-purchase-payments.use-case";
 import { ReschedulePurchaseInstallmentUseCase } from "@/modules/purchases/application/use-cases/reschedule-purchase-installment.use-case";
 import { SendPurchaseOrderEmailUseCase } from "@/modules/purchases/application/use-cases/send-purchase-order-email.use-case";
+import { PURCHASE_INDICATORS_REPOSITORY } from "@/modules/purchases/application/ports/purchase-indicators-repository.port";
+import { PURCHASE_REPORT_RENDERER } from "@/modules/purchases/application/ports/purchase-report-renderer.port";
+import { PurchaseIndicatorsUseCase } from "@/modules/purchases/application/use-cases/purchase-indicators.use-case";
+import { PurchaseReportPdfUseCase } from "@/modules/purchases/application/use-cases/purchase-report-pdf.use-case";
+import { PurchaseTransparencyUseCase } from "@/modules/purchases/application/use-cases/purchase-transparency.use-case";
+import { PdfLibPurchaseReportRenderer } from "@/modules/purchases/infrastructure/pdf/pdf-lib-purchase-report.renderer";
+import { PurchaseIndicatorsSqlRepository } from "@/modules/purchases/infrastructure/persistence/purchase-indicators-sql.repository";
+import { PurchaseIndicatorsResolver } from "@/modules/purchases/presentation/graphql/purchase-indicators.resolver";
 
 /**
  * Purchases (compras do condomínio), a module contracted apart: purchase
  * requests, quotes, their approval, the orders (deliveries and payments,
- * rating the supplier), on the shared catalog (products,
+ * rating the supplier), the indicators and the residents' accounts
+ * (prestação de contas), on the shared catalog (products,
  * brands, categories) and suppliers registry. Purchases between
  * residents will be a module of their own (marketplace).
  */
@@ -107,6 +116,18 @@ import { SendPurchaseOrderEmailUseCase } from "@/modules/purchases/application/u
     ListPurchasePaymentsUseCase,
     ReschedulePurchaseInstallmentUseCase,
     PurchasePaymentsResolver,
+    PurchaseIndicatorsUseCase,
+    PurchaseTransparencyUseCase,
+    PurchaseReportPdfUseCase,
+    PurchaseIndicatorsResolver,
+    {
+      provide: PURCHASE_INDICATORS_REPOSITORY,
+      useClass: PurchaseIndicatorsSqlRepository,
+    },
+    {
+      provide: PURCHASE_REPORT_RENDERER,
+      useClass: PdfLibPurchaseReportRenderer,
+    },
     { provide: PURCHASE_ORDER_RENDERER, useClass: PdfLibPurchaseOrderRenderer },
     {
       provide: PURCHASE_ORDER_REPOSITORY,

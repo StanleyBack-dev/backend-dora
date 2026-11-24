@@ -30,3 +30,7 @@ export function boundedText(
   if (text.length > max) throw tooLong();
   return text || null;
 }
+
+/** The period asked for is out of range. */
+export const periodInvalid = () =>
+  AppException.from(APP_ERRORS.purchases.periodInvalid, undefined);

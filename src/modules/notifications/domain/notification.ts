@@ -87,6 +87,8 @@ export enum NotificationType {
   PURCHASE_COMPLETED = "PURCHASE_COMPLETED",
   /** Purchases: the order was cancelled (to the requester and the managers). */
   PURCHASE_ORDER_CANCELLED = "PURCHASE_ORDER_CANCELLED",
+  /** Purchases: the accounts were published (to the residents). */
+  PURCHASE_TRANSPARENCY_PUBLISHED = "PURCHASE_TRANSPARENCY_PUBLISHED",
 }
 
 export const ALL_NOTIFICATION_TYPES: readonly NotificationType[] =

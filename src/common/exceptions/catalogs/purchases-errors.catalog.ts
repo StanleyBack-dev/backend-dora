@@ -120,4 +120,15 @@ export const purchasesErrors = {
     message:
       "A avaliação do fornecedor fica para quando a compra for concluída (recebida e paga).",
   },
+  transparencyOff: {
+    code: "PURCHASE_TRANSPARENCY_OFF",
+    status: HttpStatus.FORBIDDEN,
+    message:
+      "A prestação de contas de compras não está publicada neste condomínio.",
+  },
+  periodInvalid: {
+    code: "PURCHASE_PERIOD_INVALID",
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    message: "Escolha um ano (e, se quiser, um mês) válido.",
+  },
 };
