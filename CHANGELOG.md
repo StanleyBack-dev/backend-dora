@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.19.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.18.0...v0.19.0) (2026-11-24)
+
+
+### Features
+
+* **purchases:** approval by alçada and purchase summary ([5c18deb](https://github.com/StanleyBack-dev/backend-dora/commit/5c18deb54d9f2cdec718290e65fd950d7616d333))
+* **purchases:** approval by alçada and purchase summary ([c26e926](https://github.com/StanleyBack-dev/backend-dora/commit/c26e926c5da36b6807f0ef93d67ecffff925df3c))
+* **purchases:** Compras module ([4f60db7](https://github.com/StanleyBack-dev/backend-dora/commit/4f60db7cf971b6ee44ccd279f3d3bb12058c3652))
+* **purchases:** indicators and residents' accounts ([4c0c2cf](https://github.com/StanleyBack-dev/backend-dora/commit/4c0c2cf23787b2e14b3605f6b3d5a165430cb13e))
+* **purchases:** indicators and residents' accounts ([26faf60](https://github.com/StanleyBack-dev/backend-dora/commit/26faf60201cc97d24224d3b1f25266f822017306))
+* **purchases:** purchase orders, deliveries and payments ([140d415](https://github.com/StanleyBack-dev/backend-dora/commit/140d41507352a39f3e14e0904b80a04b18945e7b))
+* **purchases:** purchase orders, deliveries and payments ([2305b19](https://github.com/StanleyBack-dev/backend-dora/commit/2305b19ee3c3107334c9872cd800666115692077))
+* **purchases:** purchase requests on a shared catalog and suppliers registry ([987ed1c](https://github.com/StanleyBack-dev/backend-dora/commit/987ed1c70a430e91698a2ea1f498d2cb1db617e8))
+* **purchases:** purchase requests on a shared catalog and suppliers registry ([8af4587](https://github.com/StanleyBack-dev/backend-dora/commit/8af45870ff429aa18982bfd874b007004d4562bb))
+* **purchases:** purchases module with the suppliers registry ([8ece0b0](https://github.com/StanleyBack-dev/backend-dora/commit/8ece0b08e7ab786837992f89989e2777502ef50a))
+* **purchases:** purchases module with the suppliers registry ([b80e2f1](https://github.com/StanleyBack-dev/backend-dora/commit/b80e2f107c077193281ea721df586544db732f50))
+* **purchases:** quotes, comparison map and sharing ([d5fab16](https://github.com/StanleyBack-dev/backend-dora/commit/d5fab16b4fb7b6da97d4ac18312e2f7423382326))
+* **purchases:** quotes, comparison map and sharing ([50f0ab7](https://github.com/StanleyBack-dev/backend-dora/commit/50f0ab70269c4a4c5b5214fa5f4366e626d61684))
+
+
+### Bug Fixes
+
+* **purchases:** deliver notices right after each change ([7ef747d](https://github.com/StanleyBack-dev/backend-dora/commit/7ef747dadd4abd38526ed2d7c3ce6a9706786206))
+* **purchases:** read UPDATE … RETURNING rows as [rows, affected] ([b035569](https://github.com/StanleyBack-dev/backend-dora/commit/b035569501eba486e0f30d3ed3cb717653c1a118))
+
 ## [0.18.0](https://github.com/StanleyBack-dev/backend-dora/compare/v0.17.0...v0.18.0) (2026-11-21)
 
 
