@@ -1,8 +1,8 @@
-import { formatQuantity } from "@/modules/catalog/domain/unit";
 import { Inject, Injectable } from "@nestjs/common";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { APP_ERRORS } from "@/common/exceptions/app-errors.catalog";
 import { AppException } from "@/common/exceptions/app-exception";
+import { formatQuantity } from "@/modules/catalog/domain/unit";
 import { CondominiumLookupService } from "@/modules/condominiums/application/condominium-lookup.service";
 import {
   PURCHASE_ORDER_REPOSITORY,

@@ -17,6 +17,7 @@ import {
   type PurchaseRequestInput,
   validatePurchaseRequestInput,
 } from "@/modules/purchases/application/purchase-request-input";
+import { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
 import { assertCatalogAvailable } from "@/modules/purchases/application/purchase-request-catalog";
 import { withSpace } from "@/modules/purchases/application/purchase-request-space";
 import { requestCreatedNotices } from "@/modules/purchases/application/purchase-request-notices";
@@ -41,6 +42,7 @@ export class CreatePurchaseRequestUseCase {
     private readonly access: PurchasesAccessService,
     private readonly spaces: SpaceLookupService,
     private readonly audit: AuditTrailService,
+    private readonly outbox: OutboxDispatcher,
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
@@ -67,6 +69,7 @@ export class CreatePurchaseRequestUseCase {
       data,
       (created) => requestCreatedNotices(created, managers),
     );
+    this.outbox.kick();
     await this.audit.stamp({
       actorId: actor.id,
       entity: "purchase_request",

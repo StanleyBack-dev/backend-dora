@@ -85,6 +85,15 @@ export class PurchasesAccessService {
     return condominiumId;
   }
 
+  /** Whether the caller has at least one of the permissions here. */
+  async hasAny(
+    actor: AuthenticatedUser,
+    ...permissions: Permission[]
+  ): Promise<boolean> {
+    const granted = await this.permissions.effectiveFor(actor);
+    return permissions.some((permission) => granted.has(permission));
+  }
+
   /**
    * Who works with the orders: the management places them, pays and rates;
    * the approvers follow them with the values; whoever asks for purchases
@@ -126,6 +135,11 @@ export class PurchasesAccessService {
    */
   managers(condominiumId: string): Promise<string[]> {
     return this.users.activeMemberIds(condominiumId, UserGroup.ADMIN);
+  }
+
+  /** The residents there (told when the accounts are published). */
+  residents(condominiumId: string): Promise<string[]> {
+    return this.users.activeMemberIds(condominiumId, UserGroup.USER);
   }
 
   /**

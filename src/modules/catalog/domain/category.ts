@@ -58,3 +58,27 @@ export function normalizeCategories(
   if (text.length < 2 || text.length > CATEGORY_OTHER_MAX) return "other";
   return { categories: ordered, categoryOther: text };
 }
+
+/** Each category as shown in documents (as the app shows it). */
+export const CATEGORY_LABELS: Record<Category, string> = {
+  MAINTENANCE: "Manutenção geral",
+  ELECTRICAL: "Elétrica",
+  PLUMBING: "Hidráulica",
+  PAINTING: "Pintura",
+  CONSTRUCTION: "Obras e reformas",
+  ELEVATORS: "Elevadores",
+  CLEANING: "Limpeza e higiene",
+  PEST_CONTROL: "Dedetização e pragas",
+  GARDENING: "Jardinagem",
+  POOL: "Piscina",
+  SECURITY: "Segurança e portaria",
+  TECHNOLOGY: "Tecnologia e informática",
+  OFFICE: "Escritório e papelaria",
+  FOOD: "Alimentação e bebidas",
+  EVENTS: "Festas e eventos",
+  FURNITURE: "Móveis e utensílios",
+  UNIFORMS: "Uniformes e EPIs",
+  GAS: "Gás",
+  PROFESSIONAL: "Serviços profissionais (contábil, jurídico, engenharia)",
+  OTHER: "Outros",
+};

@@ -1,3 +1,4 @@
+import type { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import type { AuditTrailService } from "@/modules/audit/application/audit-trail.service";
 import { NotificationType } from "@/modules/notifications/domain/notification";
@@ -284,6 +285,7 @@ describe("purchase request use cases", () => {
         quoting.repository,
         quoting.access,
         quoting.audit,
+        { kick: jest.fn() } as unknown as OutboxDispatcher,
         clock,
       ).execute(actor, "r1", "Sem verba"),
     ).rejects.toMatchObject({
@@ -299,6 +301,7 @@ describe("purchase request use cases", () => {
       open.repository,
       open.access,
       open.audit,
+      { kick: jest.fn() } as unknown as OutboxDispatcher,
       clock,
     ).execute(actor, "r1", "  Sem verba ");
     expect(open.repository.cancel).toHaveBeenCalledWith(

@@ -1,4 +1,3 @@
-import { formatQuantity } from "@/modules/catalog/domain/unit";
 import { Inject, Injectable } from "@nestjs/common";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import { APP_ERRORS } from "@/common/exceptions/app-errors.catalog";
@@ -15,6 +14,7 @@ import {
   QUOTE_MAP_RENDERER,
   type QuoteMapRendererPort,
 } from "@/modules/purchases/application/ports/quote-map-renderer.port";
+import { formatQuantity } from "@/modules/catalog/domain/unit";
 import { CondominiumLookupService } from "@/modules/condominiums/application/condominium-lookup.service";
 import { Permission } from "@/modules/access-control/domain/permission";
 import {

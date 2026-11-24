@@ -11,6 +11,7 @@ import {
   boundedText,
   orderInvalid,
 } from "@/modules/purchases/application/purchase-errors";
+import { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
 import { orderCancelledNotices } from "@/modules/purchases/application/purchase-order-notices";
 import { PurchasesAccessService } from "@/modules/purchases/application/purchases-access.service";
 import {
@@ -38,6 +39,7 @@ export class CancelPurchaseOrderUseCase {
     private readonly listing: ListPurchaseOrdersUseCase,
     private readonly access: PurchasesAccessService,
     private readonly audit: AuditTrailService,
+    private readonly outbox: OutboxDispatcher,
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
@@ -82,6 +84,7 @@ export class CancelPurchaseOrderUseCase {
       notices,
     );
     if (!cancelled) throw orderInvalid(NOT_CANCELLABLE);
+    this.outbox.kick();
     await this.audit.stamp({
       actorId: actor.id,
       entity: "purchase_request",

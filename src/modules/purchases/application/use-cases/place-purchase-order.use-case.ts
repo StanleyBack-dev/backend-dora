@@ -15,6 +15,7 @@ import {
   boundedText,
   orderInvalid,
 } from "@/modules/purchases/application/purchase-errors";
+import { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
 import { orderPlacedNotices } from "@/modules/purchases/application/purchase-order-notices";
 import { PurchasesAccessService } from "@/modules/purchases/application/purchases-access.service";
 import {
@@ -58,6 +59,7 @@ export class PlacePurchaseOrderUseCase {
     private readonly listing: ListPurchaseOrdersUseCase,
     private readonly access: PurchasesAccessService,
     private readonly audit: AuditTrailService,
+    private readonly outbox: OutboxDispatcher,
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
@@ -140,6 +142,7 @@ export class PlacePurchaseOrderUseCase {
     if (!next) {
       throw AppException.from(APP_ERRORS.purchases.notApproved, undefined);
     }
+    this.outbox.kick();
     await this.audit.stamp({
       actorId: actor.id,
       entity: "purchase_request",

@@ -20,6 +20,7 @@ import {
   PURCHASE_REQUEST_REPOSITORY,
   type PurchaseRequestRepositoryPort,
 } from "@/modules/purchases/application/ports/purchase-request-repository.port";
+import { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
 import { normalizeJustification } from "@/modules/purchases/application/purchase-quote-input";
 import { PurchasesAccessService } from "@/modules/purchases/application/purchases-access.service";
 import {
@@ -51,6 +52,7 @@ export class ChoosePurchaseQuoteUseCase {
     private readonly requests: PurchaseRequestRepositoryPort,
     private readonly access: PurchasesAccessService,
     private readonly audit: AuditTrailService,
+    private readonly outbox: OutboxDispatcher,
     @Inject(CLOCK) private readonly clock: ClockPort,
     @Inject(PURCHASE_APPROVAL_REPOSITORY)
     private readonly approvals: PurchaseApprovalRepositoryPort,
@@ -65,6 +67,7 @@ export class ChoosePurchaseQuoteUseCase {
   }
 
   private stamp(actor: AuthenticatedUser, id: string) {
+    this.outbox.kick();
     return this.audit.stamp({
       actorId: actor.id,
       entity: "purchase_request",

@@ -10,17 +10,16 @@ import {
 } from "@/shared/infrastructure/pdf/pdf-brand";
 import { fitText, wrapText } from "@/shared/infrastructure/pdf/pdf-text";
 
-// A4 portrait documents written top to bottom with pdf-lib's standard
-// fonts, in the Dora look (as the quote map): a black header with the mark
-// and the document's name on every page, sections with the orange bar,
-// label/value tables, status boxes, and a footer with the page count. The
-// signed receipts (parcels, lost and found) use it.
+// A4 documents (portrait, or landscape for reports) written top to bottom
+// with pdf-lib's standard fonts, in the Dora look (as the quote map): a
+// black header with the mark and the document's name on every page,
+// sections with the orange bar, label/value tables, data tables, figures,
+// status boxes, and a footer with the page count. The signed receipts
+// (parcels, lost and found) and the purchases documents use it.
 
 export const A4 = { width: 595.28, height: 841.89 };
 const MARGIN = 40;
-const WIDTH = A4.width - MARGIN * 2;
 const HEADER = 54;
-const TOP = A4.height - HEADER - 3 - 24;
 const BOTTOM = 54;
 export const MUTED = C.muted;
 export const GOOD = C.success;
@@ -63,13 +62,35 @@ export type PdfFrame = {
   subtitle: string;
   /** The footer's left side ("Emitido em 22/11/2026 10:00"). */
   footer: string;
+  /** A4 landscape (reports with wide tables); portrait by default. */
+  landscape?: boolean;
 };
+
+/** A column of `table`: its share of the width and alignment. */
+export type PdfColumn = {
+  label: string;
+  /** Relative width (the columns' widths are shares of the page's). */
+  width: number;
+  align?: "left" | "right";
+};
+
+/** A cell of `table`: text, or a bar (0–1) with its label beside it. */
+export type PdfCell = string | { bar: number; label: string };
+
+/** A figure in `stats`: the label, the value in large type and a hint. */
+export type PdfStat = { label: string; value: string; hint?: string };
 
 /** Writes top to bottom, adding pages (with the header) as needed. */
 export class PdfWriter {
   private readonly pages: PDFPage[] = [];
+  private readonly pageWidth: number;
+  private readonly pageHeight: number;
+  /** The content's width (between the margins). */
+  private readonly width: number;
+  /** Where the content starts under the header. */
+  private readonly top: number;
   private page!: PDFPage;
-  private y = TOP;
+  private y = 0;
 
   constructor(
     private readonly doc: PDFDocument,
@@ -77,24 +98,28 @@ export class PdfWriter {
     private readonly bold: PDFFont,
     private readonly frame: PdfFrame,
   ) {
+    this.pageWidth = frame.landscape ? A4.height : A4.width;
+    this.pageHeight = frame.landscape ? A4.width : A4.height;
+    this.width = this.pageWidth - MARGIN * 2;
+    this.top = this.pageHeight - HEADER - 3 - 24;
     this.addPage();
   }
 
   private addPage() {
-    this.page = this.doc.addPage([A4.width, A4.height]);
+    this.page = this.doc.addPage([this.pageWidth, this.pageHeight]);
     this.pages.push(this.page);
-    const top = A4.height;
+    const top = this.pageHeight;
     this.page.drawRectangle({
       x: 0,
       y: top - HEADER,
-      width: A4.width,
+      width: this.pageWidth,
       height: HEADER,
       color: C.black,
     });
     this.page.drawRectangle({
       x: 0,
       y: top - HEADER - 3,
-      width: A4.width,
+      width: this.pageWidth,
       height: 3,
       color: C.orange,
     });
@@ -111,7 +136,7 @@ export class PdfWriter {
       color: C.white,
       width: 330,
     });
-    this.y = TOP;
+    this.y = this.top;
   }
 
   private right(
@@ -126,7 +151,10 @@ export class PdfWriter {
       options.width ?? 330,
     );
     this.page.drawText(text, {
-      x: A4.width - MARGIN - options.font.widthOfTextAtSize(text, options.size),
+      x:
+        this.pageWidth -
+        MARGIN -
+        options.font.widthOfTextAtSize(text, options.size),
       y: baseline,
       size: options.size,
       font: options.font,
@@ -147,7 +175,12 @@ export class PdfWriter {
     const size = options.size ?? 10;
     const font = options.bold ? this.bold : this.font;
     const lineHeight = size * 1.35;
-    for (const line of this.lines(value, font, size, options.width ?? WIDTH)) {
+    for (const line of this.lines(
+      value,
+      font,
+      size,
+      options.width ?? this.width,
+    )) {
       this.ensure(lineHeight);
       this.y -= lineHeight;
       this.page.drawText(line, {
@@ -176,7 +209,7 @@ export class PdfWriter {
     this.y -= 6;
     this.page.drawLine({
       start: { x: MARGIN, y: this.y },
-      end: { x: A4.width - MARGIN, y: this.y },
+      end: { x: this.pageWidth - MARGIN, y: this.y },
       thickness: 0.6,
       color: C.line,
     });
@@ -194,13 +227,16 @@ export class PdfWriter {
       height: 13,
       color: C.orange,
     });
-    this.page.drawText(this.lines(value, this.bold, 11.5, WIDTH)[0] ?? "", {
-      x: MARGIN + 9,
-      y: this.y - 10.5,
-      size: 11.5,
-      font: this.bold,
-      color: C.ink,
-    });
+    this.page.drawText(
+      this.lines(value, this.bold, 11.5, this.width)[0] ?? "",
+      {
+        x: MARGIN + 9,
+        y: this.y - 10.5,
+        size: 11.5,
+        font: this.bold,
+        color: C.ink,
+      },
+    );
     this.y -= 22;
   }
 
@@ -217,7 +253,7 @@ export class PdfWriter {
         value,
         this.font,
         valueSize,
-        WIDTH - labelWidth - pad,
+        this.width - labelWidth - pad,
       );
       const lineHeight = valueSize * 1.35;
       const height =
@@ -227,13 +263,13 @@ export class PdfWriter {
       this.page.drawRectangle({
         x: MARGIN,
         y: top - height,
-        width: WIDTH,
+        width: this.width,
         height,
         color: index % 2 === 0 ? C.surfaceMuted : C.white,
       });
       this.page.drawLine({
         start: { x: MARGIN, y: top - height },
-        end: { x: MARGIN + WIDTH, y: top - height },
+        end: { x: MARGIN + this.width, y: top - height },
         thickness: 0.5,
         color: C.line,
       });
@@ -274,14 +310,14 @@ export class PdfWriter {
       waiting: C.warningSoft,
       info: C.infoSoft,
     }[tone];
-    const lines = this.lines(value, this.bold, 10, WIDTH - 32);
+    const lines = this.lines(value, this.bold, 10, this.width - 32);
     const height = lines.length * 13.5 + 18;
     this.ensure(height + 6);
     const top = this.y;
     this.page.drawRectangle({
       x: MARGIN,
       y: top - height,
-      width: WIDTH,
+      width: this.width,
       height,
       color: fill,
     });
@@ -307,7 +343,7 @@ export class PdfWriter {
   /** An image centred in a framed box. */
   image(image: PDFImage, maxHeight: number) {
     const scale = Math.min(
-      (WIDTH - 16) / image.width,
+      (this.width - 16) / image.width,
       maxHeight / image.height,
       1,
     );
@@ -318,14 +354,14 @@ export class PdfWriter {
     this.page.drawRectangle({
       x: MARGIN,
       y: this.y - 6,
-      width: WIDTH,
+      width: this.width,
       height: height + 12,
       color: C.white,
       borderColor: C.line,
       borderWidth: 0.75,
     });
     this.page.drawImage(image, {
-      x: MARGIN + (WIDTH - width) / 2,
+      x: MARGIN + (this.width - width) / 2,
       y: this.y,
       width,
       height,
@@ -336,7 +372,7 @@ export class PdfWriter {
   /** The QR beside a short text, the link and a note, in a soft box. */
   qr(image: PDFImage, caption: string, url: string, note: string) {
     const size = 76;
-    const textWidth = WIDTH - size - 36;
+    const textWidth = this.width - size - 36;
     const noteLines = this.lines(note, this.font, 8, textWidth);
     const height = Math.max(size + 20, 46 + noteLines.length * 10.8);
     this.ensure(height + 6);
@@ -344,7 +380,7 @@ export class PdfWriter {
     this.page.drawRectangle({
       x: MARGIN,
       y: top - height,
-      width: WIDTH,
+      width: this.width,
       height,
       color: C.orangeSoft,
       borderColor: C.orangeBorder,
@@ -370,11 +406,173 @@ export class PdfWriter {
     this.y = top - height - 8;
   }
 
+  /** Figures side by side in boxes: the label, the value large, a hint. */
+  stats(items: PdfStat[]) {
+    if (items.length === 0) return;
+    const gap = 8;
+    const width = (this.width - gap * (items.length - 1)) / items.length;
+    const height = 58;
+    this.ensure(height + 8);
+    const top = this.y;
+    items.forEach((item, index) => {
+      const x = MARGIN + index * (width + gap);
+      this.page.drawRectangle({
+        x,
+        y: top - height,
+        width,
+        height,
+        color: C.surfaceMuted,
+        borderColor: C.line,
+        borderWidth: 0.6,
+      });
+      this.page.drawText(
+        fitText(this.bold, item.label.toUpperCase(), 7, width - 16),
+        { x: x + 8, y: top - 15, size: 7, font: this.bold, color: C.muted },
+      );
+      this.page.drawText(fitText(this.bold, item.value, 15, width - 16), {
+        x: x + 8,
+        y: top - 35,
+        size: 15,
+        font: this.bold,
+        color: C.ink,
+      });
+      if (item.hint) {
+        this.page.drawText(fitText(this.font, item.hint, 7.5, width - 16), {
+          x: x + 8,
+          y: top - 49,
+          size: 7.5,
+          font: this.font,
+          color: C.muted,
+        });
+      }
+    });
+    this.y = top - height - 10;
+  }
+
+  /**
+   * A data table: a dark header row (repeated on each new page), striped
+   * rows, each cell cut to its column; a bar cell draws its share (0–1)
+   * with the label beside it.
+   */
+  table(columns: PdfColumn[], rows: PdfCell[][], empty = "Nada no período.") {
+    const total = columns.reduce((sum, column) => sum + column.width, 0);
+    const widths = columns.map((column) => (column.width / total) * this.width);
+    const pad = 6;
+    const rowHeight = 18;
+    const header = () => {
+      this.ensure(rowHeight * 2);
+      const top = this.y;
+      this.page.drawRectangle({
+        x: MARGIN,
+        y: top - rowHeight,
+        width: this.width,
+        height: rowHeight,
+        color: C.black,
+      });
+      let x = MARGIN;
+      columns.forEach((column, index) => {
+        this.cell(column.label.toUpperCase(), x, top, widths[index], {
+          align: column.align,
+          font: this.bold,
+          size: 7,
+          color: C.white,
+        });
+        x += widths[index];
+      });
+      this.y = top - rowHeight;
+    };
+    header();
+    if (rows.length === 0) {
+      this.text(empty, { size: 9, color: C.muted, x: MARGIN + pad, gap: 6 });
+      return;
+    }
+    rows.forEach((row, rowIndex) => {
+      if (this.y - rowHeight < BOTTOM) {
+        this.addPage();
+        header();
+      }
+      const top = this.y;
+      this.page.drawRectangle({
+        x: MARGIN,
+        y: top - rowHeight,
+        width: this.width,
+        height: rowHeight,
+        color: rowIndex % 2 === 0 ? C.white : C.surfaceMuted,
+      });
+      let x = MARGIN;
+      row.forEach((value, index) => {
+        const width = widths[index];
+        if (typeof value === "string") {
+          this.cell(value, x, top, width, {
+            align: columns[index].align,
+            font: this.font,
+            size: 8.5,
+            color: C.ink,
+          });
+        } else {
+          const label = value.label;
+          const labelWidth = this.font.widthOfTextAtSize(label, 8);
+          const barMax = Math.max(0, width - pad * 3 - labelWidth);
+          const share = Math.min(1, Math.max(0, value.bar));
+          if (share > 0) {
+            this.page.drawRectangle({
+              x: x + pad,
+              y: top - rowHeight / 2 - 3,
+              width: Math.max(share * barMax, 1.5),
+              height: 6,
+              color: C.orange,
+            });
+          }
+          this.page.drawText(label, {
+            x: x + pad * 2 + share * barMax,
+            y: top - rowHeight / 2 - 2.8,
+            size: 8,
+            font: this.font,
+            color: C.muted,
+          });
+        }
+        x += width;
+      });
+      this.page.drawLine({
+        start: { x: MARGIN, y: top - rowHeight },
+        end: { x: MARGIN + this.width, y: top - rowHeight },
+        thickness: 0.4,
+        color: C.line,
+      });
+      this.y = top - rowHeight;
+    });
+    this.y -= 8;
+  }
+
+  private cell(
+    value: string,
+    x: number,
+    top: number,
+    width: number,
+    options: {
+      align?: "left" | "right";
+      font: PDFFont;
+      size: number;
+      color: RGB;
+    },
+  ) {
+    const pad = 6;
+    const text = fitText(options.font, value, options.size, width - pad * 2);
+    const textWidth = options.font.widthOfTextAtSize(text, options.size);
+    this.page.drawText(text, {
+      x: options.align === "right" ? x + width - pad - textWidth : x + pad,
+      y: top - 12,
+      size: options.size,
+      font: options.font,
+      color: options.color,
+    });
+  }
+
   /** Lines to sign side by side: the name in bold under each, the role below. */
   signatures(signers: { name: string; role: string }[], title = "Assinaturas") {
     if (signers.length === 0) return;
     const gap = 30;
-    const width = (WIDTH - gap * (signers.length - 1)) / signers.length;
+    const width = (this.width - gap * (signers.length - 1)) / signers.length;
     // The title stays on the page with the lines.
     this.ensure(52 + 70);
     this.heading(title);
@@ -412,7 +610,7 @@ export class PdfWriter {
     this.pages.forEach((page, index) => {
       page.drawLine({
         start: { x: MARGIN, y: BOTTOM - 18 },
-        end: { x: A4.width - MARGIN, y: BOTTOM - 18 },
+        end: { x: this.pageWidth - MARGIN, y: BOTTOM - 18 },
         thickness: 0.5,
         color: C.line,
       });
@@ -420,7 +618,7 @@ export class PdfWriter {
         this.font,
         `Gerado pelo Dora · ${this.frame.footer}`,
         7,
-        WIDTH - 80,
+        this.width - 80,
       );
       page.drawText(left, {
         x: MARGIN,
@@ -431,7 +629,7 @@ export class PdfWriter {
       });
       const right = `Página ${index + 1} de ${total}`;
       page.drawText(right, {
-        x: A4.width - MARGIN - this.font.widthOfTextAtSize(right, 7),
+        x: this.pageWidth - MARGIN - this.font.widthOfTextAtSize(right, 7),
         y: BOTTOM - 31,
         size: 7,
         font: this.font,

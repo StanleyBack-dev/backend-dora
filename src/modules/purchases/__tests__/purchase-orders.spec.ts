@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+import type { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
 import type { AuthenticatedUser } from "@/common/auth/authenticated-user";
 import type { AuditTrailService } from "@/modules/audit/application/audit-trail.service";
 import { NotificationType } from "@/modules/notifications/domain/notification";
@@ -197,6 +198,7 @@ const files = () =>
   }) as unknown as jest.Mocked<PurchaseOrderFiles>;
 
 const audit = { stamp: jest.fn() } as unknown as AuditTrailService;
+const outbox = { kick: jest.fn() } as unknown as OutboxDispatcher;
 
 describe("purchase order domain", () => {
   it("keeps the day of the month in the monthly due days", () => {
@@ -260,6 +262,7 @@ describe("PlacePurchaseOrderUseCase", () => {
       listing(current),
       access(MANAGE),
       audit,
+      outbox,
       clock,
     );
     return { orders, useCase };
@@ -379,6 +382,7 @@ describe("RecordPurchaseReceiptUseCase", () => {
       stored,
       access(who),
       audit,
+      outbox,
       clock,
     );
     return { orders, stored, useCase };
@@ -535,6 +539,7 @@ describe("PayPurchaseInstallmentUseCase", () => {
       files(),
       access(who),
       audit,
+      outbox,
       clock,
     );
     return { orders, useCase };
@@ -723,6 +728,7 @@ describe("CancelPurchaseOrderUseCase", () => {
       listing(request({ status: PurchaseRequestStatus.ORDERED })),
       access(MANAGE),
       audit,
+      outbox,
       clock,
     );
     return { orders, useCase };

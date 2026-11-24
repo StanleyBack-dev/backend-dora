@@ -12,6 +12,7 @@ import {
   missingPermission,
   orderInvalid,
 } from "@/modules/purchases/application/purchase-errors";
+import { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
 import { PurchaseOrderFiles } from "@/modules/purchases/application/purchase-order-files";
 import {
   completedNotices,
@@ -114,6 +115,7 @@ export class RecordPurchaseReceiptUseCase {
     private readonly files: PurchaseOrderFiles,
     private readonly access: PurchasesAccessService,
     private readonly audit: AuditTrailService,
+    private readonly outbox: OutboxDispatcher,
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
@@ -241,6 +243,7 @@ export class RecordPurchaseReceiptUseCase {
   }
 
   private stamp(actor: AuthenticatedUser, requestId: string) {
+    this.outbox.kick();
     return this.audit.stamp({
       actorId: actor.id,
       entity: "purchase_request",

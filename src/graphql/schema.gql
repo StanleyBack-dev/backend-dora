@@ -2044,6 +2044,7 @@ enum NotificationType {
   PURCHASE_RECEIVED
   PURCHASE_COMPLETED
   PURCHASE_ORDER_CANCELLED
+  PURCHASE_TRANSPARENCY_PUBLISHED
 }
 
 type NotificationPage {
@@ -2794,6 +2795,122 @@ type QuoteBoardOverview {
 
   """Com cotação escolhida, aguardando aprovação."""
   awaitingApproval: Int!
+}
+
+type IndicatorPeriod {
+  year: Int!
+  month: Int
+}
+
+"""Pago numa categoria."""
+type CategorySpend {
+  category: Category!
+  cents: Float!
+  purchases: Int!
+}
+
+"""Pago num mês do ano."""
+type MonthSpend {
+  month: Int!
+  cents: Float!
+}
+
+"""Pago a um fornecedor."""
+type SupplierSpend {
+  supplierId: ID
+  supplierName: String!
+  cents: Float!
+  purchases: Int!
+  ratingAverage: Float
+  ratingCount: Int!
+}
+
+"""O que os pedidos feitos ainda devem (hoje)."""
+type CommittedSpend {
+  cents: Float!
+  installments: Int!
+  orders: Int!
+}
+
+"""Como foram os pedidos feitos no período."""
+type ProcessIndicators {
+  orders: Int!
+
+  """Maior cotação completa menos a escolhida, somadas."""
+  savingsCents: Float!
+  withThreeQuotes: Int!
+  avgDaysToOrder: Float
+  avgDaysToDeliver: Float
+  lateDeliveries: Int!
+}
+
+"""As compras em números para a gestão."""
+type PurchaseIndicators {
+  period: IndicatorPeriod!
+  paidCents: Float!
+  paidInstallments: Int!
+  purchases: Int!
+  committed: CommittedSpend!
+  byCategory: [CategorySpend!]!
+  byMonth: [MonthSpend!]!
+  bySupplier: [SupplierSpend!]!
+  process: ProcessIndicators!
+}
+
+"""Se a prestação de contas está publicada aos moradores."""
+type TransparencyStatus {
+  enabled: Boolean!
+  updatedAt: DateTime
+  updatedByName: String
+
+  """Publica ou retira (aprovadores)."""
+  canManage: Boolean!
+
+  """Vê mesmo sem publicar (gestão e aprovadores)."""
+  canPreview: Boolean!
+}
+
+"""A prestação de contas de um período."""
+type TransparencySummary {
+  period: IndicatorPeriod!
+  paidCents: Float!
+  purchases: Int!
+  byCategory: [CategorySpend!]!
+  byMonth: [MonthSpend!]!
+}
+
+"""Uma compra concluída, como o morador vê."""
+type TransparencyPurchase {
+  number: Int!
+  title: String!
+  categories: [Category!]!
+  categoryOther: String
+  supplierName: String!
+  totalCents: Float!
+
+  """YYYY-MM-DD"""
+  completedOn: String!
+  quoteCount: Int!
+}
+
+type TransparencyPurchasePage {
+  items: [TransparencyPurchase!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+"""Relatório de compras em PDF (indicadores ou prestação de contas)."""
+type PurchaseReportFile {
+  """Nome sugerido do arquivo."""
+  fileName: String!
+
+  """application/pdf"""
+  mimeType: String!
+
+  """O PDF em base64."""
+  base64Content: String!
 }
 
 """O que chegou de um item numa entrega."""
@@ -3980,6 +4097,26 @@ type Query {
   approvalBoardOverview: PurchaseApprovalOverview!
 
   """
+  Gasto por categoria, mês e fornecedor, o comprometido e o processo (gestão e aprovadores).
+  """
+  purchaseIndicators(period: IndicatorPeriodInput!): PurchaseIndicators!
+
+  """Os indicadores do período em PDF (A4 deitado)."""
+  purchaseIndicatorsPdf(period: IndicatorPeriodInput!): PurchaseReportFile!
+
+  """Se a prestação de contas está publicada (qualquer membro)."""
+  purchaseTransparencyStatus: TransparencyStatus!
+
+  """Gasto por categoria e mês na prestação de contas."""
+  purchaseTransparency(period: IndicatorPeriodInput!): TransparencySummary!
+
+  """As compras concluídas no período, da mais recente."""
+  transparencyPurchases(period: IndicatorPeriodInput!, page: PageInput): TransparencyPurchasePage!
+
+  """A prestação de contas do período em PDF (A4 deitado)."""
+  purchaseTransparencyPdf(period: IndicatorPeriodInput!): PurchaseReportFile!
+
+  """
   Compras aprovadas, com pedido feito, recebidas ou concluídas (para a portaria, só as com pedido, sem valores).
   """
   orderBoard(filter: PurchaseRequestFilterInput, page: PageInput): OrderBoardPage!
@@ -4363,6 +4500,14 @@ input PurchaseRequestFilterInput {
   statuses: [PurchaseRequestStatus!]
 }
 
+"""Um ano ou um mês dele."""
+input IndicatorPeriodInput {
+  year: Int!
+
+  """1–12 (vazio: o ano)."""
+  month: Int
+}
+
 """Filtros da página de pagamentos."""
 input PaymentFilterInput {
   states: [PurchaseInstallmentState!]
@@ -4741,6 +4886,9 @@ type Mutation {
 
   """Reprova a compra, com o motivo (a solicitação é encerrada)."""
   rejectPurchase(requestId: ID!, reason: String!): PurchaseRequest!
+
+  """Publica ou retira a prestação de contas (aprovadores)."""
+  publishPurchaseTransparency(enabled: Boolean!): TransparencyStatus!
 
   """
   Faz o pedido de uma compra aprovada (gera a OC e as parcelas da cotação escolhida).

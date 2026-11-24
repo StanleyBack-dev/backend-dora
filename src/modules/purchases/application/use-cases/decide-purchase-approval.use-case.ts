@@ -20,6 +20,7 @@ import {
   boundedText,
   requestInvalid,
 } from "@/modules/purchases/application/purchase-errors";
+import { OutboxDispatcher } from "@/modules/outbox/application/outbox-dispatcher.service";
 import { approvalDecidedNotices } from "@/modules/purchases/application/purchase-approval-notices";
 import { PurchasesAccessService } from "@/modules/purchases/application/purchases-access.service";
 import {
@@ -63,6 +64,7 @@ export class DecidePurchaseApprovalUseCase {
     private readonly approvals: PurchaseApprovalRepositoryPort,
     private readonly access: PurchasesAccessService,
     private readonly audit: AuditTrailService,
+    private readonly outbox: OutboxDispatcher,
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
@@ -144,6 +146,7 @@ export class DecidePurchaseApprovalUseCase {
         undefined,
       );
     }
+    this.outbox.kick();
     await this.audit.stamp({
       actorId: actor.id,
       entity: "purchase_request",
